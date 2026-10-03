@@ -61,7 +61,7 @@ def tutorial_algebra():
 
     section("Multivariate differential algebra")
 
-    centre = FloatDPBoundsVector([1, 0.5], dp)
+    centre = FloatDPBoundsVector([exact(1), exact(0.5)], dp)
     variables = FloatDPBoundsDifferential.variables(3, centre)
     x = variables[0]
     y = variables[1]
