@@ -5,6 +5,7 @@ get_target_property(PYTHON_COMMON_SOURCE_DIR pyariadne-python-common SOURCE_DIR)
 add_library(pyariadne-algebra-submodule-obj OBJECT
     algebra_submodule.cpp
     linear_algebra_submodule.cpp
+    polynomial_submodule.cpp
     differentiation_submodule.cpp
 )
 target_include_directories(pyariadne-algebra-submodule-obj PRIVATE
