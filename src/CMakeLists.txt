@@ -2,6 +2,8 @@ add_library(ALGEBRA_SRC OBJECT
     vector.cpp
     matrix.cpp
     series.cpp
+    polynomial.cpp
+    chebyshev_polynomial.cpp
     multi_index.cpp
     expansion.cpp
     differential.cpp

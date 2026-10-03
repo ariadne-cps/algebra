@@ -26,6 +26,13 @@ template<class X> class Algebra;
 template<class X> class ElementaryAlgebra;
 template<class X> class Series;
 
+template<class I, class X> class Polynomial;
+template<class X> using UnivariatePolynomial = Polynomial<UniIndex,X>;
+template<class X> using MultivariatePolynomial = Polynomial<MultiIndex,X>;
+
+template<class X> class UnivariateChebyshevPolynomial;
+template<class X> class MultivariateChebyshevPolynomial;
+
 } // namespace Ariadne
 
 #endif /* ARIADNE_ALGEBRA_DECLARATIONS_HPP */

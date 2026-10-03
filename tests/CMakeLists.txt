@@ -7,6 +7,8 @@ set(UNIT_TESTS
     test_graded
     test_matrix
     test_multi_index
+    test_polynomial
+    test_chebyshev_polynomial
     test_series
     test_vector
 )
