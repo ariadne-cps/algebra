@@ -1,6 +1,8 @@
 #ifndef ARIADNE_ARIADNE_ALGEBRA_HPP
 #define ARIADNE_ARIADNE_ALGEBRA_HPP
 
+#include "ariadne-interval.hpp"
+
 #include "algebra/declarations.hpp"
 #include "algebra/vector.hpp"
 #include "algebra/covector.hpp"
