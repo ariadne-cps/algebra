@@ -5,7 +5,7 @@
 [![Windows Status](https://github.com/ariadne-cps/algebra/actions/workflows/win.yml/badge.svg)](https://github.com/ariadne-cps/algebra/actions/workflows/win.yml)
 [![Coverage Status](https://github.com/ariadne-cps/algebra/actions/workflows/coverage.yml/badge.svg)](https://github.com/ariadne-cps/algebra/actions/workflows/coverage.yml)
 
-Ariadne Algebra is the standalone C++20 algebra layer used by Ariadne. It provides linear-algebra containers, power-series and expansion structures, differential-algebra types, graded algebras and related operations over the validated numeric types supplied by the lower Ariadne stack.
+Ariadne Algebra is the standalone C++20 algebra layer used by Ariadne. It provides linear-algebra containers, sparse expansions, power series, power-basis and Chebyshev polynomial representations, differential-algebra types, graded algebras and related operations over the validated numeric types supplied by the lower Ariadne stack.
 
 ## Dependencies
 
@@ -32,14 +32,14 @@ A C++20 compiler, CMake, GMP and MPFR are required.
 
 ## Python bindings
 
-When a compatible Python development environment is available, the build produces a standalone `pyariadne` module containing the lower Interval/Numeric/Foundation bindings plus Algebra linear-algebra and differentiation bindings. The public `pyariadne-algebra` interface consumes only the direct lower `pyariadne-interval` interface.
+When a compatible Python development environment is available, the build produces a standalone `pyariadne` module containing the lower Interval/Numeric/Foundation bindings plus Algebra bindings for linear algebra, sparse expansions and series, polynomial representations, and differential algebra. The public `pyariadne-algebra` interface consumes only the direct lower `pyariadne-interval` interface.
 
 ## Tutorials
 
 - C++: `tutorials/tutorial_algebra/tutorial_algebra.cpp`
 - Python: `python/tutorials/tutorial_algebra.py`
 
-Both cover linear algebra and differential algebra, the two main user-facing parts of this layer.
+Both progress through linear algebra, multi-indices and sparse expansions, power-basis and Chebyshev polynomials, power series, and multivariate and univariate differential algebra.
 
 ## License
 
