@@ -22,6 +22,13 @@ if(NOT TARGET interval)
     add_subdirectory(submodules)
 endif()
 
+if(MSVC AND TARGET pyariadne-numeric-submodule-obj)
+    # The standalone pyariadne module embeds NUMERIC_SRC directly, so Numeric
+    # Python bindings must reference Numeric symbols as defined by this DLL,
+    # not as dllimport symbols from a separate ariadne-numeric DLL.
+    target_compile_definitions(pyariadne-numeric-submodule-obj PRIVATE ARIADNE_NUMERIC_BUILD)
+endif()
+
 if(MSVC)
     # Numeric headers instantiate conversion paths that MSVC reports as C4244.
     # Keep /WX enabled for Algebra while avoiding warnings owned by the lower layer.
