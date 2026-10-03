@@ -116,6 +116,12 @@ class TestMultiIndex
     }
 
     Void test_increment() {
+        MultiIndex u(1);
+        for(SizeType n=0; n!=8; ++n) {
+            ARIADNE_TEST_EQUAL(u.degree(),n);
+            ++u;
+        }
+
         MultiIndex a(4);
         SizeType n=0;
         while(a.degree()<=5) {

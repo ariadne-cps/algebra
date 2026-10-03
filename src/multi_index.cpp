@@ -30,12 +30,12 @@ namespace Ariadne {
 
 MultiIndex& MultiIndex::operator++() {
     assert(_n>0);
-    if(_n==1) { ++_p[0]; ++_p[_n]; return *this; }
+    if(_n==1) { ++_p[0]; return *this; }
     if(_p[_n-2]!=0) { --_p[_n-2]; ++_p[_n-1]; return *this; }
     else {
         IndexType li=_p[_n-1]; _p[_n-1]=0;
         for(SizeType k=_n-1; k!=0; --k) { if(_p[k-1]!=0) { --_p[k-1]; _p[k]=li+1u; return *this; } }
-        _p[0]=li+1u; ++_p[_n];
+        _p[0]=li+1u;
     }
     return *this;
 }
