@@ -66,7 +66,7 @@ OutputStream& operator<<(OutputStream& os, const PythonRepresentation<SortedExpa
 }
 
 
-inline uint pyindex(int i, uint n) { return (i>=0) ? static_cast<uint>(i) : (n-static_cast<uint>(-i)); }
+inline SizeType pyindex(int i, SizeType n) { return (i>=0) ? static_cast<SizeType>(i) : (n-static_cast<SizeType>(-i)); }
 
 template<class C, class I, class X=decltype(declval<const C>()[declval<I>()])> inline
 auto __getitem__(const C& c, const I& i) -> X {
@@ -74,7 +74,7 @@ auto __getitem__(const C& c, const I& i) -> X {
 
 template<class C, class I0, class I1, class S> inline
 S __getslice__(const C& c, const I0& i0, const I1& i1) {
-        if constexpr (std::same_as<I0,int>) { auto n=c.size(); return project(c,range(pyindex(i0,n,pyindex(i1,n)))); } else { return project(c,range(i0,i1)); } }
+        if constexpr (std::same_as<I0,int>) { auto n=c.size(); return project(c,range(pyindex(i0,n),pyindex(i1,n))); } else { return project(c,range(i0,i1)); } }
 
 template<class C, class I, class X> inline
 Void __setitem__(C& c, const I& i, const X& x) {
