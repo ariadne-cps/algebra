@@ -131,7 +131,7 @@ Void
 TestVector::test_misc()
 {
     DoublePrecision pr;
-    Array<FloatDPApproximation> vary={{-4.0_x,3.0_x,1.0_x},pr};
+    Array<FloatDPApproximation> vary(InitializerList<ExactDouble>{-4.0_x,3.0_x,1.0_x},pr);
     FloatDPApproximation x={1.5_x,pr};
 
     Vector<FloatDPApproximation> v0;
