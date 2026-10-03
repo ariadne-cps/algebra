@@ -23,7 +23,6 @@
  */
 
 #include "numeric/numeric.hpp"
-#include "config.hpp"
 
 #include "interval/interval.hpp"
 #include "algebra/polynomial.hpp"
