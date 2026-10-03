@@ -46,8 +46,6 @@ template<class X> struct PythonClassName<Vector<X>> { static std::string get() {
 template<class X> struct PythonClassName<Differential<X>> { static std::string get() { return python_template_class_name<X>("Differential"); } };
 template<class X> struct PythonClassName<UnivariateDifferential<X>> { static std::string get() { return python_template_class_name<X>("UnivariateDifferential"); } };
 
-template<class X> OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Expansion<MultiIndex,X>>& repr);
-
 template<class X> OutputStream& operator<<(OutputStream& os, const PythonRepresentation< Differential<X> >& repr) {
     const Differential<X>& diff=repr.reference();
     os << python_class_name<Differential<X>>().c_str() << "(" << python_representation(diff.expansion()) << "," << diff.degree() << ")";
