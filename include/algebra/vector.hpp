@@ -604,14 +604,6 @@ Vector<X> join(const Vector<X>& v1, const Vector<X>& v2)
     assert(rp==ra.end());
     return Vector<X>(std::move(ra));
 
-    if(v1.size()==0) { return v2; }
-    if(v2.size()==0) { return v1; }
-    SizeType n1=v1.size();
-    SizeType n2=v2.size();
-    Vector<X> r(n1+n2,v1[0]);
-    for(SizeType i=0; i!=v1.size(); ++i) { r[i]=v1[i]; }
-    for(SizeType i=0; i!=v2.size(); ++i) { r[v1.size()+i]=v2[i]; }
-    return r;
 }
 
 
