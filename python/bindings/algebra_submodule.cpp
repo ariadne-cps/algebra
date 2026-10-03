@@ -36,6 +36,22 @@ MultiIndex multi_index_from_object(pybind11::handle obj) {
 }
 
 template<class X>
+X coefficient_from_python(pybind11::handle obj, typename X::PrecisionType pr) {
+    if(pybind11::isinstance<X>(obj)) {
+        return pybind11::cast<X>(obj);
+    }
+
+    if constexpr (HasGenericType<X>) {
+        using Y=typename X::GenericType;
+        return X(from_python_object_or_literal<Y>(obj),pr);
+    } else if constexpr (Constructible<X,Dyadic,typename X::PrecisionType>) {
+        return X(from_python_object_or_literal<Dyadic>(obj),pr);
+    } else {
+        return from_python_object_or_literal<X>(obj);
+    }
+}
+
+template<class X>
 Expansion<MultiIndex,X>
 expansion_from_python(pybind11::dict const& terms, typename X::PrecisionType pr) {
     if(terms.empty()) {
@@ -51,7 +67,7 @@ expansion_from_python(pybind11::dict const& terms, typename X::PrecisionType pr)
         if(index.size()!=result.argument_size()) {
             throw std::invalid_argument("All Expansion indices must have the same argument size.");
         }
-        result.append(index,from_python_object_or_literal<X>(item.second));
+        result.append(index,coefficient_from_python<X>(item.second,pr));
     }
     return result;
 }
