@@ -11,7 +11,8 @@ int main() {
     Matrix<FloatDP> A({{1.0_x,2.0_x},{3.0_x,4.0_x}},dp);
     std::cout << "v = " << v << "\n";
     std::cout << "A = " << A << "\n";
-    std::cout << "A*v = " << Vector<FloatDP>(A*v) << "\n";
+    Vector<FloatDPBounds> Av=A*v;
+    std::cout << "A*v = " << Av << "\n";
 
     FloatDPBounds one(1,dp);
     auto x=Differential<FloatDPBounds>::variable(1u,3u,one,0u);
