@@ -394,7 +394,6 @@ Polynomial<I,X>::_partial_evaluate(const Polynomial<I,X>& x, SizeType k, const X
                 }
             }
         } else if(is_unit(c)) {
-            Polynomial<I,X> s(x.argument_size()-1u,x.zero_coefficient());
             Array< Polynomial<I,X> > p(x.degree()+1u,Polynomial<I,X>(x.argument_size()-1u,x.zero_coefficient()));
 
             for(typename Polynomial<I,X>::ConstIterator xiter=x.begin(); xiter!=x.end(); ++xiter) {
@@ -412,7 +411,6 @@ Polynomial<I,X>::_partial_evaluate(const Polynomial<I,X>& x, SizeType k, const X
                 r+=p[i];
             }
         } else {
-            Polynomial<I,X> s(x.argument_size()-1u,x.zero_coefficient());
             Array< Polynomial<I,X> > p(x.degree()+1u,Polynomial<I,X>(x.argument_size()-1u,x.zero_coefficient()));
 
             Array<X> cpowers(x.degree()+1u,x.zero_coefficient());
