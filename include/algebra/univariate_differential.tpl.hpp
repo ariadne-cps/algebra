@@ -58,6 +58,10 @@ template<class X> X UnivariateDifferential<X>::zero_coefficient() const {
     return nul(this->_ary[0]);
 }
 
+template<class X> SizeType UnivariateDifferential<X>::argument_size() const {
+    return 1u;
+}
+
 template<class X> DegreeType UnivariateDifferential<X>::degree() const {
     return this->_ary.size()-1u;
 }

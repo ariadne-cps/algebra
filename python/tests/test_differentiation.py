@@ -20,6 +20,7 @@ def test_differential():
 def test_univariate_differential():
     dp = DoublePrecision()
     x = FloatDPBoundsUnivariateDifferential.variable(3, FloatDPBounds(1, dp))
+    assert x.argument_size() == 1
     y = exp(x)
     assert y.degree() == 3
     assert y.value() == exp(FloatDPBounds(1, dp))

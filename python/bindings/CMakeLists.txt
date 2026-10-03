@@ -3,7 +3,6 @@ include_directories(${Python3_INCLUDE_DIRS})
 get_target_property(PYTHON_COMMON_SOURCE_DIR pyariadne-python-common SOURCE_DIR)
 
 add_library(pyariadne-algebra-submodule-obj OBJECT
-    utilities.cpp
     linear_algebra_submodule.cpp
     differentiation_submodule.cpp
 )
