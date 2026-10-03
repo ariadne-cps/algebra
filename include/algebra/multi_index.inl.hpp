@@ -65,7 +65,7 @@ inline OutputStream& operator<<(OutputStream& os, const MultiIndexData& a) {
 
 inline MultiIndex::~MultiIndex() { delete[] _p; _p=nullptr; }
 inline MultiIndex::MultiIndex() : MultiIndex(0u) { }
-inline MultiIndex::MultiIndex(SizeType nv) : MultiIndexData(nv,new DegreeType[std::max(nv,1lu)]) { for(SizeType i=0; i!=_n; ++i) { _p[i]=0u; } }
+inline MultiIndex::MultiIndex(SizeType nv) : MultiIndexData(nv,new DegreeType[std::max(nv,SizeType(1u))]) { for(SizeType i=0; i!=_n; ++i) { _p[i]=0u; } }
 inline MultiIndex::MultiIndex(SizeType nv, const DegreeType* ary) : MultiIndex(nv) {
     for(SizeType i=0; i!=_n; ++i) { _p[i]=ary[i]; } }
 inline MultiIndex::MultiIndex(InitializerList<DegreeType> lst) : MultiIndex(lst.size()) {
@@ -79,7 +79,7 @@ inline MultiIndex& MultiIndex::operator=(const MultiIndex& a) {
 inline MultiIndex MultiIndex::zero(SizeType nv) { MultiIndex a(nv); a.clear(); return a; }
 inline MultiIndex MultiIndex::unit(SizeType nv, SizeType j) { MultiIndex a=MultiIndex::zero(nv); a[j]=1u; return a; }
 
-inline Void MultiIndex::resize(SizeType n) { if(_n!=n) { _n=n; delete[] _p; _p=new DegreeType[std::max(n,1lu)]; } }
+inline Void MultiIndex::resize(SizeType n) { if(_n!=n) { _n=n; delete[] _p; _p=new DegreeType[std::max(n,SizeType(1u))]; } }
 inline Void MultiIndex::clear() { for(SizeType i=0; i!=_n; ++i) { _p[i]=0u; } }
 
 inline MultiIndex& MultiIndex::operator+=(const MultiIndex& a) { assert(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]+=a._p[i]; } return *this; }

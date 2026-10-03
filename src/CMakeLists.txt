@@ -11,3 +11,8 @@ add_library(ALGEBRA_SRC OBJECT
 target_include_directories(ALGEBRA_SRC PRIVATE
     "${PROJECT_SOURCE_DIR}/include/algebra"
 )
+
+if(MSVC)
+    # Explicit class instantiation asks MSVC about declared-but-undefined optional members.
+    target_compile_options(ALGEBRA_SRC PRIVATE /wd4661)
+endif()
