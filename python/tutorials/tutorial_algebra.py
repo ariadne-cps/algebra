@@ -81,7 +81,7 @@ def tutorial_algebra():
     quarter = FloatDPApproximation(exact(0.25), dp)
 
     show("T2", T2)
-    show("2*x^2-1", chebyshev_x*chebyshev_x*2 - 1)
+    show("2*x^2-1", chebyshev_x*chebyshev_x*two_a - one_a)
     show("T3(0.25)", T3(quarter))
 
     MultivariateChebyshev = FloatDPApproximationMultivariateChebyshevPolynomial
