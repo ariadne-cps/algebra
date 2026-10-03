@@ -1,0 +1,8 @@
+Standalone Ariadne Algebra tutorial.
+
+Build after installing ariadne-algebra:
+
+    mkdir build && cd build
+    cmake .. -DCMAKE_PREFIX_PATH=/path/to/install
+    cmake --build .
+    ./tutorial_algebra
