@@ -102,6 +102,8 @@ pybind11::class_<DIFF> export_differential(pybind11::module& module, const Strin
     differential_class.def("__str__", &__cstr__<D>);
     differential_class.def("__repr__", &__repr__<D>);
 
+    differential_class.def("argument_size", &D::argument_size);
+    differential_class.def("degree", &D::degree);
     differential_class.def("value", (ValueType<D>(D::*)()const)&D::value);
     differential_class.def("gradient", (GradientType<D>(D::*)()const)&D::gradient);
     differential_class.def("hessian", (HessianType<D>(D::*)()const)&D::hessian);
@@ -196,6 +198,8 @@ pybind11::class_<DIFF> export_univariate_differential(pybind11::module& module, 
     univariate_differential_class.def("__str__", &__cstr__<D>);
     univariate_differential_class.def("__repr__", &__repr__<D>);
 
+    univariate_differential_class.def("argument_size", &D::argument_size);
+    univariate_differential_class.def("degree", &D::degree);
     univariate_differential_class.def("value", (ValueType<D>(D::*)()const)&D::value);
     univariate_differential_class.def("gradient", (GradientType<D>(D::*)()const)&D::gradient);
     univariate_differential_class.def("hessian", (HessianType<D>(D::*)()const)&D::hessian);
