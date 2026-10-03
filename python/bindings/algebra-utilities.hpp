@@ -36,6 +36,7 @@
 #include "utility/tuple.hpp"
 #include "utility/container.hpp"
 #include "algebra/declarations.hpp"
+#include "algebra/expansion.hpp"
 #include "utility/metaprogramming.hpp"
 
 
@@ -43,6 +44,26 @@
 namespace Ariadne {
 
 using namespace PyBind11;
+
+template<class X>
+OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Expansion<MultiIndex,X>>& repr) {
+    const Expansion<MultiIndex,X>& exp=repr.reference();
+    for(typename Expansion<MultiIndex,X>::ConstIterator iter=exp.begin(); iter!=exp.end(); ++iter) {
+        os << (iter==exp.begin()?'{':',') << "(";
+        for(SizeType j=0; j!=iter->index().size(); ++j) {
+            if(j!=0) { os << ','; }
+            os << Int(iter->index()[j]);
+        }
+        os << "):" << python_representation(iter->coefficient());
+    }
+    os << "}";
+    return os;
+}
+
+template<class X, class CMP>
+OutputStream& operator<<(OutputStream& os, const PythonRepresentation<SortedExpansion<MultiIndex,X,CMP>>& repr) {
+    return os << python_representation(static_cast<const Expansion<MultiIndex,X>&>(repr.reference()));
+}
 
 
 inline uint pyindex(int i, uint n) { return (i>=0) ? static_cast<uint>(i) : (n-static_cast<uint>(-i)); }
