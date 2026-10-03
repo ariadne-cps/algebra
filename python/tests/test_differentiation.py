@@ -27,3 +27,6 @@ def test_univariate_differential():
     assert definitely(y.value() > FloatDPBounds(2, dp))
     assert definitely(y.value() < FloatDPBounds(3, dp))
     assert possibly(y.value() == expected)
+
+    dy = derivative(y)
+    assert dy.degree() == 2

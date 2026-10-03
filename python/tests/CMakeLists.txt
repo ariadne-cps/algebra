@@ -17,7 +17,7 @@ else()
 endif()
 
 if(PYTHON_TESTS)
-    foreach(TESTNAME linear_algebra differentiation)
+    foreach(TESTNAME algebra linear_algebra differentiation)
         add_custom_target(
             test_python_${TESTNAME}
             COMMAND "${Python3_EXECUTABLE}" -m pytest "${CMAKE_CURRENT_SOURCE_DIR}/test_${TESTNAME}.py"
