@@ -21,6 +21,9 @@
 
 namespace Ariadne {
 
+class UniIndex;
+class MultiIndex;
+
 
 template<class X> class Algebra;
 template<class X> class ElementaryAlgebra;
