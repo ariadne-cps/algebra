@@ -122,9 +122,12 @@ template<class X>
 UnivariateDifferential<X>
 UnivariateDifferential<X>::_derivative(const UnivariateDifferential<X>& x)
 {
-    DegreeType n=x.degree(); DegreeType one=1u;
-    UnivariateDifferential<X> r(std::min(n,one)-one,x.zero_coefficient());
-    if(n==0) { r[0]=x[0]*0; }
+    DegreeType n=x.degree();
+    UnivariateDifferential<X> r(n==0u ? 0u : n-1u,x.zero_coefficient());
+    if(n==0u) {
+        r[0]=x[0]*0;
+        return r;
+    }
     for(DegreeType i=0; i<n; ++i) {
         r[i]=(i+1u)*x[i+1u];
     }

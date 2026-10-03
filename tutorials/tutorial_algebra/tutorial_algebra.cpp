@@ -99,7 +99,7 @@ int main() {
     std::cout << "value(g) = " << g.value() << "\n";
     std::cout << "g'(1) = " << g.gradient() << "\n";
     std::cout << "g''(1) = " << g.hessian() << "\n";
-    std::cout << "derivative jet = " << derivative(g) << "\n";
+    std::cout << "differential of g' = " << derivative(g) << "\n";
 
     return 0;
 }

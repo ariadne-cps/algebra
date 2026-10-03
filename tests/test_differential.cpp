@@ -423,6 +423,23 @@ class TestDifferentialVector {
 };
 
 Int main() {
+    {
+        using X=FloatDPApproximation;
+        auto x=UnivariateDifferential<X>::variable(4u,X(1,dp));
+        auto y=exp(x);
+        auto dy=derivative(y);
+
+        ARIADNE_TEST_EQUAL(dy.degree(),3u);
+        for(DegreeType i=0; i<=dy.degree(); ++i) {
+            ARIADNE_TEST_EQUAL(dy[i],(i+1u)*y[i+1u]);
+        }
+
+        auto c=UnivariateDifferential<X>::constant(0u,X(2,dp));
+        auto dc=derivative(c);
+        ARIADNE_TEST_EQUAL(dc.degree(),0u);
+        ARIADNE_TEST_EQUALS(dc[0],0);
+    }
+
 //    TestDifferential< Differential<FloatDPApproximation> > tf;
     TestDifferentialVector< Differential<FloatDPApproximation> > tfv;
     return ARIADNE_TEST_FAILURES;
