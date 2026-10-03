@@ -31,6 +31,7 @@
 #include "algebra/matrix.hpp"
 #include "algebra/multi_index.hpp"
 #include "algebra/differential.hpp"
+#include "algebra/algebra.hpp"
 #include "algebra/polynomial.hpp"
 
 #include "algebra/chebyshev_polynomial.hpp"
