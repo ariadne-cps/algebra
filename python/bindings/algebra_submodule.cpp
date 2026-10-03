@@ -74,7 +74,11 @@ export_expansion(pybind11::module& module) {
     expansion_class.def("__getitem__",[](E const& e, MultiIndex const& a) { return X(e[a]); });
     expansion_class.def("__setitem__",[](E& e, MultiIndex const& a, X const& x) { e.set(a,x); });
     expansion_class.def("__str__",&__cstr__<E>);
-    expansion_class.def("__repr__",&__repr__<E>);
+    expansion_class.def("__repr__",[](E const& e) {
+        StringStream ss;
+        ss << python_representation(e);
+        return ss.str();
+    });
 
     return expansion_class;
 }
@@ -123,7 +127,17 @@ void algebra_submodule(pybind11::module& module) {
     multi_index_class.def("__setitem__",&MultiIndex::set);
     multi_index_class.def("degree",&MultiIndex::degree);
     multi_index_class.def("__str__",&__cstr__<MultiIndex>);
-    multi_index_class.def("__repr__",&__repr__<MultiIndex>);
+    multi_index_class.def("__repr__",[](MultiIndex const& a) {
+        StringStream ss;
+        ss << "MultiIndex((";
+        for(SizeType i=0; i!=a.size(); ++i) {
+            if(i!=0) { ss << ","; }
+            ss << Int(a[i]);
+        }
+        if(a.size()==1u) { ss << ","; }
+        ss << "))";
+        return ss.str();
+    });
 
     export_expansion<FloatDPApproximation>(module);
     export_expansion<FloatDPBounds>(module);
