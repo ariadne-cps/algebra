@@ -6,6 +6,7 @@ add_library(ALGEBRA_SRC OBJECT
     chebyshev_polynomial.cpp
     multi_index.cpp
     expansion.cpp
+    sweeper.cpp
     differential.cpp
     algebra.cpp
 )
