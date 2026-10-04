@@ -4,18 +4,13 @@
 [![Unix Status](https://github.com/ariadne-cps/algebra/actions/workflows/unix.yml/badge.svg)](https://github.com/ariadne-cps/algebra/actions/workflows/unix.yml)
 [![Windows Status](https://github.com/ariadne-cps/algebra/actions/workflows/win.yml/badge.svg)](https://github.com/ariadne-cps/algebra/actions/workflows/win.yml)
 [![Coverage Status](https://github.com/ariadne-cps/algebra/actions/workflows/coverage.yml/badge.svg)](https://github.com/ariadne-cps/algebra/actions/workflows/coverage.yml)
+[![codecov](https://codecov.io/gh/ariadne-cps/algebra/branch/main/graph/badge.svg)](https://codecov.io/gh/ariadne-cps/algebra)
 
 Ariadne Algebra is the standalone C++20 algebra layer used by Ariadne. It provides linear-algebra containers, sparse expansions, power series, power-basis and Chebyshev polynomial representations, differential-algebra types, graded algebras and related operations over the validated numeric types supplied by the lower Ariadne stack.
 
 ## Dependencies
 
 Algebra depends directly on [ariadne-cps/interval](https://github.com/ariadne-cps/interval), included as a Git submodule. Interval supplies Numeric, Foundation and Utility transitively.
-
-The intended repository chain is:
-
-```text
-utility -> foundation -> numeric -> interval -> algebra -> function
-```
 
 ## Build
 
