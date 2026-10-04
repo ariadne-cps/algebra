@@ -37,6 +37,7 @@
 #include "utility/container.hpp"
 #include "algebra/declarations.hpp"
 #include "algebra/expansion.hpp"
+#include "algebra/sweeper.hpp"
 #include "utility/metaprogramming.hpp"
 
 
@@ -44,6 +45,26 @@
 namespace Ariadne {
 
 using namespace PyBind11;
+
+template<> struct PythonTemplateName<Sweeper> { static std::string get() { return "Sweeper"; } };
+template<> struct PythonTemplateName<ThresholdSweeper> { static std::string get() { return "ThresholdSweeper"; } };
+template<> struct PythonTemplateName<GradedSweeper> { static std::string get() { return "GradedSweeper"; } };
+
+template<> struct PythonClassName<Sweeper<FloatDP>> { static std::string get() { return "SweeperDP"; } };
+template<> struct PythonClassName<ThresholdSweeper<FloatDP>> { static std::string get() { return "ThresholdSweeperDP"; } };
+template<> struct PythonClassName<GradedSweeper<FloatDP>> { static std::string get() { return "GradedSweeperDP"; } };
+
+inline OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Sweeper<FloatDP>>& repr) {
+    const Sweeper<FloatDP>& swp=repr.reference();
+    auto swp_ptr=&static_cast<const SweeperInterface<FloatDP>&>(swp);
+    auto thresh_swp_ptr=dynamic_cast<const ThresholdSweeper<FloatDP>*>(swp_ptr);
+    if(thresh_swp_ptr) {
+        os << "ThresholdSweeperDP(" << thresh_swp_ptr->sweep_threshold() << ")";
+    } else {
+        os << swp;
+    }
+    return os;
+}
 
 template<class X>
 OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Expansion<MultiIndex,X>>& repr) {
