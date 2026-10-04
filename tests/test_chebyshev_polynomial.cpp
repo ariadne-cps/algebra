@@ -99,12 +99,12 @@ template<class X> Void TestChebyshevPolynomial<X>::test_univariate() {
     ARIADNE_TEST_NAMED_CONSTRUCT(UnivariateChebyshevPolynomial<X>,x,coordinate(pr));
 
     ARIADNE_TEST_PRINT(x);
-    ARIADNE_TEST_EQUALS((+x)(y),(x)(y));
     ARIADNE_TEST_PRINT(x*x);
     ARIADNE_TEST_PRINT(x*x*x);
     ARIADNE_TEST_PRINT(x*x*x*x);
 
     ARIADNE_TEST_CONSTRUCT(X,y,(-0.75_dy,pr));
+    ARIADNE_TEST_EQUALS((+x)(y),x(y));
     ARIADNE_TEST_EQUALS(x(y),(y));
     ARIADNE_TEST_EQUALS((x*x)(y),(y*y));
     ARIADNE_TEST_EQUALS((x*x*x)(y),(y*y*y));
