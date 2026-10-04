@@ -261,7 +261,7 @@ class Polynomial
 
     //!@{
     //! \name Related operations
-    friend Polynomial<I,X>& operator*=(Polynomial<I,X>& p, const Monomial<I,X>& m) { return Polynomial<I,X>::_imul(p,m); }
+    friend Polynomial<I,X>& operator*=(Polynomial<I,X>& p, const Monomial<I,X>& m) { return AlgebraOperations<Polynomial<I,X>>::iapply(Mul(),p,m); }
 
     template<class XX, class A> friend A evaluate(const UnivariateMonomial<XX>& p, const A& v);
     template<class XX, class A> friend A evaluate(const MultivariatePolynomial<XX>& p, const Vector<A>& v);
@@ -275,7 +275,6 @@ class Polynomial
     static Polynomial<UniIndex,X> _compose(const Polynomial<I,X>& p, const ArgumentOf<I,Polynomial<UniIndex,X>>& q);
     static Polynomial<MultiIndex,X> _compose(const Polynomial<I,X>& p, const ArgumentOf<I,Polynomial<MultiIndex,X>>& q);
     static X _evaluate(const Polynomial<I,X>& p, const ArgumentOf<I,X>& vx);
-    static Algebra<X> _evaluate(const Polynomial<I,X>& p, const ArgumentOf<I,Algebra<X>>& va);
     static Polynomial<I,X> _partial_evaluate(const Polynomial<I,X>& p, SizeType k, const X& c);
     OutputStream& _write(OutputStream& os) const;
     OutputStream& _write(OutputStream& os, typename IndexTraits<I>::NameType const& names) const;
