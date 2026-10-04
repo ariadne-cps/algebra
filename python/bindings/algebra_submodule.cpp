@@ -15,10 +15,55 @@
 #include "algebra/expansion.inl.hpp"
 #include "algebra/expansion.tpl.hpp"
 #include "algebra/series.hpp"
+#include "algebra/sweeper.hpp"
 
 using namespace Ariadne;
 
+namespace Ariadne {
+
+template<> struct PythonTemplateName<Sweeper> { static std::string get() { return "Sweeper"; } };
+template<> struct PythonTemplateName<ThresholdSweeper> { static std::string get() { return "ThresholdSweeper"; } };
+template<> struct PythonTemplateName<GradedSweeper> { static std::string get() { return "GradedSweeper"; } };
+
+template<> struct PythonClassName<Sweeper<FloatDP>> { static std::string get() { return "SweeperDP"; } };
+template<> struct PythonClassName<ThresholdSweeper<FloatDP>> { static std::string get() { return "ThresholdSweeperDP"; } };
+template<> struct PythonClassName<GradedSweeper<FloatDP>> { static std::string get() { return "GradedSweeperDP"; } };
+
+OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Sweeper<FloatDP>>& repr) {
+    const Sweeper<FloatDP>& swp=repr.reference();
+    auto swp_ptr=&static_cast<const SweeperInterface<FloatDP>&>(swp);
+    auto thresh_swp_ptr=dynamic_cast<const ThresholdSweeper<FloatDP>*>(swp_ptr);
+    if(thresh_swp_ptr) {
+        os << "ThresholdSweeperDP(" << thresh_swp_ptr->sweep_threshold() << ")";
+    } else {
+        os << swp;
+    }
+    return os;
+}
+
+} // namespace Ariadne
+
 namespace {
+
+void export_sweepers(pybind11::module& module) {
+    pybind11::class_<Sweeper<FloatDP>> sweeper_class(module,"SweeperDP");
+    sweeper_class.def(pybind11::init<Sweeper<FloatDP>>());
+    sweeper_class.def("__str__",&__cstr__<Sweeper<FloatDP>>);
+
+    pybind11::class_<ThresholdSweeper<FloatDP>> threshold_sweeper_class(module,"ThresholdSweeperDP");
+    threshold_sweeper_class.def(pybind11::init<DoublePrecision,double>());
+    threshold_sweeper_class.def("__str__",&__cstr__<ThresholdSweeper<FloatDP>>);
+    sweeper_class.def(pybind11::init<ThresholdSweeper<FloatDP>>());
+    pybind11::implicitly_convertible<ThresholdSweeper<FloatDP>,Sweeper<FloatDP>>();
+
+    pybind11::class_<GradedSweeper<FloatDP>> graded_sweeper_class(module,"GradedSweeperDP");
+    graded_sweeper_class.def(pybind11::init<DoublePrecision,int>());
+    graded_sweeper_class.def("__str__",&__cstr__<GradedSweeper<FloatDP>>);
+    sweeper_class.def(pybind11::init<GradedSweeper<FloatDP>>());
+    pybind11::implicitly_convertible<GradedSweeper<FloatDP>,Sweeper<FloatDP>>();
+}
+
+
 
 MultiIndex multi_index_from_python(pybind11::sequence const& seq) {
     MultiIndex a(static_cast<SizeType>(seq.size()));
@@ -164,4 +209,14 @@ void algebra_submodule(pybind11::module& module) {
     export_series<FloatDPBounds>(module);
     export_series<FloatMPApproximation>(module);
     export_series<FloatMPBounds>(module);
+
+    export_sweepers(module);
+
+    template_<ThresholdSweeper> threshold_sweeper_template(module);
+    threshold_sweeper_template.instantiate<FloatDP>();
+    threshold_sweeper_template.def_new([](DP pr,ApproximateDouble eps){return ThresholdSweeper<FloatDP>(pr,eps);});
+
+    template_<GradedSweeper> graded_sweeper_template(module);
+    graded_sweeper_template.instantiate<FloatDP>();
+    graded_sweeper_template.def_new([](DP pr,DegreeType deg){return GradedSweeper<FloatDP>(pr,deg);});
 }

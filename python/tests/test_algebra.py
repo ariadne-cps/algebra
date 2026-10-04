@@ -38,3 +38,16 @@ def test_series():
 
     assert len(coefficients) == 6
     assert all(isinstance(c, FloatDPApproximation) for c in coefficients)
+
+
+def test_sweepers():
+    dp = DoublePrecision()
+
+    threshold = ThresholdSweeperDP(dp, 1e-8)
+    graded = GradedSweeperDP(dp, 4)
+
+    threshold_base = SweeperDP(threshold)
+    graded_base = SweeperDP(graded)
+
+    assert isinstance(threshold_base, SweeperDP)
+    assert isinstance(graded_base, SweeperDP)
