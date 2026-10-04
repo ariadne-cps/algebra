@@ -99,6 +99,7 @@ template<class X> Void TestChebyshevPolynomial<X>::test_univariate() {
     ARIADNE_TEST_NAMED_CONSTRUCT(UnivariateChebyshevPolynomial<X>,x,coordinate(pr));
 
     ARIADNE_TEST_PRINT(x);
+    ARIADNE_TEST_EQUALS((+x)(y),(x)(y));
     ARIADNE_TEST_PRINT(x*x);
     ARIADNE_TEST_PRINT(x*x*x);
     ARIADNE_TEST_PRINT(x*x*x*x);
@@ -137,6 +138,7 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
 
     Vector<X> v({0.5,-0.75},pr);
     ARIADNE_TEST_EQUALS(x(v),v[0]);
+    ARIADNE_TEST_EQUALS((+x)(v),x(v));
     ARIADNE_TEST_EQUALS((x*x)(v),v[0]*v[0]);
     ARIADNE_TEST_EQUALS((x*x*x)(v),v[0]*v[0]*v[0]);
     ARIADNE_TEST_EQUALS((x*x*x*x)(v),v[0]*v[0]*v[0]*v[0]);

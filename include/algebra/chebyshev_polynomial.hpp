@@ -107,6 +107,7 @@ template<class X> class UnivariateChebyshevPolynomial
     X operator() (X const& x) const;
     template<class Y> friend decltype(auto) evaluate(ChebyshevPolynomial<X> const& p, Y const& y) { return _evaluate(p,y); }
   private: public:
+    static ChebyshevPolynomial<X> apply(Pos, ChebyshevPolynomial<X> cm);
     static ChebyshevPolynomial<X> apply(Neg, ChebyshevPolynomial<X> cm);
     static ChebyshevPolynomial<X> apply(Add, ChebyshevPolynomial<X> const& cm1, ChebyshevPolynomial<X> const& cm2);
     static ChebyshevPolynomial<X> apply(Sub, ChebyshevPolynomial<X> const& cm1, ChebyshevPolynomial<X> const& cm2);
@@ -189,6 +190,7 @@ template<class X> class MultivariateChebyshevPolynomial
     X operator() (Vector<X> const& x) const;
     friend X evaluate(ChebyshevPolynomial<X> const& f, Vector<X> const& x) { return f(x); }
   private: public:
+    static ChebyshevPolynomial<X> apply(Pos, ChebyshevPolynomial<X> cm);
     static ChebyshevPolynomial<X> apply(Neg, ChebyshevPolynomial<X> cm);
     static ChebyshevPolynomial<X> apply(Sqr, ChebyshevPolynomial<X> cm);
     static ChebyshevPolynomial<X> apply(Add, ChebyshevPolynomial<X> const& cm1, ChebyshevPolynomial<X> const& cm2);

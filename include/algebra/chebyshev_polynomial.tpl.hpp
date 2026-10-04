@@ -86,6 +86,12 @@ UnivariateChebyshevPolynomial<X>::sup_norm() const -> MagType<X> {
 
 
 template<class X> auto
+UnivariateChebyshevPolynomial<X>::apply(Pos, ChebyshevPolynomial<X> cm) -> ChebyshevPolynomial<X> {
+    for(auto term : cm._terms) { term.coefficient() = +term.coefficient(); }
+    return cm;
+}
+
+template<class X> auto
 UnivariateChebyshevPolynomial<X>::apply(Neg, ChebyshevPolynomial<X> cm) -> ChebyshevPolynomial<X> {
     for(auto term : cm._terms) { term.coefficient() = -term.coefficient(); }
     return cm;
@@ -246,6 +252,12 @@ MultivariateChebyshevPolynomial<X>::sup_norm() const -> MagType<X> {
     MagType<X> r = mag(this->zero_coefficient());
     for(auto term : this->_terms) { r+=mag(term.coefficient()); }
     return r;
+}
+
+template<class X> auto
+MultivariateChebyshevPolynomial<X>::apply(Pos, ChebyshevPolynomial<X> cm) -> ChebyshevPolynomial<X> {
+    for(auto term : cm._terms) { term.coefficient() = +term.coefficient(); }
+    return cm;
 }
 
 template<class X> auto
