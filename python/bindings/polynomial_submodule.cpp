@@ -47,7 +47,7 @@ export_multivariate_polynomial(pybind11::module& module) {
     polynomial_class.def_static("variable",(P(*)(SizeType,SizeType,PR))&P::variable);
     polynomial_class.def_static("coordinate",(P(*)(SizeType,SizeType,PR))&P::variable);
     polynomial_class.def_static("variables",[](SizeType as, PR pr) {
-        auto vars=P::variables(as,pr);
+        auto const vars=P::variables(as,pr);
         pybind11::list result;
         for(SizeType i=0; i!=vars.size(); ++i) {
             result.append(pybind11::cast(vars[i]));
