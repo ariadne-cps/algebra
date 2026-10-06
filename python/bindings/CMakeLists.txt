@@ -19,13 +19,6 @@ target_link_libraries(pyariadne-algebra-submodule-obj PRIVATE
     algebra
 )
 set_target_properties(pyariadne-algebra-submodule-obj PROPERTIES POSITION_INDEPENDENT_CODE ON)
-if(MSVC)
-    target_compile_options(pyariadne-algebra-submodule-obj PRIVATE
-        /bigobj
-        /wd4702
-    )
-endif()
-
 add_library(pyariadne-algebra INTERFACE)
 target_sources(pyariadne-algebra INTERFACE
     $<TARGET_OBJECTS:pyariadne-algebra-submodule-obj>
