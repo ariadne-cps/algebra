@@ -289,7 +289,7 @@ TestMatrix::test_misc()
         ARIADNE_TEST_EXECUTE(A*transpose(B));
         ARIADNE_TEST_EXECUTE(transpose(A)*Matrix<RoundedFloatDP>({{1.0_x}},dp));
         ARIADNE_TEST_EXECUTE(transpose(A)*one_v);
-        ARIADNE_TEST_EXECUTE(A==B);
+        ARIADNE_TEST_EXECUTE(static_cast<void>(A==B));
 
         Matrix<RoundedFloatDP> R(2u,2u,dp);
         R.resize(1u,4u);
@@ -312,7 +312,7 @@ TestMatrix::test_misc()
         Matrix<Rational> exact_col_mismatch({{Rational(1)}});
         ARIADNE_TEST_ASSERT(!(exact_a==exact_row_mismatch));
         ARIADNE_TEST_ASSERT(!(exact_a==exact_col_mismatch));
-        ARIADNE_TEST_EXECUTE(exact_a==exact_a);
+        ARIADNE_TEST_EXECUTE(static_cast<void>(exact_a==exact_a));
     }
 
     {
