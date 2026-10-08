@@ -254,13 +254,13 @@ Void TestPolynomial::test_arithmetic()
 
     RoundedFloatDP w(3,dp);
     Vector<RoundedFloatDP> v({3,5,2},dp);
-    FloatDPApproximation aw(3,dp);
-    Vector<FloatDPApproximation> av({3,5,2},dp);
+    ExactDouble ew=3.0_x;
+    Vector<ExactDouble> ev({3.0_x,5.0_x,2.0_x});
 
     ARIADNE_TEST_EQUALS(evaluate(2*x0*x0-1,v),2*v[0]*v[0]-1)
     ARIADNE_TEST_EQUALS(evaluate(2*x1*x1-1,v),2*v[1]*v[1]-1)
-    ARIADNE_TEST_EXECUTE(evaluate(2*y*y-1,aw))
-    ARIADNE_TEST_EXECUTE(evaluate(2*x0*x0-1,av))
+    ARIADNE_TEST_EXECUTE(evaluate(2*y*y-1,ew))
+    ARIADNE_TEST_EXECUTE(evaluate(2*x0*x0-1,ev))
     /* Failing with UnivariatePolynomial
     ARIADNE_TEST_EQUALS(evaluate(2*y*y-1,w),2*w*w-1);
     ARIADNE_TEST_EQUALS(evaluate(8*y*y*(y*y-1)+1,w),8*w*w*(w*w-1)+1);
