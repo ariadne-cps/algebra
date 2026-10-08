@@ -29,7 +29,7 @@
 namespace Ariadne {
 
 MultiIndex& MultiIndex::operator++() {
-    assert(_n>0);
+    ARIADNE_ASSERT(_n>0);
     if(_n==1) { ++_p[0]; return *this; }
     if(_p[_n-2]!=0) { --_p[_n-2]; ++_p[_n-1]; return *this; }
     else {
@@ -53,21 +53,29 @@ MultiIndexList::~MultiIndexList() {
 }
 
 MultiIndexList::MultiIndexList(InitializerList<InitializerList<DegreeType>> const& lst)
-    : MultiIndexList((assert(lst.size()!=0),lst.begin()->size()))
+    : MultiIndexList(lst.size()!=0 ? lst.begin()->size() : 0u)
 {
+    ARIADNE_ASSERT(lst.size()!=0);
     for(auto iter=lst.begin(); iter!=lst.end(); ++iter) { this->append(MultiIndex(*iter)); }
 }
 
 MultiIndexList::MultiIndexList(InitializerList<MultiIndex> const& lst)
-    : MultiIndexList((assert(lst.size()!=0),lst.begin()->size()))
+    : MultiIndexList(lst.size()!=0 ? lst.begin()->size() : 0u)
 {
+    ARIADNE_ASSERT(lst.size()!=0);
     for(auto iter=lst.begin(); iter!=lst.end(); ++iter) { this->append(*iter); }
 }
 
 MultiIndexList::MultiIndexList(SizeType n, MultiIndex const& a)
     : MultiIndexList(a.size())
 {
-    for(SizeType i=0; i!=n; ++i) { this->append(a); }
+    this->reserve(n);
+    _size=n;
+    for(SizeType i=0; i!=n; ++i) {
+        for(SizeType j=0; j!=_argument_size; ++j) {
+            _indices[i*_argument_size+j]=a[j];
+        }
+    }
 }
 
 MultiIndexList::MultiIndexList(MultiIndexList const& lst) : MultiIndexList(lst.argument_size()) {

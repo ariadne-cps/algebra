@@ -184,7 +184,7 @@ inline SizeType MultiIndexList::argument_size() const {
     return this->_argument_size; }
 
 inline Void MultiIndexList::append(MultiIndexData const& a) {
-    assert(this->argument_size()==a.size());
+    ARIADNE_ASSERT(this->argument_size()==a.size());
     if (_size==_capacity) { this->reserve(std::max(2*_capacity,DEFAULT_CAPACITY)); }
     MultiIndexReference(this->_argument_size,this->_indices+this->_argument_size*this->_size)=static_cast<MultiIndex const&>(a);
     ++_size;

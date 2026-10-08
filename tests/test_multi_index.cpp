@@ -116,6 +116,9 @@ class TestMultiIndex
     }
 
     Void test_increment() {
+        MultiIndex empty;
+        ARIADNE_TEST_FAIL(++empty);
+
         MultiIndex u(1);
         for(SizeType n=0; n!=8; ++n) {
             ARIADNE_TEST_EQUAL(u.degree(),n);
@@ -196,6 +199,40 @@ class TestMultiIndex
         ARIADNE_TEST_EQUALS(lst[3],a3);
         ARIADNE_TEST_EQUALS(*(lst.begin()+3),a3);
 
+        MultiIndexList repeated(2u,a0);
+        ARIADNE_TEST_EQUALS(repeated.size(),2u);
+        ARIADNE_TEST_EQUALS(repeated[0],a0);
+        ARIADNE_TEST_EQUALS(repeated[1],a0);
+
+        MultiIndexList from_multi({a0,a1,a2});
+        ARIADNE_TEST_EQUALS(from_multi.size(),3u);
+        ARIADNE_TEST_EQUALS(from_multi[1],a1);
+
+        ARIADNE_TEST_FAIL(MultiIndexList(InitializerList<InitializerList<DegreeType>>{}));
+        ARIADNE_TEST_FAIL(MultiIndexList(InitializerList<MultiIndex>{}));
+        ARIADNE_TEST_FAIL(MultiIndexList(InitializerList<InitializerList<DegreeType>>{{1u,2u},{3u}}));
+        ARIADNE_TEST_FAIL(MultiIndexList(InitializerList<MultiIndex>{MultiIndex({1u,2u}),MultiIndex({3u})}));
+
+        MultiIndexList erased({a0,a1,a2});
+        auto erased_end=erased.erase(erased.begin()+1);
+        ARIADNE_TEST_EQUALS(erased.size(),2u);
+        ARIADNE_TEST_EQUALS(erased[1],a2);
+        ARIADNE_TEST_ASSERT(erased_end==erased.end());
+
+        MultiIndexList& erased_alias=erased;
+        ARIADNE_TEST_EXECUTE(erased=erased_alias);
+        ARIADNE_TEST_EQUALS(erased.size(),2u);
+
+        MultiIndexList size_mismatch({a0});
+        ARIADNE_TEST_ASSERT(not (erased==size_mismatch));
+
+        MultiIndexList argument_mismatch({MultiIndex({1u,2u})});
+        MultiIndexList argument_mismatch_other({MultiIndex({1u,2u,0u})});
+        ARIADNE_TEST_ASSERT(not (argument_mismatch==argument_mismatch_other));
+
+        MultiIndexList value_mismatch({MultiIndex({1u,2u})});
+        MultiIndexList value_mismatch_other({MultiIndex({1u,3u})});
+        ARIADNE_TEST_ASSERT(not (value_mismatch==value_mismatch_other));
 
     }
 
