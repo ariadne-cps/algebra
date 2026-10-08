@@ -284,6 +284,24 @@ TestVector::test_misc()
     Covector<FloatDPApproximation> ca(1u,dp);
     ARIADNE_TEST_EXECUTE(characteristics(ca));
 
+    {
+        Vector<FloatDPBounds> v({1.0_x,2.0_x},dp);
+        ARIADNE_TEST_EXECUTE(dot(v,v));
+        ARIADNE_TEST_EXECUTE(two_norm(v));
+    }
+    {
+        MultiplePrecision mp(128);
+        Vector<FloatMPApproximation> v({1.0_x,2.0_x},mp);
+        ARIADNE_TEST_EXECUTE(dot(v,v));
+        ARIADNE_TEST_EXECUTE(two_norm(v));
+    }
+    {
+        MultiplePrecision mp(128);
+        Vector<FloatMPBounds> v({1.0_x,2.0_x},mp);
+        ARIADNE_TEST_EXECUTE(dot(v,v));
+        ARIADNE_TEST_EXECUTE(two_norm(v));
+    }
+
     /*
       cout << "test_vector_slice" << endl;
       v1=Vector<FloatDPApproximation>("[-1.25_x,0.75_x,-0.5_x,-4.25_x,2.375_x]");
