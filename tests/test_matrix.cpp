@@ -299,11 +299,11 @@ TestMatrix::test_misc()
         ARIADNE_TEST_EXECUTE(static_cast<void>(exact_float==exact_float_row_mismatch));
         ARIADNE_TEST_EXECUTE(static_cast<void>(exact_float==exact_float_col_mismatch));
 
-        Matrix<FloatDPApproximation> approx({{1.0_x,2.0_x}},dp);
+        Matrix<FloatDPApproximation> approx_matrix({{1.0_x,2.0_x}},dp);
         Matrix<FloatDPApproximation> approx_row_mismatch({{1.0_x,2.0_x},{3.0_x,4.0_x}},dp);
         Matrix<FloatDPApproximation> approx_col_mismatch({{1.0_x}},dp);
-        ARIADNE_TEST_EXECUTE(static_cast<void>(approx==approx_row_mismatch));
-        ARIADNE_TEST_EXECUTE(static_cast<void>(approx==approx_col_mismatch));
+        ARIADNE_TEST_EXECUTE(static_cast<void>(approx_matrix==approx_row_mismatch));
+        ARIADNE_TEST_EXECUTE(static_cast<void>(approx_matrix==approx_col_mismatch));
 
         Matrix<RoundedFloatDP> R(2u,2u,dp);
         R.resize(1u,4u);
@@ -320,6 +320,21 @@ TestMatrix::test_misc()
 
         ARIADNE_TEST_EXECUTE(Matrix<RoundedFloatDP>::identity(2u,dp));
         ARIADNE_TEST_EXECUTE(Matrix<RoundedFloatDP>::identity<DoublePrecision>(2u,dp));
+
+        Matrix<FloatDPBounds> bounds_resize(2u,2u,dp);
+        bounds_resize.resize(1u,4u);
+        bounds_resize.resize(3u,2u);
+
+        Matrix<FloatDP> float_resize(2u,2u,dp);
+        float_resize.resize(1u,4u);
+        float_resize.resize(3u,2u);
+
+        std::ostringstream empty_rounded_stream;
+        empty_rounded_stream << Matrix<RoundedFloatDP>(0u,0u,dp);
+        std::ostringstream empty_bounds_stream;
+        empty_bounds_stream << Matrix<FloatDPBounds>(0u,0u,dp);
+        std::ostringstream empty_float_stream;
+        empty_float_stream << Matrix<FloatDP>(0u,0u,dp);
 
         Matrix<Rational> exact_a({{Rational(1),Rational(2)}});
         Matrix<Rational> exact_row_mismatch({{Rational(1),Rational(2)},{Rational(3),Rational(4)}});
