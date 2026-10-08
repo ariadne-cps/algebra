@@ -34,6 +34,8 @@
 #include "numeric/numeric.hpp"
 #include "algebra/vector.hpp"
 #include "algebra/matrix.hpp"
+#include "algebra/matrix.tpl.hpp"
+#include "interval/interval.hpp"
 #include "algebra/covector.hpp"
 
 namespace Ariadne {
@@ -195,6 +197,41 @@ TestMatrix::test_factorisations()
 Void
 TestMatrix::test_misc()
 {
+    {
+        Matrix<FloatDPBounds> A({{2.0_x,0.0_x},{0.0_x,3.0_x}},pr);
+        Vector<FloatDPBounds> b({1.0_x,2.0_x},pr);
+        ARIADNE_TEST_EXECUTE(sup_norm(A));
+        ARIADNE_TEST_EXECUTE(log_norm(A));
+        ARIADNE_TEST_EXECUTE(lu_solve(A,b));
+        ARIADNE_TEST_EXECUTE(gs_solve(A,b));
+        ARIADNE_TEST_EXECUTE(gs_inverse(A));
+        ARIADNE_TEST_EXECUTE(midpoint(A));
+    }
+
+    {
+        Matrix<FloatDPApproximation> A({{2.0_x,0.0_x},{0.0_x,3.0_x}},pr);
+        Matrix<FloatDPApproximation> B=Matrix<FloatDPApproximation>::identity(2u,pr);
+        Vector<FloatDPApproximation> b({1.0_x,2.0_x},pr);
+        ARIADNE_TEST_EXECUTE(solve(A,B));
+        ARIADNE_TEST_EXECUTE(solve(A,b));
+        ARIADNE_TEST_EXECUTE(row_norms(A));
+        ARIADNE_TEST_EXECUTE(orthogonal_decomposition(A,false));
+        ARIADNE_TEST_EXECUTE(orthogonal_decomposition(A,true));
+    }
+
+    {
+        Matrix<RoundedFloatDP> A({{1.0_x,1.0_x},{2.0_x,2.0_x}},dp);
+        ARIADNE_TEST_EXECUTE(normalise_rows(A));
+    }
+
+    {
+        FloatDPUpperInterval z({0.0_x,0.0_x});
+        Matrix<FloatDPUpperInterval> A(2u,2u,z);
+        A[0][0]=FloatDPUpperInterval({1.0_x,1.0_x});
+        A[1][1]=FloatDPUpperInterval({2.0_x,2.0_x});
+        ARIADNE_TEST_EXECUTE(cast_singleton(A));
+    }
+
     Covector<FloatDPApproximation> empty_covector(0u,pr);
     std::ostringstream empty_covector_stream;
     empty_covector_stream << empty_covector;
