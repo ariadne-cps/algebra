@@ -117,7 +117,7 @@ template<class A> class Graded : public UniformList<A>
 //    CharacteristicsType characteristics() const {
 //        return std::make_tuple(this->degree(),get_characteristics((*this)[0])); }
     Ariadne::CharacteristicsType<A> characteristics() const { return this->UniformList<A>::element_characteristics(); }
-    DegreeType degree() const { return this->size()-1u; }
+    DegreeType degree() const { return static_cast<DegreeType>(this->size()-1u); }
     Void extend(const A& a) { this->UniformList<A>::append(a); }
     OutputStream& _write(OutputStream& os) const;
     friend OutputStream& operator<<(OutputStream& os, Graded<A> const& g) { return g._write(os); }
