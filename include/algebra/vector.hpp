@@ -824,9 +824,12 @@ inline Vector<FloatDP>const& cast_exact(Vector<FloatDPApproximation>const& v) {
 inline decltype(auto) characteristics(Rational const&) { return Tuple<>(); }
 template<class PR> decltype(auto) characteristics(Float<PR> const& x) { return x.precision(); }
 template<class FLT> decltype(auto) characteristics(Rounded<FLT> const& x) { return x.precision(); }
-template<class X> decltype(auto) characteristics(Covector<X> const& x) {
-    if constexpr (HasCharacteristics<X>) { return std::make_pair(x.size(), characteristics(x.zero_element())); }
-    else { return std::make_pair(x.size(), Tuple<>()); } }
+template<class X> requires HasCharacteristics<X>
+decltype(auto) characteristics(Covector<X> const& x) {
+    return std::make_pair(x.size(), characteristics(x.zero_element())); }
+template<class X> requires (!HasCharacteristics<X>)
+decltype(auto) characteristics(Covector<X> const& x) {
+    return std::make_pair(x.size(), Tuple<>()); }
 } // namespace Ariadne
 
 #endif

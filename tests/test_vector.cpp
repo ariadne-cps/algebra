@@ -132,8 +132,10 @@ TestVector::test_misc()
     ARIADNE_TEST_FAIL(Vector<RoundedFloatDP>::unit(2u,2u,dp));
 
     Vector<RoundedFloatDP> invalid_at({1.0_x,2.0_x},dp);
+    ARIADNE_TEST_EXECUTE(invalid_at.at(0u));
     ARIADNE_TEST_FAIL(invalid_at.at(2u));
     Vector<RoundedFloatDP> const& cinvalid_at=invalid_at;
+    ARIADNE_TEST_EXECUTE(cinvalid_at.at(0u));
     ARIADNE_TEST_FAIL(cinvalid_at.at(2u));
 
     Vector<RoundedFloatDP> short_v({1.0_x},dp);
