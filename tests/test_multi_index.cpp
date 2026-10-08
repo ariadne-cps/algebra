@@ -229,7 +229,8 @@ class TestMultiIndex
         ARIADNE_TEST_EXECUTE(lst=lst);
 
         ARIADNE_TEST_ASSIGN(lstm,std::move(lstc));
-        ARIADNE_TEST_EXECUTE(lstm=std::move(lstm));
+        MultiIndexList* lstm_alias=&lstm;
+        ARIADNE_TEST_EXECUTE(lstm=std::move(*lstm_alias));
 
         ARIADNE_TEST_PRINT(lst);
         ARIADNE_TEST_PRINT(lstm);
