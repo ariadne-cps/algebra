@@ -152,6 +152,9 @@ Void TestPolynomial::test_cleanup()
     ARIADNE_TEST_EXECUTE(p.cleanup())
     ARIADNE_TEST_PRINT(p)
 
+    MultivariatePolynomial<FloatDP> raw_p(3,dp);
+    ARIADNE_TEST_EXECUTE(raw_p.cleanup())
+
 }
 
 Void TestPolynomial::test_constructors()
