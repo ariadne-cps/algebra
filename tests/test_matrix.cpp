@@ -52,6 +52,7 @@ class TestMatrix {
     Void test();
   private:
     Void test_project();
+    Void test_data_access();
     Void test_factorisations();
     Void test_misc();
 };
@@ -60,6 +61,7 @@ Void
 TestMatrix::test()
 {
     ARIADNE_TEST_CALL(test_project());
+    ARIADNE_TEST_CALL(test_data_access());
     ARIADNE_TEST_CALL(test_factorisations());
     ARIADNE_TEST_CALL(test_misc());
 }
@@ -111,9 +113,33 @@ TestMatrix::test_project()
     ARIADNE_TEST_EXECUTE(AR=B);
     ARIADNE_TEST_PRINT(A);
     ARIADNE_TEST_EQUALS(A[range(0,2)][range(1,4)],B);
+
+    const Matrix<X> original=A;
+    Matrix<X> wrong_rows(1u,3u,pr);
+    Matrix<X> wrong_columns(2u,2u,pr);
+    ARIADNE_TEST_THROWS(AR=wrong_rows,std::runtime_error);
+    ARIADNE_TEST_EQUALS(A,original);
+    ARIADNE_TEST_THROWS(AR=wrong_columns,std::runtime_error);
+    ARIADNE_TEST_EQUALS(A,original);
 //    ARIADNE_TEST_EQUALS(AR,B);
 //    ARIADNE_TEST_EQUALS(ACR,B);
 
+}
+
+
+Void
+TestMatrix::test_data_access()
+{
+    Matrix<FloatDP> A({{1,2,3},{4,5,6}},pr);
+    const Matrix<FloatDP>& C=A;
+    ARIADNE_TEST_EQUALS(A.at(1u,2u),FloatDP(6,pr));
+    ARIADNE_TEST_EQUALS(C.at(1u,2u),FloatDP(6,pr));
+
+    // Keep the other index valid to exercise each part of the bounds check.
+    ARIADNE_TEST_THROWS(A.at(A.row_size(),0u),std::runtime_error);
+    ARIADNE_TEST_THROWS(A.at(0u,A.column_size()),std::runtime_error);
+    ARIADNE_TEST_THROWS(C.at(C.row_size(),0u),std::runtime_error);
+    ARIADNE_TEST_THROWS(C.at(0u,C.column_size()),std::runtime_error);
 }
 
 
@@ -199,11 +225,11 @@ TestMatrix::test_misc()
 {
     {
         InitializerList<InitializerList<Rational>> empty_matrix{};
-        ARIADNE_TEST_FAIL(Matrix<Rational>(empty_matrix));
+        ARIADNE_TEST_FAIL((Matrix<Rational>(empty_matrix)));
         InitializerList<InitializerList<Rational>> empty_row{{}};
-        ARIADNE_TEST_FAIL(Matrix<Rational>(empty_row));
+        ARIADNE_TEST_FAIL((Matrix<Rational>(empty_row)));
         InitializerList<InitializerList<Rational>> uneven_rows{{Rational(1),Rational(2)},{Rational(3)}};
-        ARIADNE_TEST_FAIL(Matrix<Rational>(uneven_rows));
+        ARIADNE_TEST_FAIL((Matrix<Rational>(uneven_rows)));
 
         Matrix<FloatDPBounds> nonsquare_bounds({{1.0_x,0.0_x}},pr);
         ARIADNE_TEST_FAIL(log_norm(nonsquare_bounds));
