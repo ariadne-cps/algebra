@@ -58,6 +58,7 @@ Void
 TestMatrix::test()
 {
     ARIADNE_TEST_CALL(test_project());
+    ARIADNE_TEST_CALL(test_factorisations());
     ARIADNE_TEST_CALL(test_misc());
 }
 
