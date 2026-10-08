@@ -128,6 +128,19 @@ Void
 TestVector::test_misc()
 {
     DoublePrecision pr;
+
+    ARIADNE_TEST_FAIL(Vector<RoundedFloatDP>::unit(2u,2u,dp));
+
+    Vector<RoundedFloatDP> invalid_at({1.0_x,2.0_x},dp);
+    ARIADNE_TEST_FAIL(invalid_at.at(2u));
+    Vector<RoundedFloatDP> const& cinvalid_at=invalid_at;
+    ARIADNE_TEST_FAIL(cinvalid_at.at(2u));
+
+    Vector<RoundedFloatDP> short_v({1.0_x},dp);
+    Vector<RoundedFloatDP> long_v({1.0_x,2.0_x},dp);
+    ARIADNE_TEST_FAIL(short_v+long_v);
+    ARIADNE_TEST_FAIL(short_v-long_v);
+    ARIADNE_TEST_FAIL(dot(short_v,long_v));
     Array<FloatDPApproximation> vary(InitializerList<ExactDouble>{-4.0_x,3.0_x,1.0_x},pr);
     FloatDPApproximation x={1.5_x,pr};
 
