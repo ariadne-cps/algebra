@@ -24,16 +24,10 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/.git")
     )
 endif()
 
-include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include)
 
 if(NOT TARGET interval)
     add_subdirectory(submodules)
-endif()
-
-if(MSVC)
-    # Numeric headers instantiate conversion paths that MSVC reports as C4244.
-    # Keep /WX enabled for Algebra while avoiding warnings owned by the lower layer.
-    add_compile_options(/wd4244)
 endif()
 
 add_library(algebra INTERFACE)
