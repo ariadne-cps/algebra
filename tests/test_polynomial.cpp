@@ -247,14 +247,20 @@ Void TestPolynomial::test_arithmetic()
     MultivariatePolynomial<RoundedFloatDP> x0(3,dp); x0[MultiIndex({1,0,0})]=1.0_x;
     MultivariatePolynomial<RoundedFloatDP> x1(3,dp); x1[MultiIndex({0,1,0})]=1.0_x;
     MultivariatePolynomial<RoundedFloatDP> x2=MultivariatePolynomial<RoundedFloatDP>::coordinate(3,2,dp);
+    RoundedFloatDP zero(0,dp);
     UnivariatePolynomial<RoundedFloatDP> y=UnivariatePolynomial<RoundedFloatDP>::coordinate(SizeOne(),IndexZero(),dp);
+    ARIADNE_TEST_EXECUTE(y=UnivariatePolynomial<RoundedFloatDP>::coordinate(SizeOne(),IndexZero(),zero))
     y=UnivariatePolynomial<RoundedFloatDP>::coordinate(dp);
 
     RoundedFloatDP w(3,dp);
     Vector<RoundedFloatDP> v({3,5,2},dp);
+    FloatDPApproximation aw(3,dp);
+    Vector<FloatDPApproximation> av({3,5,2},dp);
 
     ARIADNE_TEST_EQUALS(evaluate(2*x0*x0-1,v),2*v[0]*v[0]-1)
     ARIADNE_TEST_EQUALS(evaluate(2*x1*x1-1,v),2*v[1]*v[1]-1)
+    ARIADNE_TEST_EXECUTE(evaluate(2*y*y-1,aw))
+    ARIADNE_TEST_EXECUTE(evaluate(2*x0*x0-1,av))
     /* Failing with UnivariatePolynomial
     ARIADNE_TEST_EQUALS(evaluate(2*y*y-1,w),2*w*w-1);
     ARIADNE_TEST_EQUALS(evaluate(8*y*y*(y*y-1)+1,w),8*w*w*(w*w-1)+1);
