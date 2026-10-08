@@ -502,7 +502,7 @@ template<class X> inline Matrix<X> Matrix<X>::zero(SizeType m, SizeType n, Ariad
         return Matrix<X>(m,n,z);
     } else {
         auto z = std::make_from_tuple<X>(prs);
-        return Matrix<X>(n,n,z);
+        return Matrix<X>(m,n,z);
     }
 }
 

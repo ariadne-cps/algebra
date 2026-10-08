@@ -120,6 +120,9 @@ TestMatrix::test_factorisations()
 {
     {
         PivotMatrix P=PivotMatrix::identity(2u);
+        PivotMatrix const& CP=P;
+        ARIADNE_TEST_EQUALS(CP.size(),2u);
+        ARIADNE_TEST_EQUALS(CP.pivot(0u),0u);
         std::ostringstream oss;
         oss << P;
         ARIADNE_TEST_ASSERT(oss.str().find("PivotMatrix(")==0u);
@@ -217,6 +220,73 @@ TestMatrix::test_misc()
     ARIADNE_TEST_PRINT(A2);
     Matrix<FloatDPApproximation> A3({{-1.0,3.0,1.0}, {-1.0,1.0,2.0}, {2.0,1.0,1.0}},pr);
     ARIADNE_TEST_PRINT(A3);
+
+    {
+        Matrix<FloatDPApproximation> R(2u,3u,pr);
+        R.resize(3u,2u);
+        ARIADNE_TEST_EQUALS(R.row_size(),3u);
+        ARIADNE_TEST_EQUALS(R.column_size(),2u);
+        R.resize(4u,2u);
+        ARIADNE_TEST_EQUALS(R.row_size(),4u);
+        ARIADNE_TEST_EQUALS(R.column_size(),2u);
+    }
+
+    {
+        Matrix<FloatDPApproximation> empty_row(1u,0u,pr);
+        std::ostringstream oss;
+        oss << empty_row;
+        ARIADNE_TEST_ASSERT(!oss.str().empty());
+    }
+
+    {
+        Matrix<FloatDPApproximation> const C({{1.0,2.0},{3.0,4.0}},pr);
+        ARIADNE_TEST_EXECUTE(C[range(0,1)]);
+        ARIADNE_TEST_EXECUTE(C.begin());
+    }
+
+    {
+        auto rc=characteristics(Rational(0));
+        Matrix<Rational> Z=Matrix<Rational>::zero(2u,3u,rc);
+        ARIADNE_TEST_EQUALS(Z.row_size(),2u);
+        ARIADNE_TEST_EQUALS(Z.column_size(),3u);
+    }
+
+    {
+        Matrix<RoundedFloatDP> M({{1.0_x,2.0_x}},dp);
+        ARIADNE_TEST_EXECUTE(M*2);
+    }
+
+    {
+        Matrix<FloatDPBounds> I=Matrix<FloatDPBounds>::identity(2u,dp);
+        ARIADNE_TEST_EQUALS(I.row_size(),2u);
+        MultiplePrecision mp(128);
+        Matrix<FloatMPBounds> J=Matrix<FloatMPBounds>::identity(2u,mp);
+        ARIADNE_TEST_EQUALS(J.column_size(),2u);
+    }
+
+    {
+        Matrix<RoundedFloatDP> A({{1.0_x,2.0_x}},dp);
+        Matrix<RoundedFloatDP> row_mismatch({{1.0_x,2.0_x},{3.0_x,4.0_x}},dp);
+        Matrix<RoundedFloatDP> col_mismatch({{1.0_x}},dp);
+        ARIADNE_TEST_FAIL(A+row_mismatch);
+        ARIADNE_TEST_FAIL(A+col_mismatch);
+        ARIADNE_TEST_FAIL(A-row_mismatch);
+        ARIADNE_TEST_FAIL(A-col_mismatch);
+        ARIADNE_TEST_FAIL(A*Matrix<RoundedFloatDP>({{1.0_x}},dp));
+        ARIADNE_TEST_FAIL(A*Vector<RoundedFloatDP>({1.0_x},dp));
+        ARIADNE_TEST_FAIL(A*transpose(Matrix<RoundedFloatDP>({{1.0_x}},dp)));
+        ARIADNE_TEST_FAIL(transpose(A)*Matrix<RoundedFloatDP>({{1.0_x}},dp));
+        ARIADNE_TEST_FAIL(transpose(A)*Vector<RoundedFloatDP>({1.0_x,2.0_x},dp));
+        ARIADNE_TEST_ASSERT(!(A==row_mismatch));
+        ARIADNE_TEST_ASSERT(!(A==col_mismatch));
+    }
+
+    {
+        InitializerList<InitializerList<ExactDouble>> bad_exact{{1.0_x,2.0_x},{3.0_x}};
+        ARIADNE_TEST_FAIL(Matrix<RoundedFloatDP>(bad_exact,dp));
+        InitializerList<InitializerList<Dbl>> bad_dbl{{1.0,2.0},{3.0}};
+        ARIADNE_TEST_FAIL(Matrix<FloatDPApproximation>(bad_dbl,dp));
+    }
 
     for(SizeType i=0; i!=A2.row_size(); ++i) {
         for(SizeType j=0; j!=A2.column_size(); ++j) {
