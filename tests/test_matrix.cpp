@@ -290,6 +290,20 @@ TestMatrix::test_misc()
         ARIADNE_TEST_EXECUTE(transpose(A)*Matrix<RoundedFloatDP>({{1.0_x}},dp));
         ARIADNE_TEST_EXECUTE(transpose(A)*one_v);
         ARIADNE_TEST_EXECUTE(static_cast<void>(A==B));
+        ARIADNE_TEST_EXECUTE(static_cast<void>(A==row_mismatch));
+        ARIADNE_TEST_EXECUTE(static_cast<void>(A==col_mismatch));
+
+        Matrix<FloatDP> exact_float({{1.0_x,2.0_x}},dp);
+        Matrix<FloatDP> exact_float_row_mismatch({{1.0_x,2.0_x},{3.0_x,4.0_x}},dp);
+        Matrix<FloatDP> exact_float_col_mismatch({{1.0_x}},dp);
+        ARIADNE_TEST_EXECUTE(static_cast<void>(exact_float==exact_float_row_mismatch));
+        ARIADNE_TEST_EXECUTE(static_cast<void>(exact_float==exact_float_col_mismatch));
+
+        Matrix<FloatDPApproximation> approx({{1.0_x,2.0_x}},dp);
+        Matrix<FloatDPApproximation> approx_row_mismatch({{1.0_x,2.0_x},{3.0_x,4.0_x}},dp);
+        Matrix<FloatDPApproximation> approx_col_mismatch({{1.0_x}},dp);
+        ARIADNE_TEST_EXECUTE(static_cast<void>(approx==approx_row_mismatch));
+        ARIADNE_TEST_EXECUTE(static_cast<void>(approx==approx_col_mismatch));
 
         Matrix<RoundedFloatDP> R(2u,2u,dp);
         R.resize(1u,4u);
