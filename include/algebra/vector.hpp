@@ -601,7 +601,6 @@ Vector<X> join(const Vector<X>& v1, const Vector<X>& v2)
     X* rp=ra.begin();
     for(X const* vp=v1.array().begin(); vp!=v1.array().end(); ++rp, ++vp) { new (rp) X(*vp); }
     for(X const* vp=v2.array().begin(); vp!=v2.array().end(); ++rp, ++vp) { new (rp) X(*vp); }
-    assert(rp==ra.end());
     return Vector<X>(std::move(ra));
 
 }
