@@ -23,7 +23,7 @@ cmake --build . --parallel
 ctest --output-on-failure
 ```
 
-A C++20 compiler, CMake, GMP and MPFR are required.
+A C++20 compiler and CMake are required.
 
 ## Python bindings
 

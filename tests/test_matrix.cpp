@@ -172,6 +172,11 @@ TestMatrix::test_misc()
     ARIADNE_TEST_FAIL(empty_covector.zero_element());
 #endif
 
+    Covector<FloatDP> empty_float_covector(0u,dp);
+    std::ostringstream empty_float_covector_stream;
+    empty_float_covector_stream << empty_float_covector;
+    ARIADNE_TEST_EQUAL(empty_float_covector_stream.str(),String("{}"));
+
     Array<FloatDPApproximation> Aary(InitializerList<Dbl>{-1.0,3.0,1.0, -1.0,1.0,2.0, 2.0,1.0,1.0},pr);
     Array<FloatDPBounds> iAary(InitializerList<ExactDouble>{-1.0_x,3.0_x, -1.0_x,1.0_x},pr);
     FloatDPApproximation* Aptr=Aary.begin();
