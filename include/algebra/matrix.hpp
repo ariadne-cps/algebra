@@ -947,7 +947,9 @@ Void Matrix<X>::set(SizeType i, SizeType j, Y const& y) {
     this->at(i,j)=y;
 }
 
+Rational midpoint(Rational);
 template<class X> Matrix<MidpointType<X>> midpoint(const Matrix<X>&);
+template<> Matrix<Rational> midpoint<Rational>(const Matrix<Rational>&);
 template<class X> Matrix<SingletonType<X>> cast_singleton(const Matrix<X>&);
 template<class X> Matrix<ExactType<X>> cast_exact(const Matrix<X>&);
 
