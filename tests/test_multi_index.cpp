@@ -42,6 +42,7 @@ class TestMultiIndex
         ARIADNE_TEST_CALL(test_constructor());
         ARIADNE_TEST_CALL(test_uni_index());
         ARIADNE_TEST_CALL(test_inline_helpers());
+        ARIADNE_TEST_CALL(test_preconditions());
         ARIADNE_TEST_CALL(test_comparison());
         ARIADNE_TEST_CALL(test_addition());
         ARIADNE_TEST_CALL(test_increment());
@@ -111,6 +112,38 @@ class TestMultiIndex
         ARIADNE_TEST_ASSERT(graded_less_object(DegreeType(1u),DegreeType(2u)));
         ARIADNE_TEST_ASSERT(lexicographic_less_object(DegreeType(1u),DegreeType(2u)));
         ARIADNE_TEST_ASSERT(lexicographic_less_object(a,b));
+    }
+
+    Void test_preconditions() {
+        MultiIndex a({1u,2u});
+        const MultiIndex& ca=a;
+        ARIADNE_TEST_FAIL(a[a.size()]);
+        ARIADNE_TEST_FAIL(ca[ca.size()]);
+        ARIADNE_TEST_FAIL(ca.get(ca.size()));
+        ARIADNE_TEST_FAIL(a.set(a.size(),0u));
+
+        MultiIndex short_index({1u});
+        ARIADNE_TEST_FAIL(a.assign(short_index));
+        ARIADNE_TEST_FAIL(graded_less(a,short_index));
+        ARIADNE_TEST_FAIL(lexicographic_less(a,short_index));
+        ARIADNE_TEST_FAIL(reverse_lexicographic_less(a,short_index));
+
+        MultiIndex long_index({2u,0u});
+        ARIADNE_TEST_FAIL(long_index+=short_index);
+        ARIADNE_TEST_FAIL(long_index-=short_index);
+        ARIADNE_TEST_FAIL(MultiIndex({0u,0u})-=MultiIndex({1u,0u}));
+        ARIADNE_TEST_FAIL(swap(long_index,short_index));
+
+        MultiIndexReference long_reference(long_index);
+        MultiIndexReference short_reference(short_index);
+        ARIADNE_TEST_FAIL(long_reference=short_index);
+        ARIADNE_TEST_FAIL(long_reference+=short_index);
+        ARIADNE_TEST_FAIL(swap(long_reference,short_reference));
+
+        MultiIndex same_size({3u,4u});
+        MultiIndex& same_alias=same_size;
+        ARIADNE_TEST_EXECUTE(same_size=same_alias);
+        ARIADNE_TEST_EXECUTE(same_size.resize(same_size.size()));
     }
 
     Void test_comparison() {
@@ -207,7 +240,7 @@ class TestMultiIndex
         const MultiIndexList& clst=lst;
         auto cit=clst.begin();
         auto cend=clst.end();
-        ARIADNE_TEST_ASSERT(cit!=cend);
+        ARIADNE_TEST_ASSERT(cit.operator!=(cend));
         auto cit_copy=cit;
         ARIADNE_TEST_ASSERT(cit_copy==cit);
         ARIADNE_TEST_EXECUTE(++cit_copy);
@@ -257,6 +290,9 @@ class TestMultiIndex
         ARIADNE_TEST_EQUALS(lst[2],a2);
         ARIADNE_TEST_EQUALS(lst[3],az);
         ARIADNE_TEST_EQUALS(lst.back(),az);
+        ARIADNE_TEST_FAIL(lst[lst.size()]);
+        const MultiIndexList& const_resized_lst=lst;
+        ARIADNE_TEST_FAIL(const_resized_lst[const_resized_lst.size()]);
         ARIADNE_TEST_PRINT(lst);
 
         ARIADNE_TEST_EXECUTE(*(lst.begin()+3)=a3);
