@@ -107,6 +107,13 @@ template<class F> Void TestExpansion<F>::test()
 
 template<class F> Void TestExpansion<F>::test_working()
 {
+    MultiIndex helper_multi({1u,2u});
+    UniIndex helper_uni(3u);
+    ARIADNE_TEST_EQUAL(degree_of(helper_multi),3u);
+    ARIADNE_TEST_EQUAL(degree_of(helper_uni),3u);
+    ARIADNE_TEST_EQUAL(size_of(helper_multi),2u);
+    ARIADNE_TEST_EQUAL(static_cast<SizeType>(size_of(helper_uni)),1u);
+
     ARIADNE_TEST_PRINT(zero);
     ARIADNE_TEST_CONSTRUCT(MultiIndexList,as,(3u));
     ARIADNE_TEST_CONSTRUCT(ExpansionType,e,(3u,prec));
@@ -394,6 +401,9 @@ template<class F> Void TestExpansion<F>::test_constructors()
 {
     // Empty initialiser list causes failure
     ARIADNE_TEST_FAIL(ExpansionType e0({}));
+
+    InitializerList<Pair<typename ExpansionType::IndexInitializerType,ExactDouble>> empty_exact;
+    ARIADNE_TEST_FAIL(ExpansionType(empty_exact,prec));
 
     // Empty expansion
     ARIADNE_TEST_CONSTRUCT(ExpansionType,e1,(3,prec));
