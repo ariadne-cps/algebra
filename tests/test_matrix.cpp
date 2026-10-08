@@ -275,10 +275,14 @@ TestMatrix::test_misc()
         ARIADNE_TEST_FAIL(A*Matrix<RoundedFloatDP>({{1.0_x}},dp));
         ARIADNE_TEST_FAIL(A*Vector<RoundedFloatDP>({1.0_x},dp));
         ARIADNE_TEST_FAIL(A*transpose(Matrix<RoundedFloatDP>({{1.0_x}},dp)));
-        ARIADNE_TEST_FAIL(transpose(A)*Matrix<RoundedFloatDP>({{1.0_x}},dp));
+        ARIADNE_TEST_FAIL(transpose(A)*Matrix<RoundedFloatDP>({{1.0_x},{2.0_x}},dp));
         ARIADNE_TEST_FAIL(transpose(A)*Vector<RoundedFloatDP>({1.0_x,2.0_x},dp));
-        ARIADNE_TEST_ASSERT(!(A==row_mismatch));
-        ARIADNE_TEST_ASSERT(!(A==col_mismatch));
+
+        Matrix<Rational> exact_a({{Rational(1),Rational(2)}});
+        Matrix<Rational> exact_row_mismatch({{Rational(1),Rational(2)},{Rational(3),Rational(4)}});
+        Matrix<Rational> exact_col_mismatch({{Rational(1)}});
+        ARIADNE_TEST_ASSERT(!(exact_a==exact_row_mismatch));
+        ARIADNE_TEST_ASSERT(!(exact_a==exact_col_mismatch));
     }
 
     {
