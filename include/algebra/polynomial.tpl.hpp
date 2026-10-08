@@ -463,11 +463,11 @@ OutputStream& operator<<(OutputStream& os, const Polynomial<I,X>& p) {
 }
 */
 
-String canonical_argument_names(SizeOne) {
+inline String canonical_argument_names(SizeOne) {
     return "x";
 }
 
-Array<String> canonical_argument_names(SizeType n) {
+inline Array<String> canonical_argument_names(SizeType n) {
     Array<String> argument_names(n);
     for(SizeType i=0; i!=n; ++i) {
         StringStream ss;

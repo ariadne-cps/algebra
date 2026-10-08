@@ -133,7 +133,6 @@ template class Matrix<Rational>;
 template Matrix<Rational> inverse(const Matrix<Rational>&);
 template Matrix<Rational> solve(const Matrix<Rational>&, const Matrix<Rational>&);
 template Vector<Rational> solve(const Matrix<Rational>&, const Vector<Rational>&);
-Rational midpoint(Rational);
 template<> Matrix<Rational> midpoint(Matrix<Rational> const& A) { return A; }
 
 template class SymmetricMatrix<FloatDPApproximation>;
