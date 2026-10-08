@@ -521,8 +521,7 @@ template<class X> inline Ariadne::CharacteristicsType<X> Matrix<X>::element_char
 }
 
 template<class X> inline X Matrix<X>::zero_element() const {
-    if constexpr (DefaultConstructible<X>) { return X(); }
-    else { return X(_ary.element_characteristics()); }
+    return make_from_characteristics<X>(_ary.element_characteristics());
 }
 
 
@@ -577,10 +576,10 @@ template<class X> inline InputStream& operator>>(InputStream& is, Matrix<X>& A) 
 
 template<class X> OutputStream& Matrix<X>::_write(OutputStream& os) const {
     const Matrix<X>& A=*this;
-    os << "[";
+    if(A.row_size()==0 || A.column_size()==0) { os << "["; }
     for(SizeType i=0; i!=A.row_size(); ++i) {
         for(SizeType j=0; j!=A.column_size(); ++j) {
-            os << (j==0 ? (i==0 ? "" : "; ") : ",") << A.at(i,j); } }
+            os << (j==0 ? (i==0 ? "[" : "; ") : ",") << A.at(i,j); } }
     return os << "]";
 }
 

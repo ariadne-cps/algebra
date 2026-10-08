@@ -259,9 +259,11 @@ TestMatrix::test_misc()
     {
         Matrix<FloatDPBounds> I=Matrix<FloatDPBounds>::identity(2u,dp);
         ARIADNE_TEST_EQUALS(I.row_size(),2u);
+        ARIADNE_TEST_EXECUTE(Matrix<FloatDPBounds>::identity<DoublePrecision>(2u,dp));
         MultiplePrecision mp(128);
         Matrix<FloatMPBounds> J=Matrix<FloatMPBounds>::identity(2u,mp);
         ARIADNE_TEST_EQUALS(J.column_size(),2u);
+        ARIADNE_TEST_EXECUTE(Matrix<FloatMPBounds>::identity<MultiplePrecision>(2u,mp));
     }
 
     {
