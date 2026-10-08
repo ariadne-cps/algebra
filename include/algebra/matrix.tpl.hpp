@@ -243,9 +243,8 @@ lu_inverse(const Matrix<X>& M)
             }
         }
 
-        if(iamax==m) {
+        if(iamax==m)
             ARIADNE_THROW(SingularMatrixException,"lu_inverse(Matrix<"<<class_name<X>()<<"> M)","M="<<M);
-        }
 
         // Set pivot row
         SizeType q=iamax;
@@ -404,10 +403,10 @@ template<class X> Matrix<Bounds<X>> gs_solve_bounds(const Matrix<Bounds<X>>& A, 
                         Rij-=JA[i][k]*R[k][j];
                     }
                 }
-                if(definitely(JA[i][i].lower()>0 || JA[i][i].upper()<0)) {
-                    Rij/=JA[i][i];
-                    R[i][j]=refinement(R[i][j],Rij);
-                }
+                // A successful interval LU factorisation guarantees that
+                // the preconditioned diagonal is separated from zero.
+                Rij/=JA[i][i];
+                R[i][j]=refinement(R[i][j],Rij);
                 // FIXME: Use FloatBounds or Float here?
                 //R[i][j]=FloatBounds(max(R[i][j].lower(),Rij.lower()),min(R[i][j].upper(),Rij.upper()));
             }
