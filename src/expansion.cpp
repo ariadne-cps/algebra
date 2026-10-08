@@ -36,9 +36,6 @@
 namespace Ariadne {
     template<> struct CharacteristicsTrait<double> { typedef std::tuple<> Type; };
 
-    DP characteristics(FloatDP flt) { return flt.precision(); }
-    MP characteristics(FloatMP flt) { return flt.precision(); }
-
     static_assert(Same<CharacteristicsType<FloatDP>,DP>);
     static_assert(Same<CharacteristicsType<RoundedFloatDP>,DP>);
 
