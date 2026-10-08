@@ -27,6 +27,7 @@
 #include "numeric/numeric.hpp"
 #include "algebra/expansion.hpp"
 #include "algebra/expansion.inl.hpp"
+#include "interval/interval.hpp"
 
 #include "utility/test.hpp"
 
@@ -298,6 +299,14 @@ template<class F> Void TestExpansion<F>::test_data_access()
         ARIADNE_TEST_ASSERT(m1val==*mptr);
     }
 
+    {
+        ExpansionConstIterator src=ce.begin()+1;
+        ExpansionIterator dst=e.begin();
+        ARIADNE_TEST_EXECUTE(*dst=*src);
+        ARIADNE_TEST_EQUAL(dst->index(),src->index());
+        ARIADNE_TEST_EQUAL(dst->coefficient(),src->coefficient());
+    }
+
     // Test finding of values of iterators
     ExpansionIterator iter=e.begin();
     ARIADNE_TEST_PRINT(e);
@@ -467,6 +476,27 @@ Int main() {
     FloatMP raw_mp(0,precision(128_bits));
     ARIADNE_TEST_EXECUTE(characteristics(raw_dp));
     ARIADNE_TEST_EXECUTE(characteristics(raw_mp));
+
+    {
+        Expansion<MultiIndex,FloatDPBounds> source(2u,double_precision);
+        source.append({0u,0u},FloatDPBounds(1,double_precision));
+        source.append({1u,0u},FloatDPBounds(0,double_precision));
+        Expansion<MultiIndex,FloatDPApproximation> approximation(source);
+        Expansion<MultiIndex,FloatDPUpperInterval> upper(source);
+        ARIADNE_TEST_EQUALS(approximation.size(),1u);
+        ARIADNE_TEST_EQUALS(upper.size(),1u);
+    }
+
+    {
+        auto mp=precision(128_bits);
+        Expansion<MultiIndex,FloatMPBounds> source(2u,mp);
+        source.append({0u,0u},FloatMPBounds(1,mp));
+        source.append({1u,0u},FloatMPBounds(0,mp));
+        Expansion<MultiIndex,FloatMPApproximation> approximation(source);
+        Expansion<MultiIndex,FloatMPUpperInterval> upper(source);
+        ARIADNE_TEST_EQUALS(approximation.size(),1u);
+        ARIADNE_TEST_EQUALS(upper.size(),1u);
+    }
 
     RoundedFloatDP zero_dp{0,double_precision};
     RoundedFloatMP zero_mp{0,precision(128_bits)};
