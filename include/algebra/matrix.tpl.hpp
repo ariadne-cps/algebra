@@ -35,7 +35,11 @@ template<class X> Matrix<X>::Matrix(SizeType m, SizeType n, const X* p)
 
 
 template<class X> Matrix<X>::Matrix(InitializerList<InitializerList<X>> lst)
-    : _rs(lst.size()), _cs((assert(_rs!=0),assert(lst.begin()->size()!=0),lst.begin()->size())), _ary(_rs*_cs,characteristics(*lst.begin()->begin()))
+    : _rs(lst.size()), _cs(([&lst]() -> SizeType {
+        ARIADNE_ASSERT(lst.size()!=0);
+        ARIADNE_ASSERT(lst.begin()->size()!=0);
+        return lst.begin()->size();
+    })()), _ary(_rs*_cs,characteristics(*lst.begin()->begin()))
 {
     typename InitializerList<InitializerList<X>>::const_iterator row_iter=lst.begin();
     for(SizeType i=0; i!=this->row_size(); ++i, ++row_iter) {

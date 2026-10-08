@@ -198,6 +198,35 @@ Void
 TestMatrix::test_misc()
 {
     {
+        InitializerList<InitializerList<Rational>> empty_matrix{};
+        ARIADNE_TEST_FAIL(Matrix<Rational>(empty_matrix));
+        InitializerList<InitializerList<Rational>> empty_row{{}};
+        ARIADNE_TEST_FAIL(Matrix<Rational>(empty_row));
+        InitializerList<InitializerList<Rational>> uneven_rows{{Rational(1),Rational(2)},{Rational(3)}};
+        ARIADNE_TEST_FAIL(Matrix<Rational>(uneven_rows));
+
+        Matrix<FloatDPBounds> nonsquare_bounds({{1.0_x,0.0_x}},pr);
+        ARIADNE_TEST_FAIL(log_norm(nonsquare_bounds));
+        ARIADNE_TEST_FAIL(lu_inverse(nonsquare_bounds));
+
+        Matrix<FloatDPBounds> singular_zero({{0.0_x,0.0_x},{0.0_x,0.0_x}},pr);
+        ARIADNE_TEST_FAIL(lu_inverse(singular_zero));
+
+        Matrix<FloatDPBounds> square_bounds({{1.0_x,0.0_x},{0.0_x,1.0_x}},pr);
+        Matrix<FloatDPBounds> bounds_rhs_ok({{1.0_x},{2.0_x}},pr);
+        Matrix<FloatDPBounds> bounds_rhs_bad({{1.0_x}},pr);
+        ARIADNE_TEST_FAIL(gs_solve(nonsquare_bounds,bounds_rhs_ok));
+        ARIADNE_TEST_FAIL(gs_solve(square_bounds,bounds_rhs_bad));
+
+        Matrix<FloatDPApproximation> nonsquare_approx({{1.0_x,0.0_x}},pr);
+        ARIADNE_TEST_FAIL(triangular_decomposition(nonsquare_approx));
+
+        Matrix<FloatDPApproximation> identity_approx=Matrix<FloatDPApproximation>::identity(2u,pr);
+        ARIADNE_TEST_EXECUTE(triangular_decomposition(identity_approx));
+        ARIADNE_TEST_EXECUTE(orthogonal_decomposition(identity_approx,true));
+    }
+
+    {
         Matrix<FloatDPBounds> A({{2.0_x,0.0_x},{0.0_x,3.0_x}},pr);
         Vector<FloatDPBounds> b({1.0_x,2.0_x},pr);
         ARIADNE_TEST_EXECUTE(sup_norm(A));
