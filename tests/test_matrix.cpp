@@ -117,6 +117,33 @@ TestMatrix::test_project()
 Void
 TestMatrix::test_factorisations()
 {
+    {
+        PivotMatrix P=PivotMatrix::identity(2u);
+        std::ostringstream oss;
+        oss << P;
+        ARIADNE_TEST_ASSERT(oss.str().find("PivotMatrix(")==0u);
+    }
+
+    {
+        Matrix<FloatDP> A({{1,0},{0,1}},dp);
+        ARIADNE_TEST_EXECUTE(inverse(A));
+    }
+
+    {
+        Matrix<FloatDPBounds> A({{1,0},{0,1}},dp);
+        Matrix<FloatDPBounds> B({{2,0},{0,3}},dp);
+        ARIADNE_TEST_EXECUTE(inverse(A));
+        ARIADNE_TEST_EXECUTE(solve(A,B));
+
+        Matrix<FloatDPBounds> singular({{1,1},{1,1}},dp);
+        ARIADNE_TEST_FAIL(inverse(singular));
+    }
+
+    {
+        Matrix<Rational> A({{Rational(1),Rational(2)},{Rational(3),Rational(4)}});
+        ARIADNE_TEST_EQUAL(midpoint(A),A);
+    }
+
     // Set all diagonal elements to 0.
     auto set_diagonal_to_zero = [](FloatApproximationMatrix A){ for (SizeType i=0; i!=min(A.row_size(),A.column_size()); ++i) { A[i][i]=0; } return A; };
 
