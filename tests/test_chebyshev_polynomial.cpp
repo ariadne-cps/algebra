@@ -102,12 +102,23 @@ template<class X> Void TestChebyshevPolynomial<X>::test_univariate() {
     ARIADNE_TEST_NAMED_CONSTRUCT(UnivariateChebyshevPolynomial<X>,one,constant(1,pr));
     ARIADNE_TEST_NAMED_CONSTRUCT(UnivariateChebyshevPolynomial<X>,x,coordinate(pr));
 
+    std::function<X(DegreeType)> coefficients=[this](DegreeType i) {
+        return X(static_cast<Nat>(i)+1u,pr);
+    };
+    UnivariateChebyshevPolynomial<X> generated(2u,coefficients);
+    UnivariateChebyshevPolynomial<X> const& cgenerated=generated;
+    ARIADNE_TEST_EQUALS(cgenerated[0u],X(1u,pr));
+    ARIADNE_TEST_EQUALS(cgenerated[2u],X(3u,pr));
+
+    UnivariateChebyshevPolynomial<X> empty(pr);
+
     ARIADNE_TEST_PRINT(x);
     ARIADNE_TEST_PRINT(x*x);
     ARIADNE_TEST_PRINT(x*x*x);
     ARIADNE_TEST_PRINT(x*x*x*x);
 
     ARIADNE_TEST_CONSTRUCT(X,y,(-0.75_dy,pr));
+    ARIADNE_TEST_EQUALS(evaluate(empty,y),X(0u,pr));
     ARIADNE_TEST_EQUALS((+x)(y),x(y));
     ARIADNE_TEST_EQUALS(x(y),(y));
     ARIADNE_TEST_EQUALS((x*x)(y),(y*y));
@@ -137,6 +148,7 @@ template<class X> Void TestChebyshevPolynomial<X>::test_univariate() {
 
 template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     ARIADNE_TEST_NAMED_CONSTRUCT(MultivariateChebyshevPolynomial<X>,one,constant(2u,1,pr));
+    ARIADNE_TEST_EQUALS(one.zero_coefficient(),X(0u,pr));
     ARIADNE_TEST_NAMED_CONSTRUCT(MultivariateChebyshevPolynomial<X>,x,coordinate(2u,0u,pr));
     ARIADNE_TEST_NAMED_CONSTRUCT(MultivariateChebyshevPolynomial<X>,y,coordinate(2u,1u,pr));
 

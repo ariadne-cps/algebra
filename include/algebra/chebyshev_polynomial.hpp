@@ -136,7 +136,7 @@ UnivariateChebyshevPolynomial<X>::_evaluate(UnivariateChebyshevPolynomial<X> con
     Y tx=x*2;
     SizeType k=1;
     auto iter=f._terms.begin();
-    if(iter!=f._terms.end() && iter->index()==0) {
+    if(iter->index()==0) {
         r=iter->coefficient();
         ++iter;
     }
