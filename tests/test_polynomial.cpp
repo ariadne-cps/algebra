@@ -257,7 +257,7 @@ Void TestPolynomial::test_arithmetic()
     UnivariatePolynomial<FloatDP> raw_y=UnivariatePolynomial<FloatDP>::coordinate(SizeOne(),IndexZero(),dp);
     MultivariatePolynomial<FloatDP> raw_x0=MultivariatePolynomial<FloatDP>::coordinate(3u,0u,dp);
     FloatDPBounds bw(3,dp);
-    Vector<FloatDPBounds> bv({FloatDPBounds(3,dp),FloatDPBounds(5,dp),FloatDPBounds(2,dp)},dp);
+    Vector<FloatDPBounds> bv({3.0_x,5.0_x,2.0_x},dp);
 
     ARIADNE_TEST_EQUALS(evaluate(2*x0*x0-1,v),2*v[0]*v[0]-1)
     ARIADNE_TEST_EQUALS(evaluate(2*x1*x1-1,v),2*v[1]*v[1]-1)
