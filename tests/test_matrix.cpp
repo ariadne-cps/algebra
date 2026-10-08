@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 
 #include "utility/test.hpp"
@@ -163,6 +164,14 @@ TestMatrix::test_factorisations()
 Void
 TestMatrix::test_misc()
 {
+    Covector<FloatDPApproximation> empty_covector(0u,pr);
+    std::ostringstream empty_covector_stream;
+    empty_covector_stream << empty_covector;
+    ARIADNE_TEST_EQUAL(empty_covector_stream.str(),String("{}"));
+#ifndef NDEBUG
+    ARIADNE_TEST_FAIL(empty_covector.zero_element());
+#endif
+
     Array<FloatDPApproximation> Aary(InitializerList<Dbl>{-1.0,3.0,1.0, -1.0,1.0,2.0, 2.0,1.0,1.0},pr);
     Array<FloatDPBounds> iAary(InitializerList<ExactDouble>{-1.0_x,3.0_x, -1.0_x,1.0_x},pr);
     FloatDPApproximation* Aptr=Aary.begin();
