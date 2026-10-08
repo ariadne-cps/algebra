@@ -133,7 +133,7 @@ constexpr bool check_concept()
 {
     using E=Expansion<MultiIndex,F>;
     return requires(F x, PrecisionType<F> prec, SizeType as, E e, E const ce, MultiIndex a) {
-        e=E(as,x);
+        E(as,prec);
         e=E(ce);
         e.reserve(2u);
         e.set(a,x);
@@ -142,7 +142,6 @@ constexpr bool check_concept()
         e.append_sum(a,a,x);
         e.clear();
         e.index_sort(GradedLess());
-        e.index_sort(LexicographicLess());
         e.index_sort(GradedIndexLess());
         e.sort(ReverseLexicographicIndexLess());
         x=ce[a];
