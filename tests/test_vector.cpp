@@ -29,6 +29,8 @@
 #include "numeric/numeric.hpp"
 #include "numeric/floats.hpp"
 #include "algebra/vector.hpp"
+#include "algebra/covector.hpp"
+#include "interval/interval.hpp"
 
 #include "utility/test.hpp"
 
@@ -130,6 +132,8 @@ TestVector::test_misc()
     FloatDPApproximation x={1.5_x,pr};
 
     Vector<FloatDPApproximation> v0;
+    ARIADNE_TEST_EXECUTE(cout << Vector<RoundedFloatDP>());
+    ARIADNE_TEST_EXECUTE(cout << Vector<FloatDP>());
     cout << "v0.size()=" << v0.size() << endl;
     cout << "v0=" << flush; cout << v0 << endl;
     ARIADNE_TEST_NOTIFY("Constructor Vector<X>(SizeType, const X*) is unsafe and has been removed.");
@@ -241,6 +245,44 @@ TestVector::test_misc()
       ARIADNE_TEST_ASSERT( (iv0*=2) == Vector<FloatDPBounds>("[4,2]") );
       ARIADNE_TEST_ASSERT( (iv0/=4) == Vector<FloatDPBounds>("[1,0.5_x]") );
     */
+
+    {
+        RoundedFloatDP s(1,dp);
+        Vector<RoundedFloatDP> v({2.0_x},dp);
+        ARIADNE_TEST_EQUALS(join(s,v),Vector<RoundedFloatDP>({1.0_x,2.0_x},dp));
+    }
+    {
+        FloatDPBounds s(1,dp);
+        Vector<FloatDPBounds> v({2.0_x},dp);
+        ARIADNE_TEST_EQUALS(join(s,v),Vector<FloatDPBounds>({1.0_x,2.0_x},dp));
+    }
+    {
+        FloatDPApproximation s(1,dp);
+        Vector<FloatDPApproximation> v({2.0_x},dp);
+        ARIADNE_TEST_EQUALS(join(s,v),Vector<FloatDPApproximation>({1.0_x,2.0_x},dp));
+    }
+    {
+        FloatDPUpperInterval s({1.0_x,1.0_x});
+        Vector<FloatDPUpperInterval> v({FloatDPUpperInterval({2.0_x,2.0_x})});
+        ARIADNE_TEST_EQUALS(join(s,v).size(),2u);
+    }
+    {
+        MultiplePrecision mp(128);
+        FloatMPBounds s(1,mp);
+        Vector<FloatMPBounds> v({2.0_x},mp);
+        ARIADNE_TEST_EQUALS(join(s,v).size(),2u);
+    }
+    {
+        MultiplePrecision mp(128);
+        FloatMPApproximation s(1,mp);
+        Vector<FloatMPApproximation> v({2.0_x},mp);
+        ARIADNE_TEST_EQUALS(join(s,v).size(),2u);
+    }
+
+    Covector<int> ci({1,2});
+    ARIADNE_TEST_EXECUTE(characteristics(ci));
+    Covector<FloatDPApproximation> ca(1u,dp);
+    ARIADNE_TEST_EXECUTE(characteristics(ca));
 
     /*
       cout << "test_vector_slice" << endl;
