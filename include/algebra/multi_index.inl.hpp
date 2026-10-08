@@ -33,14 +33,14 @@ inline MultiIndexData::MultiIndexData(SizeType n, IndexType* p) : _n(n), _p(p) {
 inline SizeType MultiIndexData::size() const { return _n; }
 inline SizeType MultiIndexData::number_of_variables() const { return _n; }
 inline DegreeType MultiIndexData::degree() const { DegreeType d=0u; for(SizeType i=0; i!=_n; ++i) { d+=_p[i]; } return d; }
-inline DegreeType const& MultiIndexData::operator[](SizeType i) const { assert(i<_n); return _p[i]; }
-inline DegreeType& MultiIndexData::operator[](SizeType i) { assert(i<_n); return _p[i]; }
+inline DegreeType const& MultiIndexData::operator[](SizeType i) const { ARIADNE_PRECONDITION(i<_n); return _p[i]; }
+inline DegreeType& MultiIndexData::operator[](SizeType i) { ARIADNE_PRECONDITION(i<_n); return _p[i]; }
 
-inline DegreeType MultiIndexData::get(SizeType i) const { assert(i<_n); return _p[i]; }
-inline Void MultiIndexData::set(SizeType i, DegreeType n) { assert(i<_n); _p[i]=n; }
+inline DegreeType MultiIndexData::get(SizeType i) const { ARIADNE_PRECONDITION(i<_n); return _p[i]; }
+inline Void MultiIndexData::set(SizeType i, DegreeType n) { ARIADNE_PRECONDITION(i<_n); _p[i]=n; }
 
 inline Void MultiIndexData::assign(const MultiIndexData& a) {
-    assert(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]=a._p[i]; } }
+    ARIADNE_PRECONDITION(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]=a._p[i]; } }
 
 inline DegreeType* MultiIndexData::begin() { return _p; }
 inline DegreeType* MultiIndexData::end() { return _p+_n; }
@@ -53,12 +53,12 @@ inline Bool operator!=(const MultiIndexData& a1, const MultiIndexData& a2) {
     return !(a1==a2); }
 
 inline Bool graded_less(const MultiIndexData& a1, const MultiIndexData& a2) {
-    assert(a1.size()==a2.size()); DegreeType d1=a1.degree(); DegreeType d2=a2.degree(); if(d1!=d2) { return d1<d2; }
+    ARIADNE_PRECONDITION(a1.size()==a2.size()); DegreeType d1=a1.degree(); DegreeType d2=a2.degree(); if(d1!=d2) { return d1<d2; }
     for(SizeType i=0; i!=a1.size(); ++i) { if(a1[i]!=a2[i]) { return a1[i]>a2[i]; } } return false; }
 inline Bool lexicographic_less(const MultiIndexData& a1, const MultiIndexData& a2) {
-    assert(a1.size()==a2.size()); for(SizeType i=0; i!=a1.size(); ++i) { if(a1[i]!=a2[i]) { return a1[i]<a2[i]; } } return false; }
+    ARIADNE_PRECONDITION(a1.size()==a2.size()); for(SizeType i=0; i!=a1.size(); ++i) { if(a1[i]!=a2[i]) { return a1[i]<a2[i]; } } return false; }
 inline Bool reverse_lexicographic_less(const MultiIndexData& a1, const MultiIndexData& a2) {
-    assert(a1.size()==a2.size()); SizeType i=a1.size(); while(i!=0) { --i; if(a1[i]!=a2[i]) { return a1[i]>a2[i]; } } return false; }
+    ARIADNE_PRECONDITION(a1.size()==a2.size()); SizeType i=a1.size(); while(i!=0) { --i; if(a1[i]!=a2[i]) { return a1[i]>a2[i]; } } return false; }
 
 inline OutputStream& operator<<(OutputStream& os, const MultiIndexData& a) {
     os << "("; for(SizeType i=0; i!=a.size(); ++i) { if(i!=0) { os << ","; } os << a[i]; } return os << ";" << a.degree() << ")"; }
@@ -82,8 +82,8 @@ inline MultiIndex MultiIndex::unit(SizeType nv, SizeType j) { MultiIndex a=Multi
 inline Void MultiIndex::resize(SizeType n) { if(_n!=n) { _n=n; delete[] _p; _p=new DegreeType[std::max(n,SizeType(1u))]; } }
 inline Void MultiIndex::clear() { for(SizeType i=0; i!=_n; ++i) { _p[i]=0u; } }
 
-inline MultiIndex& MultiIndex::operator+=(const MultiIndex& a) { assert(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]+=a._p[i]; } return *this; }
-inline MultiIndex& MultiIndex::operator-=(const MultiIndex& a) { assert(_n==a._n); for(SizeType i=0; i!=_n; ++i) { assert(_p[i]>=a._p[i]); _p[i]-=a._p[i]; } return *this; }
+inline MultiIndex& MultiIndex::operator+=(const MultiIndex& a) { ARIADNE_PRECONDITION(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]+=a._p[i]; } return *this; }
+inline MultiIndex& MultiIndex::operator-=(const MultiIndex& a) { ARIADNE_PRECONDITION(_n==a._n); for(SizeType i=0; i!=_n; ++i) { ARIADNE_PRECONDITION(_p[i]>=a._p[i]); _p[i]-=a._p[i]; } return *this; }
 inline MultiIndex& MultiIndex::operator*=(const DegreeType& s) { for(SizeType i=0; i!=_n; ++i) { _p[i]*=s; } return *this; }
 
 inline MultiIndex operator+(MultiIndex a1, const MultiIndex& a2) { a1+=a2; return a1; }
@@ -91,7 +91,7 @@ inline MultiIndex operator-(MultiIndex a1, const MultiIndex& a2) { a1-=a2; retur
 inline MultiIndex operator*(MultiIndex a, DegreeType s) { a*=s; return a; }
 inline MultiIndex operator*(DegreeType s, MultiIndex a) { a*=s; return a; }
 
-inline Void swap(MultiIndex& a1, MultiIndex& a2) { assert(a1._n==a2._n); for(SizeType i=0; i!=a1._n; ++i) { std::swap(a1._p[i],a2._p[i]); } }
+inline Void swap(MultiIndex& a1, MultiIndex& a2) { ARIADNE_PRECONDITION(a1._n==a2._n); for(SizeType i=0; i!=a1._n; ++i) { std::swap(a1._p[i],a2._p[i]); } }
 
 
 
@@ -105,16 +105,16 @@ inline Bool ReverseLexicographicLess::operator()(const MultiIndex& a1, const Mul
 
 inline MultiIndexReference::MultiIndexReference(SizeType n, IndexType* p) : MultiIndexData(n,p) { }
 inline MultiIndexReference::MultiIndexReference(MultiIndexData const& a) : MultiIndexData(a) { }
-inline MultiIndexReference& MultiIndexReference::operator=(MultiIndexData const& a) { assert(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]=a._p[i]; } return *this; }
+inline MultiIndexReference& MultiIndexReference::operator=(MultiIndexData const& a) { ARIADNE_PRECONDITION(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]=a._p[i]; } return *this; }
 inline MultiIndexReference& MultiIndexReference::operator=(MultiIndexReference const& a) { return this->operator=(static_cast<MultiIndexData const&>(a)); }
 inline MultiIndexReference::operator MultiIndex& () { return static_cast<MultiIndex&>(static_cast<MultiIndexData&>(*this)); }
 inline MultiIndexReference::operator MultiIndex const& () const { return static_cast<MultiIndex const&>(static_cast<MultiIndexData const&>(*this)); }
 
 inline MultiIndexReference& MultiIndexReference::operator+=(MultiIndexData const& a) {
-    assert(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]+=a._p[i]; } return *this; }
+    ARIADNE_PRECONDITION(_n==a._n); for(SizeType i=0; i!=_n; ++i) { _p[i]+=a._p[i]; } return *this; }
 
 inline Void swap(MultiIndexReference a1, MultiIndexReference a2) {
-    assert(a1.size()==a2.size()); for(SizeType i=0; i!=a1.size(); ++i) { std::swap(a1._p[i],a2._p[i]); } }
+    ARIADNE_PRECONDITION(a1.size()==a2.size()); for(SizeType i=0; i!=a1.size(); ++i) { std::swap(a1._p[i],a2._p[i]); } }
 
 inline MultiIndexConstReference::MultiIndexConstReference(SizeType n, IndexType const* p) : MultiIndexData(n,const_cast<IndexType*>(p)) { }
 inline MultiIndexConstReference::MultiIndexConstReference(MultiIndexReference const& r) : MultiIndexData(r._n,const_cast<IndexType*>(r._p)) { }
@@ -184,7 +184,7 @@ inline SizeType MultiIndexList::argument_size() const {
     return this->_argument_size; }
 
 inline Void MultiIndexList::append(MultiIndexData const& a) {
-    ARIADNE_ASSERT(this->argument_size()==a.size());
+    ARIADNE_PRECONDITION(this->argument_size()==a.size());
     if (_size==_capacity) { this->reserve(std::max(2*_capacity,DEFAULT_CAPACITY)); }
     MultiIndexReference(this->_argument_size,this->_indices+this->_argument_size*this->_size)=static_cast<MultiIndex const&>(a);
     ++_size;
@@ -195,9 +195,9 @@ inline Void MultiIndexList::append_sum(MultiIndexData const& a1, MultiIndexData 
 }
 
 inline MultiIndexList::Reference MultiIndexList::operator[](SizeType i) {
-    assert(i<_size); return Reference(_argument_size,_indices+i*_argument_size); }
+    ARIADNE_PRECONDITION(i<_size); return Reference(_argument_size,_indices+i*_argument_size); }
 inline MultiIndexList::ConstReference MultiIndexList::operator[](SizeType i) const {
-    assert(i<_size); return ConstReference(_argument_size,_indices+i*_argument_size); }
+    ARIADNE_PRECONDITION(i<_size); return ConstReference(_argument_size,_indices+i*_argument_size); }
 
 inline MultiIndexList::Reference MultiIndexList::front() {
     return this->operator[](0u); }
