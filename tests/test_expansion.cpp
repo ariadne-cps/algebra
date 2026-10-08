@@ -142,7 +142,7 @@ constexpr bool check_concept()
         e.append_sum(a,a,x);
         e.clear();
         e.index_sort(GradedLess());
-        e.index_sort(GradedIndexLess());
+        e.sort(GradedIndexLess());
         e.sort(ReverseLexicographicIndexLess());
         x=ce[a];
         ce.number_of_terms();
