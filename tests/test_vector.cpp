@@ -143,6 +143,7 @@ TestVector::test_misc()
     ARIADNE_TEST_FAIL(short_v+long_v);
     ARIADNE_TEST_FAIL(short_v-long_v);
     ARIADNE_TEST_FAIL(dot(short_v,long_v));
+    ARIADNE_TEST_EXECUTE(dot(long_v,long_v));
     Array<FloatDPApproximation> vary(InitializerList<ExactDouble>{-4.0_x,3.0_x,1.0_x},pr);
     FloatDPApproximation x={1.5_x,pr};
 
