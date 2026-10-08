@@ -35,7 +35,7 @@ template<class X> inline bool is_positive(X const& x) { return decide(x>=0); }
 inline MultiIndex zero_index(SizeType as) { return MultiIndex::zero(as); }
 inline DegreeType zero_index(SizeOne) { return 0u; }
 
-inline MultiIndex unit_index(SizeType as, DegreeType k) { return MultiIndex::unit(as,k); }
+inline MultiIndex unit_index(SizeType as, SizeType k) { return MultiIndex::unit(as,k); }
 inline DegreeType unit_index(SizeOne, IndexZero) { return 1u; }
 
 
@@ -241,12 +241,12 @@ template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::a
 
 
 template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::apply(Add, Polynomial<I,X> p, const X& c) {
-    p[IndexType(p.argument_size())]+=c;
+    p[zero_index(p.argument_size())]+=c;
     return p;
 }
 
 template<class I, class X> Polynomial<I,X>& AlgebraOperations<Polynomial<I,X>>::iapply(Add, Polynomial<I,X>& p, const X& c) {
-    p[IndexType(p.argument_size())]+=c;
+    p[zero_index(p.argument_size())]+=c;
     return p;
 }
 

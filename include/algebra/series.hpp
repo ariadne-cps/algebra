@@ -160,7 +160,7 @@ template<class X> inline Series<X>::Series(std::shared_ptr<const SeriesGenerator
 }
 
 template<class X> inline Void Series<X>::_compute(DegreeType n) const {
-    while(_data.size()<=n) { _data.append(_ptr->_next(_data.size(),_centre,_data)); }
+    while(_data.size()<=n) { _data.append(_ptr->_next(static_cast<DegreeType>(_data.size()),_centre,_data)); }
 }
 
 template<class X> inline OutputStream& Series<X>::_write(OutputStream& os) const {

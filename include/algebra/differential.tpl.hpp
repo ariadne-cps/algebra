@@ -813,7 +813,7 @@ Vector<Differential<X>>::_solve(const Vector<Differential<X> >& df, const Vector
 
     const SizeType m=df.result_size();
     const SizeType n=df.argument_size();
-    const SizeType deg=df.degree();
+    const DegreeType deg=df.degree();
     const X z=df.zero_element().zero_coefficient();
 
     const SizeType l=n-m;
@@ -842,12 +842,12 @@ Vector<Differential<X>>::_flow(const Vector<Differential<X> >& df, Vector<X> con
     ARIADNE_ASSERT(df.result_size()==df.argument_size());
     ARIADNE_ASSERT(x0.size()==df.argument_size());
     const SizeType n=df.result_size();
-    const SizeType deg=df.degree();
+    const DegreeType deg=df.degree();
     const X z=df.zero_element().zero_coefficient();
-    Vector<Differential<X>> dx0=Vector<Differential<X>>(n,[&](SizeType i){return Differential<X>::variable(n+1u,deg+1u,x0[i],i);});
+    Vector<Differential<X>> dx0=Vector<Differential<X>>(n,[&](SizeType i){return Differential<X>::variable(n+1u,static_cast<DegreeType>(deg+1u),x0[i],i);});
     Vector<Differential<X>> dphi=Vector<Differential<X>>(n,n+1u,0u,z);
     // TODO: This iteration repeats computation of lower-degree terms, so could be made more efficient
-    for(SizeType i=0; i<deg+1u; ++i) {
+    for(SizeType i=0; i<static_cast<DegreeType>(deg+1u); ++i) {
         dphi=dx0+antiderivative(compose(df,dphi),n);
     }
     return dphi;
@@ -860,10 +860,10 @@ Vector<Differential<X>>::_flow(const Vector<Differential<X> >& df, Vector<X> con
     ARIADNE_ASSERT(df.result_size()==x0.size());
     ARIADNE_ASSERT(df.argument_size()==x0.size()+1u);
     const SizeType n=x0.size(); // Number of state variables; also index of time variable
-    const SizeType deg=df.degree();
+    const DegreeType deg=df.degree();
 
-    Vector<Differential<X>> dx0=Vector<Differential<X>>(n,[&](SizeType i){return Differential<X>::variable(n+1u,deg+1u,x0[i],i);});
-    Vector<Differential<X>> dt0=Vector<Differential<X>>(1,Differential<X>::variable(n+1u,deg+1u,t0,n));
+    Vector<Differential<X>> dx0=Vector<Differential<X>>(n,[&](SizeType i){return Differential<X>::variable(n+1u,static_cast<DegreeType>(deg+1u),x0[i],i);});
+    Vector<Differential<X>> dt0=Vector<Differential<X>>(1,Differential<X>::variable(n+1u,static_cast<DegreeType>(deg+1u),t0,n));
 
     return _flow(df,dx0, dt0);
 }
@@ -876,11 +876,11 @@ Vector<Differential<X>>::_flow(const Vector<Differential<X> >& df, Vector<X> con
     ARIADNE_ASSERT(df.argument_size()==x0.size()+a.size());
     const SizeType n=x0.size(); // Number of state variables; also index of time variable
     const SizeType m=a.size();
-    const SizeType deg=df.degree();
+    const DegreeType deg=df.degree();
 
-    Vector<Differential<X>> dx0=Vector<Differential<X>>(n,[&](SizeType i){return Differential<X>::variable(n+1u+m,deg+1u,x0[i],i);});
-    Vector<Differential<X>> da(m,n+1u+m,deg+1u,a.zero_element());
-    for (SizeType i=0; i!=m; ++i) { da[i]=Differential<X>::variable(n+1u+m,deg+1u,a[i],n+i); }
+    Vector<Differential<X>> dx0=Vector<Differential<X>>(n,[&](SizeType i){return Differential<X>::variable(n+1u+m,static_cast<DegreeType>(deg+1u),x0[i],i);});
+    Vector<Differential<X>> da(m,n+1u+m,static_cast<DegreeType>(deg+1u),a.zero_element());
+    for (SizeType i=0; i!=m; ++i) { da[i]=Differential<X>::variable(n+1u+m,static_cast<DegreeType>(deg+1u),a[i],n+i); }
 
     return _flow(df,dx0, da);
 }
@@ -893,11 +893,11 @@ Vector<Differential<X>>::_flow(const Vector<Differential<X> >& df, Vector<X> con
     ARIADNE_ASSERT(df.argument_size()==x0.size()+1u+a.size());
     const SizeType n=x0.size(); // Number of state variables; also index of time variable
     const SizeType m=a.size();
-    const SizeType deg=df.degree();
+    const DegreeType deg=df.degree();
 
     Vector<X> t0a=join(t0,a);
-    Vector<Differential<X>> dx0=Vector<Differential<X>>(n,[&](SizeType i){return Differential<X>::variable(n+1u+m,deg+1u,x0[i],i);}, n+1u+m,deg+1u,x0.element_characteristics());
-    Vector<Differential<X>> dt0a=Vector<Differential<X>>(m+1,[&](SizeType i){return Differential<X>::variable(n+1u+m,deg+1u,t0a[i],n+i);}, n+1u+m,deg+1u,a.element_characteristics());
+    Vector<Differential<X>> dx0=Vector<Differential<X>>(n,[&](SizeType i){return Differential<X>::variable(n+1u+m,static_cast<DegreeType>(deg+1u),x0[i],i);}, n+1u+m,static_cast<DegreeType>(deg+1u),x0.element_characteristics());
+    Vector<Differential<X>> dt0a=Vector<Differential<X>>(m+1,[&](SizeType i){return Differential<X>::variable(n+1u+m,static_cast<DegreeType>(deg+1u),t0a[i],n+i);}, n+1u+m,static_cast<DegreeType>(deg+1u),a.element_characteristics());
 
     return _flow(df,dx0, dt0a);
 }

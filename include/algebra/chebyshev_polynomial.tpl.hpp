@@ -67,7 +67,7 @@ template<class X> auto UnivariateChebyshevPolynomial<X>::coordinate(PR pr) -> Ch
 
 template<class X> auto UnivariateChebyshevPolynomial<X>::basis(SizeType k, PR pr) -> ChebyshevPolynomial<X> {
     ChebyshevPolynomial<X> cmr(pr);
-    cmr._terms.append(k,X(1,pr));
+    cmr._terms.append(static_cast<DegreeType>(k),X(1,pr));
     return cmr;
 }
 
@@ -187,13 +187,14 @@ UnivariateChebyshevPolynomial<X>::apply(Mul, ChebyshevPolynomial<X> const& cm1, 
     for (auto term1 : cm1._terms) {
         for (auto term2 : cm2._terms) {
             X coefficient_product=term1.coefficient()*term2.coefficient();
-            buf[abs(term1.index()-term2.index())]+=coefficient_product;
+            DegreeType i1=term1.index(); DegreeType i2=term2.index();
+            buf[static_cast<SizeType>(i1>=i2 ? i1-i2 : i2-i1)]+=coefficient_product;
             buf[term1.index()+term2.index()]+=coefficient_product;
         }
     }
     UnivariateChebyshevPolynomial<X> cmr(pr);
     for (SizeType i=0; i!=buf.size(); ++i) {
-        cmr._terms.append(i,hlf(buf[i]));
+        cmr._terms.append(static_cast<DegreeType>(i),hlf(buf[i]));
     }
     return cmr;
 }
@@ -237,7 +238,7 @@ template<class X> auto MultivariateChebyshevPolynomial<X>::coordinate(SizeType a
 
 template<class X> auto MultivariateChebyshevPolynomial<X>::basis(SizeType as, SizeType i, SizeType k, PR pr) -> ChebyshevPolynomial<X> {
     ChebyshevPolynomial<X> cmr(as,pr);
-    cmr._terms.append(MultiIndex::unit(as,i)*k,X(1,pr));
+    cmr._terms.append(MultiIndex::unit(as,i)*static_cast<DegreeType>(k),X(1,pr));
     return cmr;
 }
 
@@ -404,7 +405,7 @@ MultivariateChebyshevPolynomial<X>::_mul_from(ConstIterator& from1, ConstIterato
                 curr1=from1;
                 DegreeType a1k=curr1->index()[k]; DegreeType a2k=curr2->index()[k];
                 ChebyshevPolynomial<X> product = _mul_from(curr1,end1,curr2,end2,k+1u);
-                buf[abs(a1k-a2k)]+=product;
+                buf[static_cast<SizeType>(a1k>=a2k ? a1k-a2k : a2k-a1k)]+=product;
                 buf[static_cast<DegreeType>(a1k+a2k)]+=product;
             }
             from1=curr1;

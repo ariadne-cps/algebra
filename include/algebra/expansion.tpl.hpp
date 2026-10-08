@@ -42,13 +42,23 @@ inline SizeType word_size(SizeType as) { return (1u+as)/sizeof(int)+1; }
 inline double nul(double) { return 0.0; }
 inline double abs(double d) { return std::fabs(d); }
 
+namespace {
+template<class I> I make_zero_index(typename IndexTraits<I>::SizeOfType as) {
+    if constexpr (Same<I,UniIndex>) { return I(); }
+    else { return I(as); }
+}
+template<class I, class A> I make_zero_index_from_initializer(A const& a) {
+    I index(a); return make_zero_index<I>(size_of(index));
+}
+} // namespace
+
 
 template<class I, class X> Expansion<I,X>::~Expansion()
 {
 }
 
 template<class I, class X> Expansion<I,X>::Expansion(ArgumentSizeType as, CharacteristicsType<X> const& prs, SizeType cap)
-    : _indices(0u,I(as)), _coefficients(prs)
+    : _indices(0u,make_zero_index<I>(as)), _coefficients(prs)
 {
     _indices.reserve(cap); _coefficients.reserve(cap);
 }
@@ -57,7 +67,7 @@ template<class I, class X> Expansion<I,X>::Expansion(ArgumentSizeType as, Charac
 template<class I, class X> Expansion<I,X>::Expansion(InitializerList<Pair<IndexInitializerType,X>> lst)
     : Expansion( Expansion(size_of(lst.begin()->first),nul(lst.begin()->second),std::max(DEFAULT_CAPACITY,lst.size()) ) )
 {
-    I a(this->argument_size());
+    I a=make_zero_index<I>(this->argument_size());
     X x;
     for(auto iter=lst.begin();
         iter!=lst.end(); ++iter)
@@ -81,13 +91,13 @@ template<class I, class X> Expansion<I,X>::Expansion(InitializerList<Pair<IndexI
 {
     ARIADNE_PRECONDITION(lst.size()!=0);
 
-    _indices = UniformList<I>(0u,I(size_of(lst.begin()->first)));
+    _indices = UniformList<I>(0u,make_zero_index_from_initializer<I>(lst.begin()->first));
 
     SizeType cap = std::max(DEFAULT_CAPACITY,lst.size());
     _indices.reserve(cap);
     _coefficients.reserve(cap);
 
-    I a(this->argument_size());
+    I a=make_zero_index<I>(this->argument_size());
     X x=this->zero_coefficient();
     for(auto iter=lst.begin();
         iter!=lst.end(); ++iter)
@@ -200,7 +210,7 @@ template<class I, class X> Void Expansion<I,X>::resize(SizeType new_size) {
         if(this->capacity() < new_size) {
             this->reserve(new_size);
         }
-        I a(this->argument_size());
+        I a=make_zero_index<I>(this->argument_size());
         X c=this->zero_coefficient();
         for (SizeType i=this->size(); i!=new_size; ++i) {
             this->append(a,c);
@@ -477,7 +487,7 @@ template<class I, class X> Expansion<MultiIndex,X> Expansion<I,X>::_embed(SizeTy
     ArgumentSizeType old_size=x.argument_size();
     SizeType new_size=before_size+old_size+after_size;
     Expansion<MultiIndex,X> r(new_size, x.coefficient_characteristics(), x.capacity());
-    IndexType old_index(old_size);
+    IndexType old_index=make_zero_index<I>(old_size);
     MultiIndex new_index(new_size);
     for(typename Expansion<I,X>::ConstIterator iter=x.begin(); iter!=x.end(); ++iter) {
         old_index=iter->index();

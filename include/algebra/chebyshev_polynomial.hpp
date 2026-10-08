@@ -64,7 +64,7 @@ template<class X> class UnivariateChebyshevPolynomial
 
     UnivariateChebyshevPolynomial(PR pr) : _terms(SizeOne(),pr) { }
     UnivariateChebyshevPolynomial(DegreeType d, std::function<X(DegreeType)> const& g) : _terms(SizeOne(),get_characteristics(g(0))) {
-        for(SizeType i=0; i<=d; ++i) { _terms.append(i,g(i)); } }
+        for(DegreeType i=0; i<=d; ++i) { _terms.append(i,g(i)); } }
 
     static ChebyshevPolynomial<X> constant(Number<P> y, PR pr);
     static ChebyshevPolynomial<X> constant(X const& c);
@@ -76,7 +76,7 @@ template<class X> class UnivariateChebyshevPolynomial
     DegreeType degree() const { return _terms.back().index(); }
     PR precision() const { return _terms.zero_coefficient().precision(); }
     X const& zero_coefficient() const { return _terms.zero_coefficient(); }
-    X const& operator[] (SizeType i) const { return _terms[i]; }
+    X const& operator[] (SizeType i) const { return _terms[UniIndex(static_cast<DegreeType>(i))]; }
 
     MagType<X> sup_norm() const;
     friend MagType<X> sup_norm(ChebyshevPolynomial<X> cm) { return cm.sup_norm(); }
