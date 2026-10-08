@@ -39,7 +39,6 @@ class TestVector {
   public:
     Void test();
   private:
-    Void test_concept();
     Void test_constructors();
     Void test_comparisons();
     Void test_arithmetic();
@@ -55,29 +54,25 @@ TestVector::test()
     ARIADNE_TEST_CALL(test_misc());
 }
 
-Void
-TestVector::test_concept()
+namespace {
+
+constexpr bool check_concept()
 {
-    FloatDPApproximation ax(1,dp);
-    FloatDPBounds ix(1,dp);
-    FloatDP ex(1,dp);
-    Vector<FloatDPApproximation> av;
-    Vector<FloatDPBounds> iv;
-    Vector<FloatDP> ev;
-
-    iv=Vector<FloatDPBounds>(ev);
-
-    av=av+av;
-    iv=ev+ev;
-    iv=ev+iv;
-    iv=iv+ev;
-    iv=iv+iv;
-    av=av-av; iv=ev-ev; iv=ev-iv; iv=iv-ev; iv=iv-iv;
-
-    av=ax*av; iv=ex*ev; iv=ex*iv; iv=ix*ev; iv=ix*iv;
-    av=av*ax; iv=ev*ex; iv=ev*ix; iv=iv*ex; iv=iv*ix;
-    av=av/ax; iv=ev/ex; iv=ev/ix; iv=iv/ex; iv=iv/ix;
+    return requires(FloatDPApproximation ax, FloatDPBounds ix, FloatDP ex,
+                    Vector<FloatDPApproximation> av, Vector<FloatDPBounds> iv, Vector<FloatDP> ev) {
+        iv=Vector<FloatDPBounds>(ev);
+        av=av+av;
+        iv=ev+ev; iv=ev+iv; iv=iv+ev; iv=iv+iv;
+        av=av-av; iv=ev-ev; iv=ev-iv; iv=iv-ev; iv=iv-iv;
+        av=ax*av; iv=ex*ev; iv=ex*iv; iv=ix*ev; iv=ix*iv;
+        av=av*ax; iv=ev*ex; iv=ev*ix; iv=iv*ex; iv=iv*ix;
+        av=av/ax; iv=ev/ex; iv=ev/ix; iv=iv/ex; iv=iv/ix;
+    };
 }
+
+static_assert(check_concept());
+
+} // namespace
 
 
 Void

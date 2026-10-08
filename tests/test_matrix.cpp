@@ -48,7 +48,6 @@ class TestMatrix {
   public:
     Void test();
   private:
-    Void test_concept();
     Void test_project();
     Void test_factorisations();
     Void test_misc();
@@ -61,36 +60,30 @@ TestMatrix::test()
     ARIADNE_TEST_CALL(test_misc());
 }
 
-Void
-TestMatrix::test_concept()
+namespace {
+
+constexpr bool check_concept()
 {
-    FloatDPApproximation fx(1,dp);
-    FloatDPBounds ix(1,dp);
-    FloatDP ex(1,dp);
-    Vector<FloatDPApproximation> fv;
-    Vector<FloatDPBounds> iv;
-    Vector<FloatDP> ev;
-    Matrix<FloatDPApproximation> fA(0,0,dp);
-    Matrix<FloatDPBounds> iA(0,0,dp);
-    Matrix<FloatDP> eA(0,0,dp);
-
-    fv=fv+fv; iv=ev+ev; iv=ev+iv; iv=iv+ev; iv=iv+iv;
-    fv=fv-fv; iv=ev-ev; iv=ev-iv; iv=iv-ev; iv=iv-iv;
-    fv=fx*fv; iv=ex*ev; iv=ex*iv; iv=ix*ev; iv=ix*iv;
-    fv=fv*fx; iv=ev*ex; iv=ev*ix; iv=iv*ex; iv=iv*ix;
-    fv=fv/fx; iv=ev/ex; iv=ev/ix; iv=iv/ex; iv=iv/ix;
-
-    fA=fA+fA; iA=eA+eA; iA=eA+iA; iA=iA+eA; iA=iA+iA;
-    fA=fA-fA; iA=eA-eA; iA=eA-iA; iA=iA-eA; iA=iA-iA;
-
-    fA=fx*fA; iA=ex*eA; iA=ex*iA; iA=ix*eA; iA=ix*iA;
-    fA=fA*fx; iA=eA*ex; iA=eA*ix; iA=iA*ex; iA=iA*ix;
-    //fv=fA*fv; iv=eA*ev; iv=eA*iv; iv=iA*ev; iv=iA*iv;
-    //fA=fA*fA; iA=eA*eA; iA=eA*iA; iA=iA*eA; iA=iA*iA;
-
-    fv=fA*fv; iv=eA*ev; iv=eA*iv; iv=iA*ev; iv=iA*iv;
-    fA=fA*fA; iA=eA*eA; iA=eA*iA; iA=iA*eA; iA=iA*iA;
+    return requires(FloatDPApproximation fx, FloatDPBounds ix, FloatDP ex,
+                    Vector<FloatDPApproximation> fv, Vector<FloatDPBounds> iv, Vector<FloatDP> ev,
+                    Matrix<FloatDPApproximation> fA, Matrix<FloatDPBounds> iA, Matrix<FloatDP> eA) {
+        fv=fv+fv; iv=ev+ev; iv=ev+iv; iv=iv+ev; iv=iv+iv;
+        fv=fv-fv; iv=ev-ev; iv=ev-iv; iv=iv-ev; iv=iv-iv;
+        fv=fx*fv; iv=ex*ev; iv=ex*iv; iv=ix*ev; iv=ix*iv;
+        fv=fv*fx; iv=ev*ex; iv=ev*ix; iv=iv*ex; iv=iv*ix;
+        fv=fv/fx; iv=ev/ex; iv=ev/ix; iv=iv/ex; iv=iv/ix;
+        fA=fA+fA; iA=eA+eA; iA=eA+iA; iA=iA+eA; iA=iA+iA;
+        fA=fA-fA; iA=eA-eA; iA=eA-iA; iA=iA-eA; iA=iA-iA;
+        fA=fx*fA; iA=ex*eA; iA=ex*iA; iA=ix*eA; iA=ix*iA;
+        fA=fA*fx; iA=eA*ex; iA=eA*ix; iA=iA*ex; iA=iA*ix;
+        fv=fA*fv; iv=eA*ev; iv=eA*iv; iv=iA*ev; iv=iA*iv;
+        fA=fA*fA; iA=eA*eA; iA=eA*iA; iA=iA*eA; iA=iA*iA;
+    };
 }
+
+static_assert(check_concept());
+
+} // namespace
 
 Void
 TestMatrix::test_project()

@@ -61,7 +61,6 @@ template<class X> class TestChebyshevPolynomial
     TestChebyshevPolynomial(PrecisionType<X> prec);
     Void test();
   private:
-    Void test_concept();
     Void test_univariate();
     Void test_multivariate();
 };
@@ -81,17 +80,22 @@ template<class X> Void TestChebyshevPolynomial<X>::test()
     ARIADNE_TEST_CALL(test_multivariate());
 }
 
-template<class X> Void TestChebyshevPolynomial<X>::test_concept()
+namespace {
+
+template<class X>
+constexpr bool check_concept()
 {
-    X c;
-    UnivariateChebyshevPolynomial<X>* xp; UnivariateChebyshevPolynomial<X>& x=*xp;
-    x=+x; x=-x; x=x+x; x=x-x; x=x*x;
-    x=x+c; x=c+x; x=x-c; x=c-x; x=x*c; x=c*x; x=x/c;
-    // x=sqr(x);
-    x=pow(x,2u);
-
-
+    return requires(X c, UnivariateChebyshevPolynomial<X> x) {
+        x=+x; x=-x; x=x+x; x=x-x; x=x*x;
+        x=x+c; x=c+x; x=x-c; x=c-x; x=x*c; x=c*x; x=x/c;
+        x=pow(x,2u);
+    };
 }
+
+static_assert(check_concept<FloatDPApproximation>());
+static_assert(check_concept<FloatMPApproximation>());
+
+} // namespace
 
 
 template<class X> Void TestChebyshevPolynomial<X>::test_univariate() {

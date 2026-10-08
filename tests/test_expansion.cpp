@@ -70,8 +70,6 @@ template<class F> class TestExpansion
     Void test();
   private:
     Void test_working();
-    Void test_concept();
-    Void test_iterator_concept();
     Void test_data_access();
     Void test_equality();
     Void test_sort();
@@ -128,72 +126,61 @@ template<class F> Void TestExpansion<F>::test_working()
 }
 
 
-template<class F> Void TestExpansion<F>::test_concept()
+namespace {
+
+template<class F>
+constexpr bool check_concept()
 {
-    F x(5,prec);
-    SizeType as(3);
-
-    ExpansionType e(as,prec);
-    const ExpansionType ce(as,prec);
-
-    e=ExpansionType(as,zero);
-    e=ExpansionType(ce);
-
-    //e=ExpansionType(3,1, {0.0_x, 0.0_x,0.0_x,0.0_x}, prec);
-    //e=ExpansionType(3,1, {1, 2,3,5.0_x}, prec);
-    e=ExpansionType({ {{0,0},1}, {{1,0,0},2}, {{0,1,0},3}, {{0,0,1},5.0_x} }, prec);
-    e=ExpansionType({ {{0,0},1}, {{1,0,0},2}, {{0,1,0},3}, {{0,0,1},5.0_x} }, prec);
-
-    MultiIndex a(as);
-    e.reserve(2u);
-    e.set(a,x);
-    e.prepend(a,x);
-    e.append(a,x);
-    e.append_sum(a,a,x);
-    e.clear();
-
-    e.index_sort(GradedLess());
-    e.index_sort(LexicographicLess());
-    e.index_sort(GradedIndexLess());
-    e.sort(ReverseLexicographicIndexLess());
-
-    x=ce[a];
-
-    ce.number_of_terms();
-    ce.argument_size();
-
-    e.erase(e.begin());
-
-    ce.check();
+    using E=Expansion<MultiIndex,F>;
+    return requires(F x, PrecisionType<F> prec, SizeType as, E e, E const ce, MultiIndex a) {
+        e=E(as,x);
+        e=E(ce);
+        e.reserve(2u);
+        e.set(a,x);
+        e.prepend(a,x);
+        e.append(a,x);
+        e.append_sum(a,a,x);
+        e.clear();
+        e.index_sort(GradedLess());
+        e.index_sort(LexicographicLess());
+        e.index_sort(GradedIndexLess());
+        e.sort(ReverseLexicographicIndexLess());
+        x=ce[a];
+        ce.number_of_terms();
+        ce.argument_size();
+        e.erase(e.begin());
+        ce.check();
+    };
 }
 
-template<class F> Void TestExpansion<F>::test_iterator_concept()
+template<class F>
+constexpr bool check_iterator_concept()
 {
-    MultiIndex a(3);
-    ExpansionType e(3,zero);
-    const ExpansionType cp(3,zero);
-
-    ExpansionIterator iter=e.begin(); iter=e.end(); iter=e.find(a);
-    ExpansionConstIterator citer=e.begin(); citer=e.end(); citer=e.find(a);
-    citer=e.begin(); citer=cp.end(); citer=cp.find(a);
-
-    ExpansionValueType val=*iter;
-    ExpansionReference ref=*iter;
-    ExpansionConstReference ncref=*iter;
-
-    ExpansionValueType cval=*citer;
-    ExpansionConstReference cref=*citer;
-
-    Bool res; if (res) return; // To avoid compiler warning
-
-    ++iter; --iter;
-    ++citer; --citer;
-
-    res=(iter==iter); res=(iter!=iter); res=(citer==citer); res=(citer!=citer);
-    res=(citer==iter); res=(citer!=iter); res=(iter==citer); res=(iter!=citer);
-
-    ref=cref; ref=ncref;
+    using E=Expansion<MultiIndex,F>;
+    using Iterator=typename E::Iterator;
+    using ConstIterator=typename E::ConstIterator;
+    using Reference=typename E::Reference;
+    using ConstReference=typename E::ConstReference;
+    return requires(E e, E const ce, MultiIndex a, Iterator iter, ConstIterator citer,
+                    Reference ref, ConstReference cref) {
+        iter=e.begin(); iter=e.end(); iter=e.find(a);
+        citer=e.begin(); citer=e.end(); citer=e.find(a);
+        citer=ce.begin(); citer=ce.end(); citer=ce.find(a);
+        *iter; *citer;
+        ++iter; --iter; ++citer; --citer;
+        iter==iter; iter!=iter; citer==citer; citer!=citer;
+        citer==iter; citer!=iter; iter==citer; iter!=citer;
+        ref=cref;
+    };
 }
+
+static_assert(check_concept<RoundedFloatDP>());
+static_assert(check_concept<Rounded<FloatMP>>());
+static_assert(check_iterator_concept<RoundedFloatDP>());
+static_assert(check_iterator_concept<Rounded<FloatMP>>());
+
+} // namespace
+
 
 // Test dereferencing of iterators
 template<class F> Void TestExpansion<F>::test_data_access()

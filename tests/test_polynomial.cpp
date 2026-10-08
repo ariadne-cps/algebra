@@ -45,7 +45,6 @@ class TestPolynomial
   public:
     Void test();
   private:
-    Void test_concept();
     Void test_cleanup();
     Void test_constructors();
     Void test_indexing();
@@ -67,43 +66,32 @@ Void TestPolynomial::test()
 }
 
 
-Void TestPolynomial::test_concept()
+namespace {
+
+constexpr bool check_concept()
 {
-    RoundedFloatDP x(0,dp);
-    Vector<RoundedFloatDP> v(3u,dp);
-    MultiIndex a(3u);
-    MultivariatePolynomial<RoundedFloatDP> p(3u,dp);
-    const MultivariatePolynomial<RoundedFloatDP> cp(3u,dp);
-    Vector< MultivariatePolynomial<RoundedFloatDP> > pv(2u,cp);
-
-    p=MultivariatePolynomial<RoundedFloatDP>(3u,dp);
-    p=MultivariatePolynomial<RoundedFloatDP>(cp);
-
-    p=MultivariatePolynomial<RoundedFloatDP>({ {{0,0,0},1.0_x}, {{1,0,0},2.0_x}, {{0,0,0},3.0_x}, {{0,0,1},5.0_x} },dp);
-
-    //p=MultivariatePolynomial<ApproximateDouble>::variable(3u,0u);
-    //p=MultivariatePolynomial<ApproximateDouble>::variables(3u)[0u];
-
-    p=x;
-
-    p.reserve(2u);
-    p.insert(a,x);
-
-    x=cp[a];
-    p[a]=1.0_x;
-
-    cp.argument_size();
-
-    p.erase(p.begin());
-
-    p.check();
-    p.cleanup();
-    p.clear();
-
-    evaluate(p,v);
-    compose(p,pv);
-
+    using P=MultivariatePolynomial<RoundedFloatDP>;
+    return requires(RoundedFloatDP x, Vector<RoundedFloatDP> v, MultiIndex a, P p, P const cp, Vector<P> pv) {
+        p=P(3u,dp);
+        p=P(cp);
+        p=x;
+        p.reserve(2u);
+        p.insert(a,x);
+        x=cp[a];
+        p[a]=1.0_x;
+        cp.argument_size();
+        p.erase(p.begin());
+        p.check();
+        p.cleanup();
+        p.clear();
+        evaluate(p,v);
+        compose(p,pv);
+    };
 }
+
+static_assert(check_concept());
+
+} // namespace
 
 Void TestPolynomial::test_cleanup()
 {
