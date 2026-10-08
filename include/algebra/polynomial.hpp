@@ -302,6 +302,8 @@ class Polynomial
 
 };
 
+template<> Void Polynomial<MultiIndex,FloatDP>::cleanup();
+
 template<class I, class X> struct AlgebraOperations<Polynomial<I,X>> {
     typedef I IndexType;
   public:
