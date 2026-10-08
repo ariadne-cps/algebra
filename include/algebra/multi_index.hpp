@@ -279,18 +279,6 @@ class MultiIndexListConstIterator {
 };
 
 
-class MultiIndexBound {
-  public:
-    MultiIndexBound(SizeType n, SizeType d);
-    MultiIndexBound(const MultiIndex& a);
-    SizeType size() const { return _groups.size(); }
-    friend Bool operator<=(const MultiIndex& a, const MultiIndexBound& b);
-  private:
-    Array<SizeType> _groups;
-    Array<SizeType> _max_degrees;
-};
-
-
 template<> class UniformList<MultiIndex>
     : public MultiIndexList
 {

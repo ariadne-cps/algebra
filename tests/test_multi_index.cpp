@@ -40,6 +40,7 @@ class TestMultiIndex
 
     Void test() {
         ARIADNE_TEST_CALL(test_constructor());
+        ARIADNE_TEST_CALL(test_uni_index());
         ARIADNE_TEST_CALL(test_comparison());
         ARIADNE_TEST_CALL(test_addition());
         ARIADNE_TEST_CALL(test_increment());
@@ -67,6 +68,27 @@ class TestMultiIndex
         ARIADNE_TEST_EQUAL((Int)i3.degree(),1);
         ARIADNE_TEST_EQUAL((Int)i3[2],1);
         ARIADNE_TEST_EQUAL((Int)i3[8],0);
+    }
+
+    Void test_uni_index() {
+        UniIndex a(2u);
+        ARIADNE_TEST_EQUALS(a.degree(),DegreeType(2u));
+        ARIADNE_TEST_EXECUTE(a.size());
+        ARIADNE_TEST_EQUALS(a[IndexZero()],DegreeType(2u));
+
+        a[IndexZero()]=3u;
+        const UniIndex& ca=a;
+        ARIADNE_TEST_EQUALS(ca[IndexZero()],DegreeType(3u));
+
+        ARIADNE_TEST_EXECUTE(++a);
+        ARIADNE_TEST_EQUALS(a.degree(),DegreeType(4u));
+        ARIADNE_TEST_EXECUTE(--a);
+        ARIADNE_TEST_EQUALS(a.degree(),DegreeType(3u));
+
+        UniIndex b(2u);
+        ARIADNE_TEST_EQUALS(a-b,static_cast<short int>(1));
+        ARIADNE_TEST_EXECUTE(a+=b);
+        ARIADNE_TEST_EQUALS(a.degree(),DegreeType(5u));
     }
 
     Void test_comparison() {
@@ -151,6 +173,8 @@ class TestMultiIndex
         ARIADNE_TEST_EXECUTE(lst.append(a0));
         ARIADNE_TEST_PRINT(*lst.begin());
         ARIADNE_TEST_EQUALS(lst.begin()->size(),3u);
+        const MultiIndexList& const_lst=lst;
+        ARIADNE_TEST_EQUALS(const_lst.begin()->size(),3u);
         ARIADNE_TEST_EQUALS(*lst.begin(),a0);
 
         ARIADNE_TEST_EXECUTE(lst.append(a1));
