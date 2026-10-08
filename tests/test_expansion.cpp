@@ -33,6 +33,11 @@
 using namespace std;
 using namespace Ariadne;
 
+namespace Ariadne {
+DP characteristics(FloatDP flt);
+MP characteristics(FloatMP flt);
+}
+
 template<class K, class V> struct MapValue {
     typedef K key_type;
     K first; V second;
@@ -448,6 +453,11 @@ template<class F> Void TestExpansion<F>::test_embed()
 }
 
 Int main() {
+    FloatDP raw_dp(0,double_precision);
+    FloatMP raw_mp(0,precision(128_bits));
+    ARIADNE_TEST_EXECUTE(characteristics(raw_dp));
+    ARIADNE_TEST_EXECUTE(characteristics(raw_mp));
+
     RoundedFloatDP zero_dp{0,double_precision};
     RoundedFloatMP zero_mp{0,precision(128_bits)};
     TestExpansion<RoundedFloatDP>(zero_dp).test();
