@@ -267,6 +267,35 @@ TestMatrix::test_misc()
     }
 
     {
+        Matrix<FloatDPBounds> A({{1.0_x},{2.0_x}},dp);
+        MatrixColumn<Matrix<FloatDPBounds>> c(A,0u);
+        Vector<FloatDPBounds> v=c;
+        ARIADNE_TEST_EQUALS(v.size(),2u);
+        Vector<FloatDPBounds> w({3.0_x,4.0_x},dp);
+        ARIADNE_TEST_EXECUTE(c=w);
+    }
+
+    {
+        MultiplePrecision mp(128);
+        Matrix<FloatMPApproximation> A({{1.0_x},{2.0_x}},mp);
+        MatrixColumn<Matrix<FloatMPApproximation>> c(A,0u);
+        Vector<FloatMPApproximation> v=c;
+        ARIADNE_TEST_EQUALS(v.size(),2u);
+        Vector<FloatMPApproximation> w({3.0_x,4.0_x},mp);
+        ARIADNE_TEST_EXECUTE(c=w);
+    }
+
+    {
+        MultiplePrecision mp(128);
+        Matrix<FloatMPBounds> A({{1.0_x},{2.0_x}},mp);
+        MatrixColumn<Matrix<FloatMPBounds>> c(A,0u);
+        Vector<FloatMPBounds> v=c;
+        ARIADNE_TEST_EQUALS(v.size(),2u);
+        Vector<FloatMPBounds> w({3.0_x,4.0_x},mp);
+        ARIADNE_TEST_EXECUTE(c=w);
+    }
+
+    {
         Matrix<RoundedFloatDP> A({{1.0_x,2.0_x}},dp);
         Matrix<RoundedFloatDP> row_mismatch({{1.0_x,2.0_x},{3.0_x,4.0_x}},dp);
         Matrix<RoundedFloatDP> col_mismatch({{1.0_x}},dp);
