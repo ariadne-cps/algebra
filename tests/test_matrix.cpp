@@ -278,11 +278,41 @@ TestMatrix::test_misc()
         ARIADNE_TEST_FAIL(transpose(A)*Matrix<RoundedFloatDP>({{1.0_x},{2.0_x}},dp));
         ARIADNE_TEST_FAIL(transpose(A)*Vector<RoundedFloatDP>({1.0_x,2.0_x},dp));
 
+        Matrix<RoundedFloatDP> B({{3.0_x,4.0_x}},dp);
+        Matrix<RoundedFloatDP> C({{1.0_x},{2.0_x}},dp);
+        Vector<RoundedFloatDP> v({1.0_x,2.0_x},dp);
+        Vector<RoundedFloatDP> one_v({1.0_x},dp);
+        ARIADNE_TEST_EXECUTE(A+B);
+        ARIADNE_TEST_EXECUTE(A-B);
+        ARIADNE_TEST_EXECUTE(A*C);
+        ARIADNE_TEST_EXECUTE(A*v);
+        ARIADNE_TEST_EXECUTE(A*transpose(B));
+        ARIADNE_TEST_EXECUTE(transpose(A)*Matrix<RoundedFloatDP>({{1.0_x}},dp));
+        ARIADNE_TEST_EXECUTE(transpose(A)*one_v);
+        ARIADNE_TEST_EXECUTE(A==B);
+
+        Matrix<RoundedFloatDP> R(2u,2u,dp);
+        R.resize(1u,4u);
+        R.resize(3u,2u);
+        R.set(0u,0u,RoundedFloatDP(1.0_x,dp));
+        ARIADNE_TEST_EXECUTE(R.get(0u,0u));
+        Matrix<RoundedFloatDP> const& CR=R;
+        ARIADNE_TEST_EXECUTE(CR.begin());
+        ARIADNE_TEST_EXECUTE(CR[range(0,1)]);
+        ARIADNE_TEST_EXECUTE(R[range(0,1)]);
+        ARIADNE_TEST_EXECUTE(CR.element_characteristics());
+        std::ostringstream rounded_stream;
+        rounded_stream << R;
+
+        ARIADNE_TEST_EXECUTE(Matrix<RoundedFloatDP>::identity(2u,dp));
+        ARIADNE_TEST_EXECUTE(Matrix<RoundedFloatDP>::identity<DoublePrecision>(2u,dp));
+
         Matrix<Rational> exact_a({{Rational(1),Rational(2)}});
         Matrix<Rational> exact_row_mismatch({{Rational(1),Rational(2)},{Rational(3),Rational(4)}});
         Matrix<Rational> exact_col_mismatch({{Rational(1)}});
         ARIADNE_TEST_ASSERT(!(exact_a==exact_row_mismatch));
         ARIADNE_TEST_ASSERT(!(exact_a==exact_col_mismatch));
+        ARIADNE_TEST_EXECUTE(exact_a==exact_a);
     }
 
     {
