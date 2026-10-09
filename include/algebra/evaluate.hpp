@@ -57,4 +57,6 @@ template<class X, class A> Vector<ArithmeticType<X,A>> evaluate(const Vector< Ex
 
 } // namespace Ariadne
 
+#include "algebra/evaluate.tpl.hpp"
+
 #endif /* ARIADNE_EVALUATE_HPP */
