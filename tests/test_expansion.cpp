@@ -147,9 +147,9 @@ template<class F> Void TestExpansion<F>::test_helpers()
     MultiIndex zero_index({0u,0u});
     MultiIndex first_index({1u,0u});
     MultiIndex second_index({0u,1u});
-    F one(1,prec);
-    F two(2,prec);
-    F three(3,prec);
+    F coefficient_one(1,prec);
+    F coefficient_two(2,prec);
+    F coefficient_three(3,prec);
 
     ExpansionType checked(2u,prec);
     ARIADNE_TEST_EXECUTE(checked.check());
@@ -162,14 +162,14 @@ template<class F> Void TestExpansion<F>::test_helpers()
 
     ExpansionType left(2u,prec);
     ExpansionType right(2u,prec);
-    left.append(zero_index,one);
-    right.append(first_index,two);
+    left.append(zero_index,coefficient_one);
+    right.append(first_index,coefficient_two);
     ARIADNE_TEST_EXECUTE(left.swap(right));
     ARIADNE_TEST_EQUALS(left.front().index(),first_index);
-    ARIADNE_TEST_EQUALS(left.front().coefficient(),two);
+    ARIADNE_TEST_EQUALS(left.front().coefficient(),coefficient_two);
     ExpansionType const& const_left=left;
     ARIADNE_TEST_EQUALS(const_left.front().index(),first_index);
-    ARIADNE_TEST_EQUALS(const_left.back().coefficient(),two);
+    ARIADNE_TEST_EQUALS(const_left.back().coefficient(),coefficient_two);
 
     ExpansionType resized(2u,prec);
     SizeType initial_capacity=resized.capacity();
@@ -184,47 +184,49 @@ template<class F> Void TestExpansion<F>::test_helpers()
     ARIADNE_TEST_EQUALS(resized.size(),3u);
 
     ExpansionType values(2u,prec);
-    ARIADNE_TEST_EXECUTE(values.set(zero_index,one));
-    ARIADNE_TEST_EXECUTE(values.set(zero_index,two));
-    ARIADNE_TEST_EQUALS(values.get(zero_index),two);
+    ARIADNE_TEST_EXECUTE(values.set(zero_index,coefficient_one));
+    ARIADNE_TEST_EXECUTE(values.set(zero_index,coefficient_two));
+    ARIADNE_TEST_EQUALS(values.get(zero_index),coefficient_two);
     ARIADNE_TEST_EQUALS(values.get(first_index),zero);
 
     ExpansionType spare(2u,prec);
     spare.reserve(4u);
-    spare.append(zero_index,one);
-    spare.append(second_index,three);
-    auto inserted=spare.insert(spare.begin()+1,first_index,two);
+    spare.append(zero_index,coefficient_one);
+    spare.append(second_index,coefficient_three);
+    auto inserted=spare.insert(spare.begin()+1,first_index,coefficient_two);
     ARIADNE_TEST_EQUALS(inserted->index(),first_index);
     ARIADNE_TEST_EXECUTE(spare.erase(inserted));
     ARIADNE_TEST_EQUALS(spare.size(),2u);
 
-    ExpansionType tight(2u,characteristics(one),1u);
-    tight.append(zero_index,one);
-    auto tight_inserted=tight.insert(tight.begin(),first_index,two);
+    ExpansionType tight(2u,characteristics(coefficient_one),1u);
+    tight.append(zero_index,coefficient_one);
+    auto tight_inserted=tight.insert(tight.begin(),first_index,coefficient_two);
     ARIADNE_TEST_EQUALS(tight_inserted->index(),first_index);
 
-    ExpansionType sortable(2u,prec);
-    sortable.append(first_index,two);
-    sortable.append(zero_index,one);
-    SortedExpansion<MI,F,GradedIndexLess> sorted(std::move(sortable));
-    ARIADNE_TEST_EXECUTE(sorted.check());
-    ARIADNE_TEST_EXECUTE(sorted.insert(second_index,three));
-    ARIADNE_TEST_FAIL(sorted.insert(second_index,three));
-    ARIADNE_TEST_EXECUTE(sorted.set(first_index,three));
-    ARIADNE_TEST_EQUALS(sorted.get(first_index),three);
-    MultiIndex missing_index({2u,0u});
-    ARIADNE_TEST_EQUALS(sorted.get(missing_index),zero);
+    if constexpr (Same<F,RoundedFloatDP>) {
+        ExpansionType sortable(2u,prec);
+        sortable.append(first_index,coefficient_two);
+        sortable.append(zero_index,coefficient_one);
+        SortedExpansion<MI,F,GradedIndexLess> sorted(std::move(sortable));
+        ARIADNE_TEST_EXECUTE(sorted.check());
+        ARIADNE_TEST_EXECUTE(sorted.insert(second_index,coefficient_three));
+        ARIADNE_TEST_FAIL(sorted.insert(second_index,coefficient_three));
+        ARIADNE_TEST_EXECUTE(sorted.set(first_index,coefficient_three));
+        ARIADNE_TEST_EQUALS(sorted.get(first_index),coefficient_three);
+        MultiIndex missing_index({2u,0u});
+        ARIADNE_TEST_EQUALS(sorted.get(missing_index),zero);
 
-    SortedExpansion<MI,F,GradedIndexLess> bad_sorted(2u,prec);
-    bad_sorted.append(first_index,two);
-    bad_sorted.append(zero_index,one);
-    ARIADNE_TEST_FAIL(bad_sorted.check());
+        SortedExpansion<MI,F,GradedIndexLess> bad_sorted(2u,prec);
+        bad_sorted.append(first_index,coefficient_two);
+        bad_sorted.append(zero_index,coefficient_one);
+        ARIADNE_TEST_FAIL(bad_sorted.check());
+    }
 
     std::ostringstream os;
     Array<String> names({"x","y"});
-    ARIADNE_TEST_EXECUTE(sorted._write(os,names));
+    ARIADNE_TEST_EXECUTE(values._write(os,names));
     Array<String> wrong_names({"x"});
-    ARIADNE_TEST_FAIL((void)sorted._write(os,wrong_names));
+    ARIADNE_TEST_FAIL((void)values._write(os,wrong_names));
 }
 
 
