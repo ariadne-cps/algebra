@@ -204,10 +204,8 @@ template<class I, class X> X const& Expansion<I,X>::zero_coefficient() const {
 }
 
 template<class I, class X> Void Expansion<I,X>::reserve(SizeType new_capacity) {
-    if(this->capacity() < new_capacity) {
-        this->_indices.reserve(new_capacity);
-        this->_coefficients.reserve(new_capacity);
-    }
+    this->_indices.reserve(new_capacity);
+    this->_coefficients.reserve(new_capacity);
 }
 
 template<class I, class X> Void Expansion<I,X>::resize(SizeType new_size) {
@@ -215,9 +213,7 @@ template<class I, class X> Void Expansion<I,X>::resize(SizeType new_size) {
         this->_indices.resize(new_size);
         this->_coefficients.resize(new_size);
     } else {
-        if(this->capacity() < new_size) {
-            this->reserve(new_size);
-        }
+        this->reserve(new_size);
         I a=make_zero_index(this->argument_size());
         X c=this->zero_coefficient();
         for (SizeType i=this->size(); i!=new_size; ++i) {
@@ -240,26 +236,28 @@ template<class I, class X> Void Expansion<I,X>::remove_zeros() {
 
 template<class X, class Y> concept CanInplaceAdd = requires(X& x, Y const& y) { x+=y; };
 
-template<class I, class X>Void combine_terms(Expansion<I,X>& e) {
-    if constexpr (CanInplaceAdd<X,X>) {
-        auto begin=e.begin();
-        auto end=e.end();
-        auto curr=begin;
-        auto adv=begin;
-        while (adv!=end) {
-            curr->index()=adv->index();
-            curr->coefficient()=adv->coefficient();
+template<class I, class X> requires CanInplaceAdd<X,X>
+Void combine_terms(Expansion<I,X>& e) {
+    auto begin=e.begin();
+    auto end=e.end();
+    auto curr=begin;
+    auto adv=begin;
+    while (adv!=end) {
+        curr->index()=adv->index();
+        curr->coefficient()=adv->coefficient();
+        ++adv;
+        while (adv!=end && adv->index()==curr->index()) {
+            curr->coefficient() += adv->coefficient();
             ++adv;
-            while (adv!=end && adv->index()==curr->index()) {
-                curr->coefficient() += adv->coefficient();
-                ++adv;
-            }
-            ++curr;
         }
-        e.resize(static_cast<SizeType>(curr-begin));
-    } else {
-        throw std::runtime_error("Cannot combine terms of an expansion if the coefficients do not support inplace addition.");
+        ++curr;
     }
+    e.resize(static_cast<SizeType>(curr-begin));
+}
+
+template<class I, class X> requires (!CanInplaceAdd<X,X>)
+Void combine_terms(Expansion<I,X>&) {
+    throw std::runtime_error("Cannot combine terms of an expansion if the coefficients do not support inplace addition.");
 }
 
 template<class I, class X> Void Expansion<I,X>::combine_terms() {
@@ -347,13 +345,9 @@ template<class I, class X> Bool Expansion<I,X>::same_as(const Expansion<I,X>& ot
 }
 
 template<class I, class X> auto Expansion<I,X>::insert(Iterator pos, const I& a, const X& c) -> Iterator {
-    if(this->size()==this->capacity()) {
-        SizeType where=static_cast<SizeType>(pos-this->begin());
-        this->append(a,c);
-        pos=this->begin()+static_cast<std::ptrdiff_t>(where);
-    } else {
-        this->append(a,c);
-    }
+    SizeType where=static_cast<SizeType>(pos-this->begin());
+    this->append(a,c);
+    pos=this->begin()+static_cast<std::ptrdiff_t>(where);
     auto curr=this->end();
     auto prev=curr-1;
     while(prev!=pos) {
@@ -486,6 +480,16 @@ template<class I, class X> Bool Expansion<I,X>::is_sorted(GradedIndexLess) {
     return std::is_sorted(this->begin(),this->end(),GradedIndexLess());
 }
 
+namespace {
+inline Void copy_embedded_index(MultiIndex& new_index, MultiIndex const& old_index, SizeType before_size, SizeType old_size) {
+    for(SizeType j=0; j!=old_size; ++j) { new_index[j+before_size]=old_index[j]; }
+}
+
+inline Void copy_embedded_index(MultiIndex& new_index, UniIndex old_index, SizeType before_size, SizeOne) {
+    new_index[before_size]=old_index;
+}
+} // namespace
+
 template<class I, class X> Expansion<MultiIndex,X> Expansion<I,X>::_embed(SizeType before_size, Expansion<I,X> const& x, SizeType after_size)
 {
     ArgumentSizeType old_size=x.argument_size();
@@ -495,12 +499,7 @@ template<class I, class X> Expansion<MultiIndex,X> Expansion<I,X>::_embed(SizeTy
     MultiIndex new_index(new_size);
     for(typename Expansion<I,X>::ConstIterator iter=x.begin(); iter!=x.end(); ++iter) {
         old_index=iter->index();
-        static_assert(Same<I,MultiIndex> or Same<I,UniIndex>);
-        if constexpr (Same<I,MultiIndex>) {
-            for(SizeType j=0; j!=old_size; ++j) { new_index[j+before_size]=old_index[j]; }
-        } else {
-            new_index[before_size]=old_index;
-        }
+        copy_embedded_index(new_index,old_index,before_size,old_size);
         r.append(new_index,iter->coefficient());
     }
     return r;
