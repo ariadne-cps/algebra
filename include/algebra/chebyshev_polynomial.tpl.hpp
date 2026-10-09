@@ -101,7 +101,7 @@ template<class X> auto
 UnivariateChebyshevPolynomial<X>::apply(Add, ChebyshevPolynomial<X> cm, X const& s) -> ChebyshevPolynomial<X> {
     if (cm._terms.empty()) { cm._terms.append(0u,s); }
     else if (cm._terms.front().index()==0) { cm._terms.front().coefficient()+=s; }
-    else { assert(false); }
+    else { cm._terms.prepend(0u,s); }
     return cm;
 }
 
@@ -271,7 +271,7 @@ template<class X> auto
 MultivariateChebyshevPolynomial<X>::apply(Add, ChebyshevPolynomial<X> cm, Scalar<X> const& s) -> ChebyshevPolynomial<X> {
     if (cm._terms.empty()) { cm._terms.append(MultiIndex::zero(cm.argument_size()),s); }
     else if (cm._terms.front().index().degree()==0) { cm._terms.front().coefficient()+=s; }
-    else { assert(false); }
+    else { cm._terms.prepend(MultiIndex::zero(cm.argument_size()),s); }
     return cm;
 }
 
@@ -283,7 +283,7 @@ MultivariateChebyshevPolynomial<X>::apply(Mul, ChebyshevPolynomial<X> cm, Scalar
 
 template<class X> auto
 MultivariateChebyshevPolynomial<X>::apply(Add, ChebyshevPolynomial<X> const& cm1, ChebyshevPolynomial<X> const& cm2) -> ChebyshevPolynomial<X> {
-    ARIADNE_ASSERT(cm1.argument_size()==cm2.argument_size());
+    ARIADNE_PRECONDITION(cm1.argument_size()==cm2.argument_size());
     ChebyshevPolynomial<X> cmr(cm1.argument_size(),min(cm1.precision(),cm2.precision()));
     auto iter1=cm1._terms.begin();
     auto iter2=cm2._terms.begin();
