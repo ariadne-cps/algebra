@@ -30,6 +30,31 @@
 
 using namespace Ariadne;
 
+namespace {
+
+class ValidatedAlgebraInterfaceStub : public AlgebraInterface<ValidatedNumber> {
+  public:
+    AlgebraInterface<ValidatedNumber>* _copy() const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<ValidatedNumber>* _create_copy() const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<ValidatedNumber>* _create_zero() const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<ValidatedNumber>* _create_constant(ValidatedNumber const&) const override { return new ValidatedAlgebraInterfaceStub(*this); }
+
+    Void _iadd(ValidatedNumber const&) override { }
+    Void _imul(ValidatedNumber const&) override { }
+    Void _isma(ValidatedNumber const&, AlgebraInterface<ValidatedNumber> const&) override { }
+    Void _ifma(AlgebraInterface<ValidatedNumber> const&, AlgebraInterface<ValidatedNumber> const&) override { }
+
+    AlgebraInterface<ValidatedNumber>* _apply(UnaryRingOperator) const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<ValidatedNumber>* _apply(BinaryRingOperator,AlgebraInterface<ValidatedNumber> const&) const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<ValidatedNumber>* _apply(BinaryFieldOperator,ValidatedNumber const&) const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<ValidatedNumber>* _rapply(BinaryRingOperator,ValidatedNumber const&) const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<ValidatedNumber>* _apply(GradedRingOperator,Nat) const override { return new ValidatedAlgebraInterfaceStub(*this); }
+
+    OutputStream& _write(OutputStream& os) const override { return os << "ValidatedAlgebraInterfaceStub"; }
+};
+
+} // namespace
+
 class TestAlgebra {
     using X=FloatDPApproximation;
     using DX=Differential<X>;
@@ -67,6 +92,17 @@ class TestAlgebra {
         ax=ax*cx;
         ARIADNE_TEST_EXECUTE(ax=ax/cx);
         ARIADNE_TEST_ASSIGN(dx,ax.extract<DX>());
+        auto algebra_wrapper=ax.extract<AlgebraWrapper<DX,X>>();
+        ARIADNE_TEST_PRINT(algebra_wrapper);
+
+        Algebra<ValidatedNumber> validated_algebra(new ValidatedAlgebraInterfaceStub());
+        AlgebraInterface<ValidatedNumber> const& validated_interface=validated_algebra;
+        (void)validated_interface;
+        ARIADNE_TEST_EXECUTE(validated_algebra.create());
+        ARIADNE_TEST_EXECUTE(validated_algebra.clone());
+        ARIADNE_TEST_EXECUTE(validated_algebra.create_zero());
+        auto validated_body=validated_algebra.extract<ValidatedAlgebraInterfaceStub>();
+        ARIADNE_TEST_PRINT(validated_body);
 
         ARIADNE_TEST_CONSTRUCT(TAX,tax,(dx));
         ARIADNE_TEST_ASSIGN(tax,div(tax,tax+cx));
@@ -97,6 +133,8 @@ class TestAlgebra {
         ARIADNE_TEST_EXECUTE(rec(factorial));
 
         ARIADNE_TEST_ASSIGN(dx,tax.extract<DX>());
+        auto transcendental_wrapper=tax.extract<TranscendentalAlgebraWrapper<DX,X>>();
+        ARIADNE_TEST_PRINT(transcendental_wrapper);
 
     }
 };
