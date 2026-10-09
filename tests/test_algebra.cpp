@@ -32,26 +32,28 @@ using namespace Ariadne;
 
 namespace {
 
-class ValidatedAlgebraInterfaceStub : public AlgebraInterface<ValidatedNumber> {
+template<class X> class AlgebraInterfaceStub : public AlgebraInterface<X> {
   public:
-    AlgebraInterface<ValidatedNumber>* _copy() const override { return new ValidatedAlgebraInterfaceStub(*this); }
-    AlgebraInterface<ValidatedNumber>* _create_copy() const override { return new ValidatedAlgebraInterfaceStub(*this); }
-    AlgebraInterface<ValidatedNumber>* _create_zero() const override { return new ValidatedAlgebraInterfaceStub(*this); }
-    AlgebraInterface<ValidatedNumber>* _create_constant(ValidatedNumber const&) const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _copy() const override { return new AlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _create_copy() const override { return new AlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _create_zero() const override { return new AlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _create_constant(X const&) const override { return new AlgebraInterfaceStub(*this); }
 
-    Void _iadd(ValidatedNumber const&) override { }
-    Void _imul(ValidatedNumber const&) override { }
-    Void _isma(ValidatedNumber const&, AlgebraInterface<ValidatedNumber> const&) override { }
-    Void _ifma(AlgebraInterface<ValidatedNumber> const&, AlgebraInterface<ValidatedNumber> const&) override { }
+    Void _iadd(X const&) override { }
+    Void _imul(X const&) override { }
+    Void _isma(X const&, AlgebraInterface<X> const&) override { }
+    Void _ifma(AlgebraInterface<X> const&, AlgebraInterface<X> const&) override { }
 
-    AlgebraInterface<ValidatedNumber>* _apply(UnaryRingOperator) const override { return new ValidatedAlgebraInterfaceStub(*this); }
-    AlgebraInterface<ValidatedNumber>* _apply(BinaryRingOperator,AlgebraInterface<ValidatedNumber> const&) const override { return new ValidatedAlgebraInterfaceStub(*this); }
-    AlgebraInterface<ValidatedNumber>* _apply(BinaryFieldOperator,ValidatedNumber const&) const override { return new ValidatedAlgebraInterfaceStub(*this); }
-    AlgebraInterface<ValidatedNumber>* _rapply(BinaryRingOperator,ValidatedNumber const&) const override { return new ValidatedAlgebraInterfaceStub(*this); }
-    AlgebraInterface<ValidatedNumber>* _apply(GradedRingOperator,Nat) const override { return new ValidatedAlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _apply(UnaryRingOperator) const override { return new AlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _apply(BinaryRingOperator,AlgebraInterface<X> const&) const override { return new AlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _apply(BinaryFieldOperator,X const&) const override { return new AlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _rapply(BinaryRingOperator,X const&) const override { return new AlgebraInterfaceStub(*this); }
+    AlgebraInterface<X>* _apply(GradedRingOperator,Nat) const override { return new AlgebraInterfaceStub(*this); }
 
-    OutputStream& _write(OutputStream& os) const override { return os << "ValidatedAlgebraInterfaceStub"; }
+    OutputStream& _write(OutputStream& os) const override { return os << "AlgebraInterfaceStub"; }
 };
+
+using ValidatedAlgebraInterfaceStub=AlgebraInterfaceStub<ValidatedNumber>;
 
 template<class X> class TranscendentalAlgebraInterfaceStub : public TranscendentalAlgebraInterface<X> {
   public:
@@ -109,9 +111,10 @@ class TestAlgebra {
         ARIADNE_TEST_ASSIGN(dx,ax.extract<DX>());
         auto algebra_wrapper=ax.extract<AlgebraWrapper<DX,X>>();
         ARIADNE_TEST_PRINT(algebra_wrapper);
-        using OtherAlgebraWrapper=AlgebraWrapper<X,X>;
-        ARIADNE_TEST_FAIL(ax.extract<OtherAlgebraWrapper>());
-        ARIADNE_TEST_FAIL(ax.extract<X>());
+        Algebra<X> interface_algebra(new AlgebraInterfaceStub<X>());
+        ARIADNE_TEST_EXECUTE(interface_algebra.extract<AlgebraInterfaceStub<X>>());
+        ARIADNE_TEST_FAIL(ax.extract<AlgebraInterfaceStub<X>>());
+        ARIADNE_TEST_FAIL(interface_algebra.extract<DX>());
 
         Algebra<ValidatedNumber> validated_algebra(new ValidatedAlgebraInterfaceStub());
         AlgebraInterface<ValidatedNumber> const& validated_interface=validated_algebra;
@@ -153,8 +156,10 @@ class TestAlgebra {
         ARIADNE_TEST_ASSIGN(dx,tax.extract<DX>());
         auto transcendental_wrapper=tax.extract<TranscendentalAlgebraWrapper<DX,X>>();
         ARIADNE_TEST_PRINT(transcendental_wrapper);
+        TranscendentalAlgebra<X> interface_tax(new TranscendentalAlgebraInterfaceStub<X>());
+        ARIADNE_TEST_EXECUTE(interface_tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
         ARIADNE_TEST_FAIL(tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
-        ARIADNE_TEST_FAIL(tax.extract<X>());
+        ARIADNE_TEST_FAIL(interface_tax.extract<DX>());
 
     }
 };
