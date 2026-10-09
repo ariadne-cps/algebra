@@ -32,6 +32,7 @@
 #include <initializer_list>
 
 #include "utility/metaprogramming.hpp"
+#include "utility/macros.hpp"
 #include "vector.hpp"
 
 namespace Ariadne {
@@ -137,14 +138,16 @@ template<class X> class SymmetricMatrix
     template<class T> friend SymmetricMatrix<T> outer(Matrix<T> const& A);
     template<class T> friend SymmetricMatrix<T> AxTpTA(Matrix<T> const&, SymmetricMatrix<T> const&);
   private:
-    Void _check_data_access(SizeType i, SizeType j) const;
     OutputStream& _write(OutputStream& os) const;
 
     friend Vector<X>& to_vector(SymmetricMatrix<X>& S) { return reinterpret_cast<Vector<X>&>(S._ary); }
     friend Vector<X> const& to_vector(SymmetricMatrix<X> const& S) { return reinterpret_cast<Vector<X>const&>(S._ary); }
   private:
-    SizeType _fast_position(SizeType i, SizeType j) const { assert(i<=j); return i*(2*this->size()-i-1)/2+j; }
-    SizeType _position(SizeType i, SizeType j) const { if(i<=j) { return this->_fast_position(i,j); } else { return this->_fast_position(j,i); } }
+    SizeType _fast_position(SizeType i, SizeType j) const { return i*(2*this->size()-i-1)/2+j; }
+    SizeType _position(SizeType i, SizeType j) const {
+        ARIADNE_PRECONDITION(i<this->size() && j<this->size());
+        if(i<=j) { return this->_fast_position(i,j); } else { return this->_fast_position(j,i); }
+    }
 };
 
 template<class X> Vector<X>& to_vector(SymmetricMatrix<X>& S);
@@ -162,8 +165,9 @@ template<class X> SymmetricMatrix<X>::SymmetricMatrix(SizeType n, X const& z)
 }
 
 template<class X> SymmetricMatrix<X>::SymmetricMatrix(Matrix<X> const& A)
-    : _zero(A.zero_element()), _s((assert(A.row_size()==A.column_size()),A.row_size())), _ary(_s*(_s+1)/2,_zero)
+    : _zero(A.zero_element()), _s(A.row_size()), _ary(_s*(_s+1)/2,_zero)
 {
+    ARIADNE_PRECONDITION(A.row_size()==A.column_size());
     const SizeType n=this->_s;
     for(SizeType i=0; i!=n; ++i) {
         this->_ary[this->_fast_position(i,i)]=A[i][i];
@@ -202,7 +206,7 @@ template<class X> inline SizeType SymmetricMatrix<X>::column_size() const {
 
 template<class X> inline Void SymmetricMatrix<X>::resize(SizeType n) {
     this->_s = n;
-    this->_ary.resize(n*(n-1)/2,this->_zero);
+    this->_ary.resize(n*(n+1)/2,this->_zero);
 }
 
 template<class X> inline X& SymmetricMatrix<X>::at(SizeType i, SizeType j) {
@@ -238,11 +242,6 @@ template<class X> inline X SymmetricMatrix<X>::zero_element() const {
     return _zero;
 }
 
-template<class X> inline Void SymmetricMatrix<X>::_check_data_access(SizeType i, SizeType j) const {
-    static_cast<void>(i); static_cast<void>(j);
-    assert(i<this->row_size() && j<this->column_size());
-}
-
 template<class X> inline OutputStream& operator<<(OutputStream& os, SymmetricMatrix<X>const& S) {
     return S._write(os);
 }
@@ -268,7 +267,7 @@ template<class X> OutputStream& SymmetricMatrix<X>::_write(OutputStream& os) con
 }
 
 template<class X> SymmetricMatrix<X> operator+(SymmetricMatrix<X> const& S1, SymmetricMatrix<X> const& S2) {
-    assert(S1.size()==S2.size());
+    ARIADNE_PRECONDITION(S1.size()==S2.size());
     const SizeType n=S1.size();
     SymmetricMatrix<X> R(n,S1.zero_element()+S2.zero_element());
     for(SizeType i=0; i!=n*(n+1)/2; ++i) {
@@ -347,7 +346,7 @@ template<class X> SymmetricMatrix<X> outer(SymmetricMatrix<X> const& A) {
 }
 
 template<class X> SymmetricMatrix<X> symmetrize(Matrix<X> const& A) {
-    assert(A.row_size()==A.column_size());
+    ARIADNE_PRECONDITION(A.row_size()==A.column_size());
     const SizeType n=A.row_size();
     SymmetricMatrix S(n,A.zero_element());
     for(SizeType i=0; i!=n; ++i) {
