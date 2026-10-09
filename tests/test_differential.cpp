@@ -277,6 +277,67 @@ class TestDifferential {
         DifferentialType explicit_values(2u,2u,{{{0u,0u},1.0_x},{{1u,0u},2.0_x}},pr);
         ARIADNE_TEST_PRINT(explicit_values);
         ARIADNE_TEST_FAIL((void)DifferentialType(2u,1u,{{{0u},1.0_x}},pr));
+
+        DifferentialType degree_one=DifferentialType::constant(1u,1u,X(1u,pr));
+        ARIADNE_TEST_FAIL((void)degree_one.half_hessian());
+
+        DifferentialVectorType compose_one(1u,1u,1u,pr);
+        DifferentialType compose_wrong_size=DifferentialType::constant(2u,1u,X(1u,pr));
+        ARIADNE_TEST_FAIL((void)compose(compose_wrong_size,compose_one));
+        DifferentialType compose_degree_zero=DifferentialType::constant(1u,0u,X(1u,pr));
+        ARIADNE_TEST_FAIL((void)compose(compose_degree_zero,compose_one));
+
+        Array<DifferentialType> empty_differential_array;
+        ARIADNE_TEST_FAIL((void)DifferentialVectorType(empty_differential_array));
+
+        Vector<X> one_value(1u,pr);
+        Vector<X> two_values(2u,pr);
+        Vector<X> one_parameter(1u,pr);
+
+        DifferentialVectorType solve_bad_dimension(2u,1u,1u,pr);
+        ARIADNE_TEST_FAIL((void)solve(solve_bad_dimension,two_values));
+        DifferentialVectorType solve_bad_value_size(1u,1u,1u,pr);
+        ARIADNE_TEST_FAIL((void)solve(solve_bad_value_size,two_values));
+
+        DifferentialVectorType autonomous_bad_result(1u,2u,1u,pr);
+        ARIADNE_TEST_FAIL((void)flow(autonomous_bad_result,two_values));
+        DifferentialVectorType autonomous_bad_initial(1u,1u,1u,pr);
+        ARIADNE_TEST_FAIL((void)flow(autonomous_bad_initial,two_values));
+
+        DifferentialVectorType timed_bad_result(1u,2u,1u,pr);
+        ARIADNE_TEST_FAIL((void)flow(timed_bad_result,two_values,X(0u,pr)));
+        DifferentialVectorType timed_bad_arguments(1u,1u,1u,pr);
+        ARIADNE_TEST_FAIL((void)flow(timed_bad_arguments,one_value,X(0u,pr)));
+
+        DifferentialVectorType parameter_bad_result(1u,2u,1u,pr);
+        ARIADNE_TEST_FAIL((void)flow(parameter_bad_result,two_values,one_parameter));
+        DifferentialVectorType parameter_bad_arguments(1u,1u,1u,pr);
+        ARIADNE_TEST_FAIL((void)flow(parameter_bad_arguments,one_value,one_parameter));
+
+        DifferentialVectorType timed_parameter_bad_result(1u,3u,1u,pr);
+        ARIADNE_TEST_FAIL((void)flow(timed_parameter_bad_result,two_values,X(0u,pr),one_parameter));
+        DifferentialVectorType timed_parameter_bad_arguments(1u,2u,1u,pr);
+        ARIADNE_TEST_FAIL((void)flow(timed_parameter_bad_arguments,one_value,X(0u,pr),one_parameter));
+
+        DifferentialVectorType internal_df_first(1u,2u,1u,pr);
+        DifferentialVectorType internal_dx_first(2u,2u,1u,pr);
+        DifferentialVectorType internal_dt_first(1u,2u,1u,pr);
+        ARIADNE_TEST_FAIL((void)DifferentialVectorType::_flow(internal_df_first,internal_dx_first,internal_dt_first));
+
+        DifferentialVectorType internal_df_second(1u,1u,1u,pr);
+        DifferentialVectorType internal_dx_second(1u,2u,1u,pr);
+        DifferentialVectorType internal_dt_second(1u,2u,1u,pr);
+        ARIADNE_TEST_FAIL((void)DifferentialVectorType::_flow(internal_df_second,internal_dx_second,internal_dt_second));
+
+        DifferentialVectorType internal_df_third(1u,2u,1u,pr);
+        DifferentialVectorType internal_dx_third(1u,2u,1u,pr);
+        DifferentialVectorType internal_dt_third(1u,3u,1u,pr);
+        ARIADNE_TEST_FAIL((void)DifferentialVectorType::_flow(internal_df_third,internal_dx_third,internal_dt_third));
+
+        DifferentialVectorType internal_df_fourth(1u,2u,1u,pr);
+        DifferentialVectorType internal_dx_fourth(1u,1u,1u,pr);
+        DifferentialVectorType internal_dt_fourth(1u,1u,1u,pr);
+        ARIADNE_TEST_FAIL((void)DifferentialVectorType::_flow(internal_df_fourth,internal_dx_fourth,internal_dt_fourth));
     }
 
 

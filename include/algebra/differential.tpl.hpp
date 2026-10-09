@@ -493,26 +493,20 @@ Differential<X> AlgebraOperations<Differential<X>>::apply(Pow, const Differentia
 template<class X> Differential<X> AlgebraOperations<Differential<X>>::apply(Min, const Differential<X>& x1, const Differential<X>& x2) {
     // FIXME: Maybe need different code for validated and approximate paradigms
     ARIADNE_PRECONDITION_MSG(x1.argument_size()==x2.argument_size(),"x1="<<x1<<" x2="<<x2);
-    if(decide(x1.value()==x2.value())) {
-        ARIADNE_THROW(std::runtime_error,"min(Differential<X> x1, Differential<X> x2)","x1[0]==x2[0]");
-    }
+    if(decide(x1.value()==x2.value())) { ARIADNE_THROW(std::runtime_error,"min(Differential<X> x1, Differential<X> x2)","x1[0]==x2[0]"); }
     return decide(x1.value()<x2.value()) ? x1 : x2;
 }
 
 
 template<class X> Differential<X> AlgebraOperations<Differential<X>>::apply(Max, const Differential<X>& x1,const Differential<X>& x2) {
     ARIADNE_PRECONDITION_MSG(x1.argument_size()==x2.argument_size(),"x1="<<x1<<" x2="<<x2);
-    if(decide(x1.value()==x2.value())) {
-        ARIADNE_THROW(std::runtime_error,"max(Differential<X> x1, Differential<X> x2)","x1[0]==x2[0]");
-    }
+    if(decide(x1.value()==x2.value())) { ARIADNE_THROW(std::runtime_error,"max(Differential<X> x1, Differential<X> x2)","x1[0]==x2[0]"); }
     return decide(x1.value()>x2.value()) ? x1 : x2;
 }
 
 template<class X> Differential<X> AlgebraOperations<Differential<X>>::apply(Abs, const Differential<X>& x) {
     // FIXME: Maybe need different code for validated and approximate paradigms
-    if(decide(x.value()==0)) {
-        ARIADNE_THROW(std::runtime_error,"abs(Differential<X> x)","x[0]==0");
-    }
+    if(decide(x.value()==0)) { ARIADNE_THROW(std::runtime_error,"abs(Differential<X> x)","x[0]==0"); }
     return decide(x.value()>0) ? pos(x) : neg(x);
 }
 
