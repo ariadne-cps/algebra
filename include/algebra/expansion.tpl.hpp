@@ -37,8 +37,6 @@
 
 namespace Ariadne {
 
-inline SizeType word_size(SizeType as) { return (1u+as)/sizeof(int)+1; }
-
 inline double nul(double) { return 0.0; }
 inline double abs(double d) { return std::fabs(d); }
 
@@ -259,7 +257,7 @@ template<class I, class X> Void Expansion<I,X>::combine_terms() {
 }
 
 template<class I, class X> Void Expansion<I,X>::check() const {
-    ARIADNE_NOT_IMPLEMENTED;
+    ARIADNE_PRECONDITION(this->_indices.size()==this->_coefficients.size());
 }
 
 template<class I, class X> ExpansionValueReference<I,X> Expansion<I,X>::operator[](const I& a) {
@@ -536,7 +534,7 @@ template<class I, class X>
 OutputStream& Expansion<I,X>::_write(OutputStream& os, const typename IndexTraits<I>::NameType& variable_names) const
 {
     const Expansion<I,X>& p=*this;
-    ARIADNE_ASSERT(p.argument_size()==variable_names.size());
+    if constexpr (Same<I,MultiIndex>) { ARIADNE_PRECONDITION(p.argument_size()==variable_names.size()); }
     if(p.size()==0) {
         os << "0";
     } else {

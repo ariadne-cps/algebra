@@ -24,6 +24,7 @@
 
 #include <iostream>
 #include <vector>
+#include <sstream>
 #include "numeric/numeric.hpp"
 #include "algebra/expansion.hpp"
 #include "algebra/expansion.inl.hpp"
@@ -76,6 +77,7 @@ template<class F> class TestExpansion
     Void test();
   private:
     Void test_working();
+    Void test_helpers();
     Void test_data_access();
     Void test_equality();
     Void test_sort();
@@ -95,6 +97,7 @@ template<class F> TestExpansion<F>::TestExpansion(F const& z)
 template<class F> Void TestExpansion<F>::test()
 {
     ARIADNE_TEST_CALL(test_working());
+    ARIADNE_TEST_CALL(test_helpers());
     ARIADNE_TEST_CALL(test_data_access());
     ARIADNE_TEST_CALL(test_equality());
     ARIADNE_TEST_CALL(test_sort());
@@ -136,6 +139,92 @@ template<class F> Void TestExpansion<F>::test_working()
     ExpansionType ce=e;
     ARIADNE_TEST_ASSERT(ce._indices.capacity()==ce._coefficients.capacity());
 
+}
+
+
+template<class F> Void TestExpansion<F>::test_helpers()
+{
+    MultiIndex zero_index({0u,0u});
+    MultiIndex first_index({1u,0u});
+    MultiIndex second_index({0u,1u});
+    F one(1,prec);
+    F two(2,prec);
+    F three(3,prec);
+
+    ExpansionType checked(2u,prec);
+    ARIADNE_TEST_EXECUTE(checked.check());
+    auto checked_characteristics=checked.characteristics();
+    ARIADNE_TEST_EQUALS(checked_characteristics.first,2u);
+
+    ExpansionType broken(2u,prec);
+    broken._indices.append(zero_index);
+    ARIADNE_TEST_FAIL(broken.check());
+
+    ExpansionType left(2u,prec);
+    ExpansionType right(2u,prec);
+    left.append(zero_index,one);
+    right.append(first_index,two);
+    ARIADNE_TEST_EXECUTE(left.swap(right));
+    ARIADNE_TEST_EQUALS(left.front().index(),first_index);
+    ARIADNE_TEST_EQUALS(left.front().coefficient(),two);
+    ExpansionType const& const_left=left;
+    ARIADNE_TEST_EQUALS(const_left.front().index(),first_index);
+    ARIADNE_TEST_EQUALS(const_left.back().coefficient(),two);
+
+    ExpansionType resized(2u,prec);
+    SizeType initial_capacity=resized.capacity();
+    ARIADNE_TEST_EXECUTE(resized.reserve(initial_capacity));
+    ARIADNE_TEST_EXECUTE(resized.reserve(initial_capacity+1u));
+    ARIADNE_TEST_ASSERT(resized.capacity()>=initial_capacity+1u);
+    ARIADNE_TEST_EXECUTE(resized.resize(2u));
+    ARIADNE_TEST_EQUALS(resized.size(),2u);
+    ARIADNE_TEST_EXECUTE(resized.resize(1u));
+    ARIADNE_TEST_EQUALS(resized.size(),1u);
+    ARIADNE_TEST_EXECUTE(resized.resize(3u));
+    ARIADNE_TEST_EQUALS(resized.size(),3u);
+
+    ExpansionType values(2u,prec);
+    ARIADNE_TEST_EXECUTE(values.set(zero_index,one));
+    ARIADNE_TEST_EXECUTE(values.set(zero_index,two));
+    ARIADNE_TEST_EQUALS(values.get(zero_index),two);
+    ARIADNE_TEST_EQUALS(values.get(first_index),zero);
+
+    ExpansionType spare(2u,prec);
+    spare.reserve(4u);
+    spare.append(zero_index,one);
+    spare.append(second_index,three);
+    auto inserted=spare.insert(spare.begin()+1,first_index,two);
+    ARIADNE_TEST_EQUALS(inserted->index(),first_index);
+    ARIADNE_TEST_EXECUTE(spare.erase(inserted));
+    ARIADNE_TEST_EQUALS(spare.size(),2u);
+
+    ExpansionType tight(2u,characteristics(one),1u);
+    tight.append(zero_index,one);
+    auto tight_inserted=tight.insert(tight.begin(),first_index,two);
+    ARIADNE_TEST_EQUALS(tight_inserted->index(),first_index);
+
+    ExpansionType sortable(2u,prec);
+    sortable.append(first_index,two);
+    sortable.append(zero_index,one);
+    SortedExpansion<MI,F,GradedIndexLess> sorted(std::move(sortable));
+    ARIADNE_TEST_EXECUTE(sorted.check());
+    ARIADNE_TEST_EXECUTE(sorted.insert(second_index,three));
+    ARIADNE_TEST_FAIL(sorted.insert(second_index,three));
+    ARIADNE_TEST_EXECUTE(sorted.set(first_index,three));
+    ARIADNE_TEST_EQUALS(sorted.get(first_index),three);
+    MultiIndex missing_index({2u,0u});
+    ARIADNE_TEST_EQUALS(sorted.get(missing_index),zero);
+
+    SortedExpansion<MI,F,GradedIndexLess> bad_sorted(2u,prec);
+    bad_sorted.append(first_index,two);
+    bad_sorted.append(zero_index,one);
+    ARIADNE_TEST_FAIL(bad_sorted.check());
+
+    std::ostringstream os;
+    Array<String> names({"x","y"});
+    ARIADNE_TEST_EXECUTE(sorted._write(os,names));
+    Array<String> wrong_names({"x"});
+    ARIADNE_TEST_FAIL((void)sorted._write(os,wrong_names));
 }
 
 
