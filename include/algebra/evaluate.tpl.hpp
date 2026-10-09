@@ -22,9 +22,6 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef ARIADNE_EVALUATE_TPL_HPP
-#define ARIADNE_EVALUATE_TPL_HPP
-
 #include "algebra/vector.hpp"
 #include "algebra/multi_index.hpp"
 #include "algebra/expansion.hpp"
@@ -208,4 +205,3 @@ Vector<ArithmeticType<X,Y>> evaluate(const Vector< Expansion<MultiIndex,X> >& x,
 
 }
 
-#endif // ARIADNE_EVALUATE_TPL_HPP
