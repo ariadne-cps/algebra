@@ -666,6 +666,25 @@ Void test_sorted_equality_edge_cases() {
     ARIADNE_TEST_THROWS(two_variables.insert(MultiIndex({1u,0u}),RoundedFloatDP(3,dp)),std::runtime_error);
     ARIADNE_TEST_ASSERT(same(two_variables,original));
 
+    using Reverse=SortedExpansion<MultiIndex,RoundedFloatDP,ReverseLexicographicIndexLess>;
+
+    Reverse reverse_two_variables(2u,dp);
+    Reverse reverse_three_variables(3u,dp);
+    ARIADNE_TEST_EXECUTE((void)(reverse_two_variables==reverse_three_variables));
+
+    Reverse reverse_left_only(2u,dp);
+    reverse_left_only.insert(MultiIndex({1u,0u}),RoundedFloatDP(0,dp));
+    Reverse reverse_empty(2u,dp);
+    ARIADNE_TEST_EXECUTE((void)(reverse_left_only==reverse_empty));
+    ARIADNE_TEST_EXECUTE((void)(reverse_empty==reverse_left_only));
+
+    Reverse reverse_first(2u,dp);
+    Reverse reverse_second(2u,dp);
+    reverse_first.insert(MultiIndex({1u,0u}),RoundedFloatDP(0,dp));
+    reverse_second.insert(MultiIndex({0u,1u}),RoundedFloatDP(0,dp));
+    ARIADNE_TEST_EXECUTE((void)(reverse_first==reverse_second));
+    ARIADNE_TEST_EXECUTE((void)(reverse_second==reverse_first));
+
     using Grouped=SortedExpansion<MultiIndex,RoundedFloatDP,DegreeIndexLess>;
     for(Int left_value=0; left_value!=2; ++left_value) {
         for(Int right_value=0; right_value!=2; ++right_value) {
@@ -846,6 +865,20 @@ Int main() {
 
     test_univariate_expansion_assignment_instantiation<FloatMPApproximation>(multiple_precision);
     test_univariate_expansion_assignment_instantiation<FloatMPBounds>(multiple_precision);
+
+    {
+        Expansion<MultiIndex,FloatDPUpperInterval> dp_upper_reserve(2u,double_precision);
+        SizeType dp_upper_capacity=dp_upper_reserve.capacity();
+        ARIADNE_TEST_EXECUTE(dp_upper_reserve.reserve(dp_upper_capacity+1u));
+
+        Expansion<MultiIndex,FloatMPBounds> mp_bounds_reserve(2u,multiple_precision);
+        SizeType mp_bounds_capacity=mp_bounds_reserve.capacity();
+        ARIADNE_TEST_EXECUTE(mp_bounds_reserve.reserve(mp_bounds_capacity+1u));
+
+        Expansion<UniIndex,FloatMPApproximation> uni_mp_reserve(SizeOne(),multiple_precision);
+        SizeType uni_mp_capacity=uni_mp_reserve.capacity();
+        ARIADNE_TEST_EXECUTE(uni_mp_reserve.reserve(uni_mp_capacity));
+    }
 
     RoundedFloatDP zero_dp{0,double_precision};
     RoundedFloatMP zero_mp{0,multiple_precision};
