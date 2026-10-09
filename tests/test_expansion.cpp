@@ -219,6 +219,11 @@ template<class F> Void TestExpansion<F>::test_helpers()
     ARIADNE_TEST_ASSERT(reverse_sortable.is_sorted(ReverseLexicographicIndexLess()));
 
     if constexpr (Same<F,RoundedFloatDP>) {
+        SortedExpansion<MI,F,ReverseLexicographicIndexLess> bad_reverse(2u,prec);
+        bad_reverse.append(zero_index,coefficient_one);
+        bad_reverse.append(first_index,coefficient_two);
+        ARIADNE_TEST_FAIL(bad_reverse.check());
+
         ExpansionType sortable(2u,prec);
         sortable.append(first_index,coefficient_two);
         sortable.append(zero_index,coefficient_one);
@@ -238,7 +243,6 @@ template<class F> Void TestExpansion<F>::test_helpers()
     }
 
     std::ostringstream os;
-    ARIADNE_TEST_EXECUTE(os << ReverseLexicographicIndexLess());
     Array<String> names({"x","y"});
     ARIADNE_TEST_EXECUTE(values._write(os,names));
     Array<String> wrong_names({"x"});
@@ -579,8 +583,12 @@ template<class F> Void TestExpansion<F>::test_embed()
 }
 
 Int main() {
-    ARIADNE_TEST_EQUALS(Ariadne::nul(1.0),0.0);
-    ARIADNE_TEST_EQUALS(Ariadne::abs(-2.0),2.0);
+    {
+        Expansion<MultiIndex,double> double_expansion({{{1u,0u},-2.0},{{0u,0u},1.0}});
+        std::ostringstream double_stream;
+        Array<String> double_names({"x","y"});
+        ARIADNE_TEST_EXECUTE(double_expansion._write(double_stream,double_names));
+    }
 
     {
         RoundedFloatDP coefficient_one(1,double_precision);
