@@ -40,12 +40,11 @@ namespace Ariadne {
 inline double abs(double d) { return std::fabs(d); }
 
 namespace {
-template<class I> I make_zero_index(typename IndexTraits<I>::SizeOfType as) {
-    if constexpr (Same<I,UniIndex>) { return I(); }
-    else { return I(as); }
-}
+inline UniIndex make_zero_index(SizeOne) { return UniIndex(); }
+inline MultiIndex make_zero_index(SizeType as) { return MultiIndex(as); }
+
 template<class I, class A> I make_zero_index_from_initializer(A const& a) {
-    I index(a); return make_zero_index<I>(size_of(index));
+    I index(a); return make_zero_index(size_of(index));
 }
 } // namespace
 
@@ -55,7 +54,7 @@ template<class I, class X> Expansion<I,X>::~Expansion()
 }
 
 template<class I, class X> Expansion<I,X>::Expansion(ArgumentSizeType as, CharacteristicsType<X> const& prs, SizeType cap)
-    : _indices(0u,make_zero_index<I>(as)), _coefficients(prs)
+    : _indices(0u,make_zero_index(as)), _coefficients(prs)
 {
     _indices.reserve(cap); _coefficients.reserve(cap);
 }
@@ -171,11 +170,25 @@ template<class I, class X> SizeType Expansion<I,X>::size() const {
 
 template<class X> concept HasPrecision = requires(X const& x) { x.precision(); };
 
+namespace {
+template<class X> requires HasPrecision<X>
+CharacteristicsType<X> coefficient_characteristics_of(X const& x) {
+    return x.precision();
+}
+
+template<class X> requires (!HasPrecision<X> && HasCharacteristics<X>)
+CharacteristicsType<X> coefficient_characteristics_of(X const& x) {
+    return Ariadne::characteristics(x);
+}
+
+template<class X> requires (!HasPrecision<X> && !HasCharacteristics<X>)
+CharacteristicsType<X> coefficient_characteristics_of(X const&) {
+    return std::tuple<>();
+}
+} // namespace
+
 template<class I, class X> auto Expansion<I,X>::coefficient_characteristics() const -> CharacteristicsType<X> {
-    if constexpr (HasPrecision<X>) { return this->zero_coefficient().precision(); }
-    else if constexpr (HasCharacteristics<X>) { return Ariadne::characteristics(this->zero_coefficient()); }
-    else if constexpr (DefaultConstructible<X>) { return std::tuple<>(); }
-    else { return std::tuple<>(); }
+    return coefficient_characteristics_of(this->zero_coefficient());
 }
 
 template<class I, class X> auto Expansion<I,X>::characteristics() const -> Pair<ArgumentSizeType,CharacteristicsType<X>> {
@@ -523,11 +536,18 @@ inline OutputStream& write(OutputStream& os, MultiIndex const& a, Array<String> 
     return os;
 }
 
+namespace {
+inline Void check_variable_names(SizeOne, String const&) { }
+inline Void check_variable_names(SizeType as, Array<String> const& names) {
+    ARIADNE_PRECONDITION(as==names.size());
+}
+} // namespace
+
 template<class I, class X>
 OutputStream& Expansion<I,X>::_write(OutputStream& os, const typename IndexTraits<I>::NameType& variable_names) const
 {
     const Expansion<I,X>& p=*this;
-    if constexpr (Same<I,MultiIndex>) { ARIADNE_PRECONDITION(p.argument_size()==variable_names.size()); }
+    check_variable_names(p.argument_size(),variable_names);
     if(p.size()==0) {
         os << "0";
     } else {
