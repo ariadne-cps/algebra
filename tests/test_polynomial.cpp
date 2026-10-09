@@ -48,6 +48,7 @@ class TestPolynomial
     Void test_cleanup();
     Void test_constructors();
     Void test_indexing();
+    Void test_modifiers();
     Void test_arithmetic();
     Void test_evaluate_horner();
     Void test_variables();
@@ -60,6 +61,7 @@ Void TestPolynomial::test()
     ARIADNE_TEST_CALL(test_cleanup())
     ARIADNE_TEST_CALL(test_constructors())
     ARIADNE_TEST_CALL(test_indexing())
+    ARIADNE_TEST_CALL(test_modifiers())
     ARIADNE_TEST_CALL(test_arithmetic())
     ARIADNE_TEST_CALL(test_evaluate_horner())
     ARIADNE_TEST_CALL(test_variables())
@@ -238,6 +240,68 @@ Void TestPolynomial::test_indexing()
     ++iter;
     ARIADNE_TEST_EQUALS(iter->index(),MultiIndex({2,1,0}))
     ARIADNE_TEST_EQUALS(iter->coefficient(),5.0_x)
+}
+
+Void TestPolynomial::test_modifiers()
+{
+    RoundedFloatDP coefficient_zero(0,dp);
+    RoundedFloatDP coefficient_one(1,dp);
+    RoundedFloatDP coefficient_two(2,dp);
+    RoundedFloatDP coefficient_three(3,dp);
+
+    P direct_coefficients({
+        {{0u,0u},coefficient_one},
+        {{1u,0u},coefficient_two}
+    });
+    ARIADNE_TEST_EQUALS(direct_coefficients.number_of_terms(),2u)
+
+    auto compatible_zero=direct_coefficients.create_zero();
+    ARIADNE_TEST_EQUALS(compatible_zero.argument_size(),2u)
+    ARIADNE_TEST_EQUALS(compatible_zero.number_of_terms(),0u)
+
+    P const& const_direct=direct_coefficients;
+    auto const_found=const_direct.find(MultiIndex({1u,0u}));
+    ARIADNE_TEST_COMPARE(const_found,!=,const_direct.end())
+    ARIADNE_TEST_EQUALS(const_found->coefficient(),coefficient_two)
+
+    P edited(2u,dp);
+    ARIADNE_TEST_EXECUTE(edited.reserve(4u))
+    ARIADNE_TEST_EXECUTE(edited.insert(MultiIndex({0u,0u}),coefficient_one))
+    ARIADNE_TEST_EXECUTE(edited.insert(MultiIndex({1u,0u}),coefficient_two))
+    ARIADNE_TEST_EQUALS(edited.number_of_terms(),2u)
+    auto erase_iter=edited.find(MultiIndex({0u,0u}));
+    ARIADNE_TEST_COMPARE(erase_iter,!=,edited.end())
+    ARIADNE_TEST_EXECUTE(edited.erase(erase_iter))
+    ARIADNE_TEST_EQUALS(edited.number_of_terms(),1u)
+
+    P derivative({
+        {{0u,0u},coefficient_three},
+        {{1u,0u},coefficient_two},
+        {{2u,0u},coefficient_one}
+    });
+    ARIADNE_TEST_EXECUTE(derivative.differentiate(0u))
+    ARIADNE_TEST_EQUALS(derivative[MultiIndex({0u,0u})],coefficient_two)
+    ARIADNE_TEST_EQUALS(derivative[MultiIndex({1u,0u})],coefficient_two)
+
+    P antiderivative({
+        {{0u,0u},coefficient_two},
+        {{1u,0u},coefficient_two}
+    });
+    ARIADNE_TEST_EXECUTE(antiderivative.antidifferentiate(0u))
+    ARIADNE_TEST_EQUALS(antiderivative[MultiIndex({1u,0u})],coefficient_two)
+    ARIADNE_TEST_EQUALS(antiderivative[MultiIndex({2u,0u})],coefficient_one)
+
+    P truncated({
+        {{0u,0u},coefficient_one},
+        {{1u,0u},coefficient_two},
+        {{2u,0u},coefficient_three}
+    });
+    truncated.expansion().append(MultiIndex({0u,1u}),coefficient_zero);
+    ARIADNE_TEST_EXECUTE(truncated.truncate(1u))
+    ARIADNE_TEST_EQUALS(truncated.number_of_terms(),2u)
+    ARIADNE_TEST_EQUALS(truncated[MultiIndex({0u,0u})],coefficient_one)
+    ARIADNE_TEST_EQUALS(truncated[MultiIndex({1u,0u})],coefficient_two)
+    ARIADNE_TEST_EQUALS(truncated[MultiIndex({2u,0u})],coefficient_zero)
 }
 
 Void TestPolynomial::test_arithmetic()
