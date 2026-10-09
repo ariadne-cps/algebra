@@ -386,7 +386,8 @@ Polynomial<I,X>::_partial_evaluate(const Polynomial<I,X>& x, SizeType k, const X
             Array< Polynomial<I,X> > p(x.degree()+1u,Polynomial<I,X>(x.argument_size()-1u,x.zero_coefficient()));
 
             Array<X> cpowers(x.degree()+1u,x.zero_coefficient());
-            cpowers[0]=1; cpowers[1]=c;
+            cpowers[0]=1;
+            if(x.degree()>=1) { cpowers[1]=c; }
             if(x.degree()>=2) { cpowers[2]=sqr(c); }
             for(DegreeType j=3; j<=x.degree(); ++j) {
                 cpowers[j]=cpowers[j-2u]*cpowers[2];
@@ -412,7 +413,7 @@ Polynomial<I,X>::_partial_evaluate(const Polynomial<I,X>& x, SizeType k, const X
 
         return r;
     } else {
-        abort();
+        throw std::logic_error("Partial evaluation requires a multivariate polynomial; use evaluate for a univariate polynomial.");
     }
 }
 

@@ -446,6 +446,26 @@ Void TestPolynomial::test_partial_evaluate()
     auto linear_at_two=partial_evaluate(linear,1u,coefficient_two);
     ARIADNE_TEST_EQUALS(linear_at_two[MultiIndex({0u})],RoundedFloatDP(5,dp))
 
+    // Degree-zero polynomials have no entry for the first power of c.
+    P constant=P::constant(2u,coefficient_two);
+    P empty(2u,dp);
+    for(SizeType k=0; k!=2u; ++k) {
+        auto constant_at_two=partial_evaluate(constant,k,coefficient_two);
+        ARIADNE_TEST_EQUALS(constant_at_two.argument_size(),1u)
+        ARIADNE_TEST_EQUALS(constant_at_two.number_of_terms(),1u)
+        ARIADNE_TEST_EQUALS(constant_at_two.value(),coefficient_two)
+        auto empty_at_two=partial_evaluate(empty,k,coefficient_two);
+        ARIADNE_TEST_EQUALS(empty_at_two.argument_size(),1u)
+        ARIADNE_TEST_EQUALS(empty_at_two.number_of_terms(),0u)
+    }
+
+    // Unsupported univariate partial evaluation must report an error without
+    // terminating the process or modifying the source polynomial.
+    auto univariate=UnivariatePolynomial<RoundedFloatDP>::coordinate(dp);
+    ARIADNE_TEST_THROWS(partial_evaluate(univariate,0u,coefficient_two),std::logic_error)
+    ARIADNE_TEST_EQUALS(univariate.degree(),1u)
+    ARIADNE_TEST_EQUALS(univariate[UniIndex(1u)],coefficient_one)
+
     ARIADNE_TEST_FAIL((void)partial_evaluate(source,3u,coefficient_one))
 }
 
