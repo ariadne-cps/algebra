@@ -92,12 +92,12 @@ template<class X> class TestSeries
         std::cerr<<std::setprecision(18);
     }
     void test_basic_operators() {
-        const X zero(0,pr), one(1,pr), two(2,pr);
+        const X zero(0,pr), one(1,pr), two_value(2,pr);
 
-        ARIADNE_TEST_EQUALS(Series<X>(Pos(),two).coefficients(2),
-                            (List<X>{two,one,zero}));
-        ARIADNE_TEST_EQUALS(Series<X>(Neg(),two).coefficients(2),
-                            (List<X>{-two,-one,zero}));
+        ARIADNE_TEST_EQUALS(Series<X>(Pos(),two_value).coefficients(2),
+                            (List<X>{two_value,one,zero}));
+        ARIADNE_TEST_EQUALS(Series<X>(Neg(),two_value).coefficients(2),
+                            (List<X>{-two_value,-one,zero}));
 
         ARIADNE_TEST_FAIL((void)Series<X>(Asin(),zero)[0]);
         ARIADNE_TEST_FAIL((void)Series<X>(Acos(),zero)[0]);

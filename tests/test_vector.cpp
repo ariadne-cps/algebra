@@ -42,6 +42,7 @@ class TestVector {
     Void test();
   private:
     Void test_range();
+    Void test_slice();
     Void test_constructors();
     Void test_comparisons();
     Void test_arithmetic();
@@ -52,6 +53,7 @@ Void
 TestVector::test()
 {
     ARIADNE_TEST_CALL(test_range());
+    ARIADNE_TEST_CALL(test_slice());
     ARIADNE_TEST_CALL(test_constructors());
     ARIADNE_TEST_CALL(test_comparisons());
     ARIADNE_TEST_CALL(test_arithmetic());
@@ -105,6 +107,19 @@ TestVector::test_range()
     auto last=end(offset_range);
     ARIADNE_TEST_EQUALS(*first,2u);
     ARIADNE_TEST_ASSERT(first!=last);
+}
+
+Void
+TestVector::test_slice()
+{
+    Slice sample_slice=slice(3u,2u,4u);
+    ARIADNE_TEST_EQUALS(sample_slice.size(),3u);
+    ARIADNE_TEST_EQUALS(sample_slice.start(),2u);
+    ARIADNE_TEST_EQUALS(sample_slice.stride(),4u);
+    ARIADNE_TEST_EQUALS(sample_slice.stop(),14u);
+    ARIADNE_TEST_EQUALS(sample_slice[0u],2u);
+    ARIADNE_TEST_EQUALS(sample_slice[1u],6u);
+    ARIADNE_TEST_EQUALS(sample_slice[2u],10u);
 }
 
 Void
