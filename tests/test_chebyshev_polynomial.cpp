@@ -128,6 +128,7 @@ template<class X> Void TestChebyshevPolynomial<X>::test_univariate() {
     ARIADNE_TEST_PRINT(right_tail);
 
     ARIADNE_TEST_PRINT(x);
+    ARIADNE_TEST_PRINT(-x);
     ARIADNE_TEST_PRINT(x*x);
     ARIADNE_TEST_PRINT(x*x*x);
     ARIADNE_TEST_PRINT(x*x*x*x);
@@ -171,6 +172,7 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     auto multivariate_basis=MultivariateChebyshevPolynomial<X>::basis(2u,0u,2u,pr);
     ARIADNE_TEST_PRINT(multivariate_constant);
     ARIADNE_TEST_PRINT(multivariate_basis);
+    ARIADNE_TEST_PRINT(-x);
     ARIADNE_TEST_EXECUTE(multivariate_constant.sup_norm());
 
     MultivariateChebyshevPolynomial<X> multivariate_empty(2u,pr);
@@ -179,9 +181,12 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     auto multivariate_x_plus=MultivariateChebyshevPolynomial<X>::apply(Add(),x,X(2u,pr));
     auto multivariate_scaled=MultivariateChebyshevPolynomial<X>::apply(Mul(),x,X(2u,pr));
     auto multivariate_empty_scaled=MultivariateChebyshevPolynomial<X>::apply(Mul(),multivariate_empty,X(2u,pr));
+    auto multivariate_zero=MultivariateChebyshevPolynomial<X>::constant(2u,X(0u,pr));
+    auto multivariate_zero_product=MultivariateChebyshevPolynomial<X>::apply(Mul(),multivariate_zero,x);
     ARIADNE_TEST_PRINT(multivariate_empty_plus);
     ARIADNE_TEST_PRINT(multivariate_one_plus);
     ARIADNE_TEST_PRINT(multivariate_empty_scaled);
+    ARIADNE_TEST_PRINT(multivariate_zero_product);
     ARIADNE_TEST_FAIL(MultivariateChebyshevPolynomial<X>::apply(Add(),x,MultivariateChebyshevPolynomial<X>::coordinate(3u,0u,pr)));
     auto xy=MultivariateChebyshevPolynomial<X>::apply(Add(),x,y);
     auto yx=MultivariateChebyshevPolynomial<X>::apply(Add(),y,x);
