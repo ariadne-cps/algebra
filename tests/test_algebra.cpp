@@ -138,7 +138,7 @@ class TestAlgebra {
         ARIADNE_TEST_ASSIGN(dx,tax.extract<DX>());
         auto transcendental_wrapper=tax.extract<TranscendentalAlgebraWrapper<DX,X>>();
         ARIADNE_TEST_PRINT(transcendental_wrapper);
-        using OtherTranscendentalWrapper=TranscendentalAlgebraWrapper<X,X>;
+        using OtherTranscendentalWrapper=TranscendentalAlgebraWrapper<UnivariateDifferential<X>,X>;
         ARIADNE_TEST_FAIL(tax.extract<OtherTranscendentalWrapper>());
         ARIADNE_TEST_FAIL(tax.extract<X>());
 
