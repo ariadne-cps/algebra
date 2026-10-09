@@ -137,9 +137,9 @@ template<class X> template<class OP> UnivariateDifferential<X>::UnivariateDiffer
     : UnivariateDifferential(d,Series<X>(op,c)) { }
 
 template<class X> inline const X& UnivariateDifferential<X>::value() const { return _ary[0]; }
-template<class X> inline const X& UnivariateDifferential<X>::gradient() const { assert(this->degree()>=1); return _ary[1]; }
-template<class X> inline const X& UnivariateDifferential<X>::half_hessian() const { assert(this->degree()>=2); return _ary[2]; }
-template<class X> inline const X UnivariateDifferential<X>::hessian() const { assert(this->degree()>=2); return _ary[2]*2; }
+template<class X> inline const X& UnivariateDifferential<X>::gradient() const { ARIADNE_PRECONDITION(this->degree()>=1); return _ary[1]; }
+template<class X> inline const X& UnivariateDifferential<X>::half_hessian() const { ARIADNE_PRECONDITION(this->degree()>=2); return _ary[2]; }
+template<class X> inline const X UnivariateDifferential<X>::hessian() const { ARIADNE_PRECONDITION(this->degree()>=2); return _ary[2]*2; }
 
 template<class X> template<class... PRS> requires Constructible<X,ExactDouble,PRS...>
 UnivariateDifferential<X>::UnivariateDifferential(DegreeType d, InitializerList<ExactDouble> lst, PRS... prs)

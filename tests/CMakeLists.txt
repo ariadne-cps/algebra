@@ -11,6 +11,7 @@ set(UNIT_TESTS
     test_chebyshev_polynomial
     test_sweeper
     test_symmetric_matrix
+    test_univariate_differential
     test_series
     test_vector
 )
