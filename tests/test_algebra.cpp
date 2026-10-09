@@ -126,6 +126,14 @@ class TestAlgebra {
         ARIADNE_TEST_PRINT(validated_body);
 
         ARIADNE_TEST_CONSTRUCT(TAX,tax,(dx));
+        auto transcendental_zero=tax.reference()._create_zero();
+        delete transcendental_zero;
+        auto transcendental_constant=tax.reference()._create_constant(cx);
+        delete transcendental_constant;
+        auto transcendental_copy=tax.reference()._create_copy();
+        delete transcendental_copy;
+        auto transcendental_rdiv=tax.reference()._rapply(BinaryFieldOperator(Div()),cx);
+        delete transcendental_rdiv;
         ARIADNE_TEST_ASSIGN(tax,div(tax,tax+cx));
         ARIADNE_TEST_ASSIGN(tax,rec(tax));
 
