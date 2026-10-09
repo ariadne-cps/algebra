@@ -301,7 +301,9 @@ template<class I, class X, class CMP> EqualityType<X,X> SortedExpansion<I,X,CMP>
             r = r && static_cast<L>(0==iter2->coefficient());
             ++iter2;
         } else {
-             r = r && static_cast<L>(iter1->coefficient()==0) && static_cast<L>(0==iter2->coefficient());
+            // Distinct indices can be equivalent under a custom ordering.
+            r = r && static_cast<L>(iter1->coefficient()==0) && static_cast<L>(0==iter2->coefficient());
+            ++iter1; ++iter2;
         }
     }
     while (iter1!=e1.end()) {

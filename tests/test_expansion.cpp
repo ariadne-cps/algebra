@@ -29,6 +29,7 @@
 #include "algebra/expansion.hpp"
 #include "algebra/expansion.inl.hpp"
 #include "interval/interval.hpp"
+#include "algebra/expansion.tpl.hpp"
 
 #include "utility/test.hpp"
 
@@ -644,7 +645,86 @@ template<class F> Void TestExpansion<F>::test_embed()
 
 }
 
+namespace {
+
+// A strict weak ordering that groups different monomials of equal degree.
+struct DegreeIndexLess {
+    template<class T> Bool operator()(T const& lhs, T const& rhs) const {
+        return lhs.index().degree()<rhs.index().degree();
+    }
+};
+
+Void test_sorted_equality_edge_cases() {
+    using E=SortedExpansion<MultiIndex,RoundedFloatDP,GradedIndexLess>;
+    E two_variables(2u,dp);
+    E three_variables(3u,dp);
+    ARIADNE_TEST_ASSERT(!(two_variables==three_variables));
+    ARIADNE_TEST_ASSERT(!(three_variables==two_variables));
+
+    using Grouped=SortedExpansion<MultiIndex,RoundedFloatDP,DegreeIndexLess>;
+    for(Int left_value=0; left_value!=2; ++left_value) {
+        for(Int right_value=0; right_value!=2; ++right_value) {
+            Grouped left(2u,dp), right(2u,dp);
+            left.append(MultiIndex({1u,0u}),RoundedFloatDP(left_value,dp));
+            right.append(MultiIndex({0u,1u}),RoundedFloatDP(right_value,dp));
+            // A following common term verifies that comparison advances past
+            // the distinct indices equivalent under DegreeIndexLess.
+            left.append(MultiIndex({2u,0u}),RoundedFloatDP(3,dp));
+            right.append(MultiIndex({2u,0u}),RoundedFloatDP(3,dp));
+            Bool expected=(left_value==0 && right_value==0);
+            ARIADNE_TEST_EQUALS(decide(left==right),expected);
+            ARIADNE_TEST_EQUALS(decide(right==left),expected);
+            right.back().coefficient()=4;
+            ARIADNE_TEST_ASSERT(!(left==right));
+        }
+    }
+}
+
+Void test_exact_coefficient_helpers() {
+    Expansion<MultiIndex,double> plain(2u,std::tuple<>());
+    ARIADNE_TEST_ASSERT(plain.coefficient_characteristics()==std::tuple<>());
+    ARIADNE_TEST_EQUALS(plain.characteristics().first,2u);
+
+    // Raw floats do not have inplace addition: combining them must fail
+    // without losing either of the duplicate terms.
+    static_assert(!CanInplaceAdd<FloatDP,FloatDP>);
+    Expansion<MultiIndex,FloatDP> raw(2u,dp);
+    raw.append(MultiIndex({1u,0u}),FloatDP(2,dp));
+    raw.append(MultiIndex({1u,0u}),FloatDP(3,dp));
+    ARIADNE_TEST_THROWS(raw.combine_terms(),std::runtime_error);
+    ARIADNE_TEST_EQUALS(raw.size(),2u);
+    ARIADNE_TEST_EQUALS(raw.front().coefficient(),FloatDP(2,dp));
+    ARIADNE_TEST_EQUALS(raw.back().coefficient(),FloatDP(3,dp));
+}
+
+Void test_unit_coefficient_output() {
+    // Built-in doubles have decidable equality, so unit coefficients can be
+    // omitted while unit constants must still be printed.
+    Expansion<MultiIndex,double> multi(2u,std::tuple<>());
+    multi.append(MultiIndex({1u,1u}),1.0);
+    multi.append(MultiIndex({0u,2u}),-1.0);
+    multi.append(MultiIndex({0u,0u}),1.0);
+    multi.append(MultiIndex({1u,0u}),2.0);
+    std::ostringstream multi_stream;
+    multi._write(multi_stream,Array<String>({"x","y"}));
+    ARIADNE_TEST_EQUALS(multi_stream.str(),String(" x*y -y^2 +1 +2*x"));
+
+    Expansion<UniIndex,double> uni(SizeOne{},std::tuple<>{});
+    uni.append(UniIndex(1u),1.0);
+    uni.append(UniIndex(2u),-1.0);
+    uni.append(UniIndex(0u),1.0);
+    uni.append(UniIndex(3u),2.0);
+    std::ostringstream uni_stream;
+    uni._write(uni_stream,String("t"));
+    ARIADNE_TEST_EQUALS(uni_stream.str(),String(" t -t^2 +1 +2*t^3"));
+}
+
+} // namespace
+
 Int main() {
+    ARIADNE_TEST_CALL(test_sorted_equality_edge_cases());
+    ARIADNE_TEST_CALL(test_exact_coefficient_helpers());
+    ARIADNE_TEST_CALL(test_unit_coefficient_output());
     {
         Expansion<MultiIndex,ExactDouble> exact_expansion({{{0u,0u},ExactDouble(1.0)},{{0u,0u},ExactDouble(2.0)}});
         ARIADNE_TEST_EXECUTE(exact_expansion.coefficient_characteristics());
