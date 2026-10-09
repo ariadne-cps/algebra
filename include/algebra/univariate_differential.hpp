@@ -94,12 +94,6 @@ template<class X> class UnivariateDifferential
     template<AssignableTo<X> W>
         SelfType& operator=(const W& c) { X xc=nul(this->value()); xc=c; return (*this)=xc; }
 
-    SelfType& operator+=(const SelfType& x);
-    SelfType& operator-=(const SelfType& x);
-    SelfType& operator*=(const SelfType& x);
-    SelfType& operator+=(const NumericType& c);
-    SelfType& operator*=(const NumericType& c);
-
     SelfType apply(Rec) const;
 
     const X& value() const;

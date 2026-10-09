@@ -82,19 +82,6 @@ template<class X> X& UnivariateDifferential<X>::operator[](SizeType k) {
     return this->_ary[k];
 }
 
-template<class X> UnivariateDifferential<X>& UnivariateDifferential<X>::operator+=(X const& c) {
-    this->_ary[0]+=c;
-    return *this;
-}
-
-template<class X> UnivariateDifferential<X>& UnivariateDifferential<X>::operator*=(X const& c) {
-    for(DegreeType i=0; i<=this->degree(); ++i) {
-        this->_ary[i]*=c;
-    }
-    return *this;
-}
-
-
 template<class X>
 UnivariateDifferential<X> UnivariateDifferential<X>::_compose(const Series<X>& x, const UnivariateDifferential<X>& y)
 {
