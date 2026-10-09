@@ -435,6 +435,12 @@ class TestDifferentialVector {
         DifferentialType wrong=DifferentialType::constant(1u,2u,X(0u,pr));
         ARIADNE_TEST_FAIL(v.set(0u,wrong));
 
+        DifferentialType wrong_argument_size=DifferentialType::constant(1u,2u,X(0u,pr));
+        DifferentialType wrong_degree=DifferentialType::constant(2u,1u,X(0u,pr));
+        ARIADNE_TEST_FAIL(v[0u]=wrong_argument_size);
+        ARIADNE_TEST_FAIL(v[0u]=wrong_degree);
+        ARIADNE_TEST_FAIL((DifferentialType(2u,1u,{{{0u},1.0_x}},pr)));
+
         auto generator=[this](SizeType i) {
             return DifferentialType::constant(1u,1u,X(static_cast<Nat>(i),pr));
         };
@@ -445,6 +451,12 @@ class TestDifferentialVector {
         auto empty_range=cv[Range(0u,0u)];
         ARIADNE_TEST_FAIL((void)DifferentialVectorType(empty_range));
         ARIADNE_TEST_FAIL(v=empty_range);
+
+        DifferentialVectorType source=v;
+        DifferentialVectorType const& csource=source;
+        auto source_range=csource[Range(0u,1u)];
+        ARIADNE_TEST_EXECUTE(v=source_range);
+        ARIADNE_TEST_EQUALS(v.size(),1u);
 
         X z(pr);
         DifferentialVectorType df={DifferentialType::constant(2u,1u,z)};
