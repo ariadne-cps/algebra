@@ -185,6 +185,12 @@ template<class F> Void TestExpansion<F>::test_helpers()
     ARIADNE_TEST_EXECUTE(resized.resize(3u));
     ARIADNE_TEST_EQUALS(resized.size(),3u);
 
+    ExpansionType different_argument_size(3u,prec);
+    different_argument_size.append(MultiIndex({0u,0u,0u}),coefficient_one);
+    ExpansionType one_term_two_variables(2u,prec);
+    one_term_two_variables.append(zero_index,coefficient_one);
+    ARIADNE_TEST_ASSERT(!same(one_term_two_variables,different_argument_size));
+
     ExpansionType values(2u,prec);
     ARIADNE_TEST_EXECUTE(values.set(zero_index,coefficient_one));
     ARIADNE_TEST_EXECUTE(values.set(zero_index,coefficient_two));
