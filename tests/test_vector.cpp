@@ -112,7 +112,7 @@ TestVector::test_range()
 Void
 TestVector::test_slice()
 {
-    Slice sample_slice=slice(3u,2u,4u);
+    Slice sample_slice=Ariadne::slice(3u,2u,4u);
     ARIADNE_TEST_EQUALS(sample_slice.size(),3u);
     ARIADNE_TEST_EQUALS(sample_slice.start(),2u);
     ARIADNE_TEST_EQUALS(sample_slice.stride(),4u);
