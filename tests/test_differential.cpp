@@ -553,6 +553,86 @@ class TestDifferentialVector {
     }
 };
 
+template<class X, class PR>
+Void test_differential_tpl_instantiation_branches(PR const& pr) {
+    using D=Differential<X>;
+    X z(0u,pr);
+    X one(1u,pr);
+    X two(2u,pr);
+
+    Expansion<MultiIndex,X> expansion(1u,pr);
+    expansion.append(MultiIndex({0u}),one);
+    expansion.append(MultiIndex({2u}),two);
+    ARIADNE_TEST_EXECUTE((void)D(expansion,1u));
+
+    Map<MultiIndex,X> map;
+    map.insert(MultiIndex({0u}),one);
+    map.insert(MultiIndex({2u}),two);
+    ARIADNE_TEST_EXECUTE((void)D(map,1u));
+    Map<MultiIndex,X> empty_map;
+    ARIADNE_TEST_FAIL((void)D(empty_map,1u));
+
+    D empty(1u,2u,z);
+    D constant=D::constant(1u,2u,one);
+    D high(1u,2u,z);
+    high[MultiIndex({2u})]=one;
+    D low(1u,1u,z);
+    low[MultiIndex({0u})]=one;
+
+    ARIADNE_TEST_EXECUTE((void)(empty==constant));
+    ARIADNE_TEST_EXECUTE((void)(constant==high));
+    ARIADNE_TEST_EXECUTE((void)(high==constant));
+
+    D const_missing(1u,2u,z);
+    D const& const_ref=const_missing;
+    ARIADNE_TEST_EXECUTE((void)const_ref[MultiIndex({1u})]);
+
+    D linear_only(1u,2u,z);
+    linear_only.set_gradient(0u,one);
+    ARIADNE_TEST_EXECUTE(linear_only.half_hessian());
+
+    D cubic_only(1u,3u,z);
+    cubic_only[MultiIndex({3u})]=one;
+    ARIADNE_TEST_EXECUTE(cubic_only.half_hessian());
+
+    D mixed_gap(3u,2u,z);
+    mixed_gap[MultiIndex({1u,0u,1u})]=one;
+    ARIADNE_TEST_EXECUTE(mixed_gap.half_hessian());
+
+    ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Add(),high,low));
+    ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Add(),low,high));
+    ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Sub(),high,low));
+    ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Sub(),low,high));
+    ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Mul(),high,low));
+    ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Mul(),low,high));
+
+    UnivariateDifferential<X> series(2u,pr);
+    series[0u]=one;
+    series[1u]=one;
+    ARIADNE_TEST_EXECUTE(compose(series,linear_only));
+
+    D degree_zero=D::constant(1u,0u,one);
+    ARIADNE_TEST_EXECUTE(derivative(degree_zero,0u));
+
+    D valid_check=D::constant(1u,1u,one);
+    ARIADNE_TEST_EXECUTE(valid_check.check());
+    D empty_check(1u,1u,z);
+    ARIADNE_TEST_EXECUTE(empty_check.check());
+    D invalid_check(1u,1u,z);
+    invalid_check.expansion().append(MultiIndex({2u}),one);
+    ARIADNE_TEST_FAIL(invalid_check.check());
+
+    MultiIndex wrong_index({0u,0u});
+    ARIADNE_TEST_FAIL((void)constant[wrong_index]);
+    D const& constant_ref=constant;
+    ARIADNE_TEST_FAIL((void)constant_ref[wrong_index]);
+
+    D wrong_as=D::constant(2u,1u,one);
+    ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Add(),low,wrong_as));
+    ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Sub(),low,wrong_as));
+    ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Mul(),low,wrong_as));
+}
+
 Int main() {
     {
         using X=FloatDPApproximation;
@@ -570,6 +650,15 @@ Int main() {
         ARIADNE_TEST_EQUAL(dc.degree(),0u);
         ARIADNE_TEST_EQUALS(dc[0],0);
     }
+
+    MultiplePrecision mp(128);
+    test_differential_tpl_instantiation_branches<RoundedFloatDP>(dp);
+    test_differential_tpl_instantiation_branches<FloatDPApproximation>(dp);
+    test_differential_tpl_instantiation_branches<FloatDPBounds>(dp);
+    test_differential_tpl_instantiation_branches<FloatDPUpperInterval>(dp);
+    test_differential_tpl_instantiation_branches<FloatMPApproximation>(mp);
+    test_differential_tpl_instantiation_branches<FloatMPBounds>(mp);
+    test_differential_tpl_instantiation_branches<FloatMPUpperInterval>(mp);
 
     TestDifferential< Differential<FloatDPApproximation> > tf;
     TestDifferentialVector< Differential<FloatDPApproximation> > tfv;

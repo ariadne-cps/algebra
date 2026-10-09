@@ -52,10 +52,17 @@ inline DegreeType max(DegreeType d1, DegreeType d2) { return std::max(d1,d2); }
 
 template<class X> Differential<X>::Differential(SizeType as, DegreeType deg, X const& z) : _expansion(as,get_characteristics(z)), _degree(deg) { }
 
-template<class X> Differential<X>::Differential(const Map<MultiIndex,X>& map, DegreeType)
-    : _expansion((assert(!map.empty()),map.begin()->first.size()),get_characteristics(map.begin()->second))
+template<class X> Expansion<MultiIndex,X> _differential_expansion_from_map(const Map<MultiIndex,X>& map) {
+    ARIADNE_PRECONDITION(!map.empty());
+    Expansion<MultiIndex,X> expansion(map.begin()->first.size(),get_characteristics(map.begin()->second));
+    for(auto const& term : map) { expansion.append(term.first,term.second); }
+    expansion.graded_sort();
+    return expansion;
+}
+
+template<class X> Differential<X>::Differential(const Map<MultiIndex,X>& map, DegreeType deg)
+    : Differential<X>(_differential_expansion_from_map(map),deg)
 {
-    ARIADNE_NOT_IMPLEMENTED;
 }
 
 template<class X>
@@ -273,12 +280,12 @@ template<class X> const X& Differential<X>::operator[](const SizeType& j) const 
 }
 
 template<class X> X& Differential<X>::operator[](const MultiIndex& a) {
-    ARIADNE_ASSERT_MSG(a.number_of_variables()==this->argument_size()," d="<<*this<<", a="<<a);
+    ARIADNE_PRECONDITION_MSG(a.number_of_variables()==this->argument_size()," d="<<*this<<", a="<<a);
     return this->_expansion.at(a);
 }
 
 template<class X> const X& Differential<X>::operator[](const MultiIndex& a) const {
-    ARIADNE_ASSERT_MSG(a.number_of_variables()==this->argument_size()," d="<<*this<<", a="<<a);
+    ARIADNE_PRECONDITION_MSG(a.number_of_variables()==this->argument_size()," d="<<*this<<", a="<<a);
     ConstIterator iter=this->_expansion.find(a);
     if(iter==this->_expansion.end()) { return this->_expansion.zero_coefficient(); }
     else { return iter->coefficient(); }
@@ -351,11 +358,8 @@ template<class X> Void Differential<X>::cleanup() {
 }
 
 template<class X> Void Differential<X>::check() const {
-    for(auto iter=this->begin(); iter!=this->end(); ++iter) {
-        ARIADNE_ASSERT_MSG(iter->index().degree()<=this->degree(), *this);
-        auto next = iter; ++next;
-        ARIADNE_ASSERT_MSG(graded_less(iter->index(),next->index()),"ErrorTag in ordering Differential "<<this->expansion());
-    }
+    this->_expansion.check();
+    ARIADNE_PRECONDITION(this->_expansion.empty() || this->_expansion.back().index().degree()<=this->degree());
 }
 
 
@@ -411,7 +415,7 @@ Differential<X> AlgebraOperations<Differential<X>>::apply(Mul, Differential<X> x
 template<class X>
 Differential<X> AlgebraOperations<Differential<X>>::apply(Add, const Differential<X>& x, const Differential<X>& y)
 {
-    ARIADNE_ASSERT_MSG(x.argument_size()==y.argument_size(),"x="<<x<<" y="<<y);
+    ARIADNE_PRECONDITION_MSG(x.argument_size()==y.argument_size(),"x="<<x<<" y="<<y);
     Differential<X> r(x.argument_size(),min(x.degree(),y.degree()),add(x.zero_coefficient(),y.zero_coefficient()));
     typename Differential<X>::ConstIterator xiter=x.begin();
     typename Differential<X>::ConstIterator yiter=y.begin();
@@ -444,7 +448,7 @@ Differential<X> AlgebraOperations<Differential<X>>::apply(Add, const Differentia
 template<class X>
 Differential<X> AlgebraOperations<Differential<X>>::apply(Sub, const Differential<X>& x, const Differential<X>& y)
 {
-    ARIADNE_ASSERT_MSG(x.argument_size()==y.argument_size(),"x="<<x<<" y="<<y);
+    ARIADNE_PRECONDITION_MSG(x.argument_size()==y.argument_size(),"x="<<x<<" y="<<y);
     Differential<X> r(x.argument_size(),min(x.degree(),y.degree()),sub(x.zero_coefficient(),y.zero_coefficient()));
     typename Differential<X>::ConstIterator xiter=x.begin();
     typename Differential<X>::ConstIterator yiter=y.begin();
@@ -478,7 +482,7 @@ template<class X>
 Differential<X> AlgebraOperations<Differential<X>>::apply(Mul, const Differential<X>& x, const Differential<X>& y)
 {
     typedef typename Differential<X>::ConstIterator ConstIterator;
-    ARIADNE_ASSERT_MSG(x.argument_size()==y.argument_size(),"x="<<x<<" y="<<y);
+    ARIADNE_PRECONDITION_MSG(x.argument_size()==y.argument_size(),"x="<<x<<" y="<<y);
     Differential<X> r(x.argument_size(),min(x.degree(),y.degree()),mul(x.zero_coefficient(),y.zero_coefficient()));
     MultiIndex a(x.argument_size());
     X c(x.zero_coefficient()*y.zero_coefficient());
@@ -540,10 +544,10 @@ template<class X> Differential<X> AlgebraOperations<Differential<X>>::apply(Abs,
 
 template<class X> Differential<X> _evaluate(const Differential<X>& x, const Vector<Differential<X>>& a)
 {
-    ARIADNE_ASSERT_MSG(x.argument_size()==a.size(), "x="<<x<<" a="<<a);
+    ARIADNE_PRECONDITION_MSG(x.argument_size()==a.size(), "x="<<x<<" a="<<a);
     DegreeType d=x.degree();
     SizeType ms=a.size();
-    ARIADNE_ASSERT(d>=1);
+    ARIADNE_PRECONDITION(d>=1);
 
     Differential<X> zero = a.zero_element();
     X x_one=zero.zero_coefficient(); x_one=1;
@@ -706,7 +710,7 @@ template<class X> Vector<Differential<X>>::Vector(InitializerList<Differential<X
 template<class X> Vector<Differential<X>>::Vector(Array<Differential<X>> ary)
     : _ary(std::move(ary))
 {
-    ARIADNE_ASSERT(_ary.size()>0);
+    ARIADNE_PRECONDITION(_ary.size()>0);
 }
 
 
@@ -808,8 +812,8 @@ template<class X>
 Vector<Differential<X>>
 Vector<Differential<X>>::_solve(const Vector<Differential<X> >& df, const Vector<X>& y0)
 {
-    ARIADNE_ASSERT(df.result_size()<=df.argument_size());
-    ARIADNE_ASSERT(df.result_size()==y0.size());
+    ARIADNE_PRECONDITION(df.result_size()<=df.argument_size());
+    ARIADNE_PRECONDITION(df.result_size()==y0.size());
 
     const SizeType m=df.result_size();
     const SizeType n=df.argument_size();
@@ -839,8 +843,8 @@ template<class X>
 Vector<Differential<X>>
 Vector<Differential<X>>::_flow(const Vector<Differential<X> >& df, Vector<X> const& x0)
 {
-    ARIADNE_ASSERT(df.result_size()==df.argument_size());
-    ARIADNE_ASSERT(x0.size()==df.argument_size());
+    ARIADNE_PRECONDITION(df.result_size()==df.argument_size());
+    ARIADNE_PRECONDITION(x0.size()==df.argument_size());
     const SizeType n=df.result_size();
     const DegreeType deg=df.degree();
     const X z=df.zero_element().zero_coefficient();
@@ -857,8 +861,8 @@ template<class X>
 Vector<Differential<X>>
 Vector<Differential<X>>::_flow(const Vector<Differential<X> >& df, Vector<X> const& x0, X const& t0)
 {
-    ARIADNE_ASSERT(df.result_size()==x0.size());
-    ARIADNE_ASSERT(df.argument_size()==x0.size()+1u);
+    ARIADNE_PRECONDITION(df.result_size()==x0.size());
+    ARIADNE_PRECONDITION(df.argument_size()==x0.size()+1u);
     const SizeType n=x0.size(); // Number of state variables; also index of time variable
     const DegreeType deg=df.degree();
 
@@ -872,8 +876,8 @@ template<class X>
 Vector<Differential<X>>
 Vector<Differential<X>>::_flow(const Vector<Differential<X> >& df, Vector<X> const& x0, Vector<X> const& a)
 {
-    ARIADNE_ASSERT(df.result_size()==x0.size());
-    ARIADNE_ASSERT(df.argument_size()==x0.size()+a.size());
+    ARIADNE_PRECONDITION(df.result_size()==x0.size());
+    ARIADNE_PRECONDITION(df.argument_size()==x0.size()+a.size());
     const SizeType n=x0.size(); // Number of state variables; also index of time variable
     const SizeType m=a.size();
     const DegreeType deg=df.degree();
@@ -889,8 +893,8 @@ template<class X>
 Vector<Differential<X>>
 Vector<Differential<X>>::_flow(const Vector<Differential<X> >& df, Vector<X> const& x0, X const& t0, Vector<X> const& a)
 {
-    ARIADNE_ASSERT(df.result_size()==x0.size());
-    ARIADNE_ASSERT(df.argument_size()==x0.size()+1u+a.size());
+    ARIADNE_PRECONDITION(df.result_size()==x0.size());
+    ARIADNE_PRECONDITION(df.argument_size()==x0.size()+1u+a.size());
     const SizeType n=x0.size(); // Number of state variables; also index of time variable
     const SizeType m=a.size();
     const DegreeType deg=df.degree();
@@ -906,10 +910,10 @@ template<class X>
 Vector<Differential<X>>
 Vector<Differential<X>>::_flow(const Vector<Differential<X>>& df, const Vector<Differential<X>>& dx0, const Vector<Differential<X>>& dt0a)
 {
-    ARIADNE_ASSERT(df.result_size()==dx0.result_size());
-    ARIADNE_ASSERT(df.argument_size()==dx0.result_size()+dt0a.result_size());
-    ARIADNE_ASSERT(dx0.argument_size()==dt0a.argument_size());
-    ARIADNE_ASSERT(dx0.result_size()<dx0.argument_size()); // dx0 has strictly more arguments since time is an input
+    ARIADNE_PRECONDITION(df.result_size()==dx0.result_size());
+    ARIADNE_PRECONDITION(df.argument_size()==dx0.result_size()+dt0a.result_size());
+    ARIADNE_PRECONDITION(dx0.argument_size()==dt0a.argument_size());
+    ARIADNE_PRECONDITION(dx0.result_size()<dx0.argument_size()); // dx0 has strictly more arguments since time is an input
 
     const SizeType n=dx0.result_size(); const SizeType p=dx0.argument_size();
     const SizeType deg=min(min(df.degree(),dt0a.degree())+1u,dx0.degree());
