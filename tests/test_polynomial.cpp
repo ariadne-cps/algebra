@@ -188,14 +188,14 @@ Void TestPolynomial::test_constructors()
     // Repeated indices
     ARIADNE_TEST_EQUAL(MultivariatePolynomial<RoundedFloatDP>({ {{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{1,0},7.0_x}, {{1,2},11.0_x} },dp), MultivariatePolynomial<RoundedFloatDP>({ {{0,0},2.0_x}, {{1,0},10.0_x}, {{1,2},16.0_x} },dp))
 
-    // Exercise both cleanup outcomes in the same exact-coefficient Polynomial instantiation.
-    UnivariatePolynomial<FloatDP> exact_cancellation(SizeOne(),dp);
-    exact_cancellation.expansion().append(UniIndex(1u),FloatDP(1,dp));
-    exact_cancellation.expansion().append(UniIndex(1u),FloatDP(-1,dp));
-    exact_cancellation.expansion().append(UniIndex(2u),FloatDP(2,dp));
+    // Exercise both cleanup outcomes in a Polynomial coefficient type closed under addition.
+    UnivariatePolynomial<FloatDPBounds> exact_cancellation(SizeOne(),dp);
+    exact_cancellation.expansion().append(UniIndex(1u),FloatDPBounds(1,dp));
+    exact_cancellation.expansion().append(UniIndex(1u),FloatDPBounds(-1,dp));
+    exact_cancellation.expansion().append(UniIndex(2u),FloatDPBounds(2,dp));
     ARIADNE_TEST_EXECUTE(exact_cancellation.cleanup())
     ARIADNE_TEST_EQUALS(exact_cancellation.number_of_terms(),1u)
-    ARIADNE_TEST_EQUALS(exact_cancellation[UniIndex(2u)],FloatDP(2,dp))
+    ARIADNE_TEST_EQUALS(exact_cancellation[UniIndex(2u)],FloatDPBounds(2,dp))
 
 }
 
