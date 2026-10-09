@@ -52,6 +52,7 @@ class TestPolynomial
     Void test_arithmetic();
     Void test_partial_evaluate();
     Void test_evaluate_horner();
+    Void test_evaluate_univariate_without_constant();
     Void test_variables();
     Void test_find();
 };
@@ -66,6 +67,7 @@ Void TestPolynomial::test()
     ARIADNE_TEST_CALL(test_arithmetic())
     ARIADNE_TEST_CALL(test_partial_evaluate())
     ARIADNE_TEST_CALL(test_evaluate_horner())
+    ARIADNE_TEST_CALL(test_evaluate_univariate_without_constant())
     ARIADNE_TEST_CALL(test_variables())
 
     ARIADNE_TEST_CALL(test_find())
@@ -548,6 +550,39 @@ Void TestPolynomial::test_evaluate_horner()
     HornerPolynomial m1=HornerPolynomial::coordinate(2u,1u,dp);
     Vector<HornerPolynomial> mq({m0,m1});
     ARIADNE_TEST_EXECUTE(compose(q2,mq))
+}
+
+Void TestPolynomial::test_evaluate_univariate_without_constant()
+{
+    using X=RoundedFloatDP;
+    using U=UnivariatePolynomial<X>;
+    auto u=U::coordinate(dp);
+    U cubic({{3u,3.0_x}},dp);
+    U sparse({{5u,2.0_x},{2u,-3.0_x}},dp);
+    auto constant=U::constant(X(7u,dp));
+    U explicit_zero=sparse;
+    explicit_zero.expansion().append(UniIndex(0u),X(0u,dp));
+
+    // Horner evaluation must include the lowest retained power even when
+    // there is no constant term. Test positive, negative and zero arguments.
+    for(Int value : {-2,0,2}) {
+        X argument(value,dp);
+        X square=argument*argument;
+        X cube=square*argument;
+        ARIADNE_TEST_EQUALS(evaluate(u,argument),argument)
+        ARIADNE_TEST_EQUALS(evaluate(cubic,argument),X(3u,dp)*cube)
+        ARIADNE_TEST_EQUALS(evaluate(sparse,argument),X(2u,dp)*cube*square-X(3u,dp)*square)
+        ARIADNE_TEST_EQUALS(evaluate(sparse,argument),evaluate(explicit_zero,argument))
+        ARIADNE_TEST_EQUALS(evaluate(constant,argument),X(7u,dp))
+    }
+
+    // The same evaluator also substitutes polynomial arguments.
+    auto shifted=u+X(1u,dp);
+    ARIADNE_TEST_EQUAL(compose(cubic,shifted),X(3u,dp)*shifted*shifted*shifted)
+    auto x=P::coordinate(2u,0u,dp);
+    auto y=P::coordinate(2u,1u,dp);
+    auto sum=x+y;
+    ARIADNE_TEST_EQUAL(compose(cubic,sum),X(3u,dp)*sum*sum*sum)
 }
 
 Void TestPolynomial::test_variables()

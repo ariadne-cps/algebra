@@ -145,6 +145,10 @@ template<class X, class Y> ArithmeticType<X,Y> horner_evaluate(const Expansion<U
         a=na;
         ++iter;
     }
+    // Account for the lowest exponent when the expansion has no constant term.
+    for(DegreeType i=0; i!=a; ++i) {
+        r=r*x;
+    }
     return r;
 }
 
