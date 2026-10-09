@@ -836,14 +836,14 @@ Void test_bounds_coefficient_output() {
     expansion._write(empty_stream,names);
     ARIADNE_TEST_EQUALS(empty_stream.str(),String("0"));
 
-    FloatDPBounds one(1,dp), two(2,dp);
+    FloatDPBounds one(1,dp), coefficient_two(2,dp);
     expansion.append(MultiIndex({1u,1u}),one);
     expansion.append(MultiIndex({0u,2u}),FloatDPBounds(-1,dp));
     expansion.append(MultiIndex({0u,0u}),one);
-    expansion.append(MultiIndex({1u,0u}),two);
+    expansion.append(MultiIndex({1u,0u}),coefficient_two);
     std::ostringstream stream, expected;
     expansion._write(stream,names);
-    expected << " x*y -y^2 +" << one << " +" << two << "*x";
+    expected << " x*y -y^2 +" << one << " +" << coefficient_two << "*x";
     ARIADNE_TEST_EQUALS(stream.str(),expected.str());
 }
 
