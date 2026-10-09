@@ -264,8 +264,10 @@ Void TestPolynomial::test_arithmetic()
     ARIADNE_TEST_EQUALS(evaluate(2*x0*x0-1,v),2*v[0]*v[0]-1)
     ARIADNE_TEST_EQUALS(evaluate(2*x1*x1-1,v),2*v[1]*v[1]-1)
     ARIADNE_TEST_EXECUTE(evaluate(raw_y,bw))
-    UnivariatePolynomial<FloatDP> raw_q({ {2,1.0_x}, {0,3.0_x} },dp);
-    ARIADNE_TEST_EQUALS(evaluate(raw_q,bw),bw*bw+FloatDPBounds(3,dp))
+    Expansion<UniIndex,FloatDP> raw_q(SizeOne(),dp);
+    raw_q.append(UniIndex(2u),FloatDP(1,dp));
+    raw_q.append(UniIndex(0u),FloatDP(3,dp));
+    ARIADNE_TEST_EQUALS(horner_evaluate(raw_q,bw),bw*bw+FloatDPBounds(3,dp))
     ARIADNE_TEST_EXECUTE(evaluate(raw_x0,bv))
     /* Failing with UnivariatePolynomial
     ARIADNE_TEST_EQUALS(evaluate(2*y*y-1,w),2*w*w-1);
