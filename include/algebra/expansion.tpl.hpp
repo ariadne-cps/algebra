@@ -86,8 +86,6 @@ template<class I, class X> CharacteristicsType<X> get_coefficient_characteristic
 template<class I, class X> Expansion<I,X>::Expansion(InitializerList<Pair<IndexInitializerType,X>> lst)
     : Expansion(ArgumentSizeType(),get_coefficient_characteristics(lst))
 {
-    ARIADNE_PRECONDITION(lst.size()!=0);
-
     _indices = UniformList<I>(0u,make_zero_index_from_initializer<I>(lst.begin()->first));
 
     SizeType cap = std::max(DEFAULT_CAPACITY,lst.size());
@@ -327,16 +325,11 @@ template<class I, class X> Bool Expansion<I,X>::same_as(const Expansion<I,X>& ot
     if (this->size()!=other.size()) { return false; }
     if (this->argument_size()!=other.argument_size()) { return false; }
 
-    while(true) {
-        if (iter1!=end1 && iter2!=end2) {
-            if (!same(*iter1,*iter2)) { return false; }
-            ++iter1; ++iter2;
-        } else if (iter1==end1 && iter2==end2) {
-            return true;
-        } else {
-            return false;
-        }
+    while(iter1!=end1) {
+        if (!same(*iter1,*iter2)) { return false; }
+        ++iter1; ++iter2;
     }
+    return true;
 }
 
 template<class I, class X> auto Expansion<I,X>::insert(Iterator pos, const I& a, const X& c) -> Iterator {

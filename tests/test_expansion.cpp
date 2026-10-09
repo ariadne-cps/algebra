@@ -153,6 +153,18 @@ template<class F> Void TestExpansion<F>::test_helpers()
 
     ExpansionType checked(2u,prec);
     ARIADNE_TEST_EXECUTE(checked.check());
+
+    ExpansionType self_copy(2u,prec);
+    self_copy.append(zero_index,coefficient_one);
+    ExpansionType& self_copy_alias=self_copy;
+    ARIADNE_TEST_EXECUTE(self_copy=self_copy_alias);
+    ARIADNE_TEST_EQUALS(self_copy.size(),1u);
+
+    ExpansionType self_move(2u,prec);
+    self_move.append(first_index,coefficient_two);
+    ExpansionType* self_move_alias=&self_move;
+    ARIADNE_TEST_EXECUTE(self_move=std::move(*self_move_alias));
+    ARIADNE_TEST_EQUALS(self_move.size(),1u);
     auto checked_characteristics=checked.characteristics();
     ARIADNE_TEST_EQUALS(checked_characteristics.first,2u);
 
