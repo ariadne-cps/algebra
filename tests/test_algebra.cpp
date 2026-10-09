@@ -157,6 +157,8 @@ class TestAlgebra {
         auto transcendental_wrapper=tax.extract<TranscendentalAlgebraWrapper<DX,X>>();
         ARIADNE_TEST_PRINT(transcendental_wrapper);
         TranscendentalAlgebra<X> interface_tax(new TranscendentalAlgebraInterfaceStub<X>());
+        auto copied_transcendental_interface=interface_tax.reference()._copy();
+        delete copied_transcendental_interface;
         ARIADNE_TEST_EXECUTE(interface_tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
         ARIADNE_TEST_FAIL(tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
         ARIADNE_TEST_FAIL(interface_tax.extract<DX>());
