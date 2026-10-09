@@ -111,6 +111,18 @@ class TestAlgebra {
         ARIADNE_TEST_ASSIGN(dx,ax.extract<DX>());
         auto algebra_wrapper=ax.extract<AlgebraWrapper<DX,X>>();
         ARIADNE_TEST_PRINT(algebra_wrapper);
+        auto algebra_wrapper_copy=algebra_wrapper._copy();
+        delete algebra_wrapper_copy;
+        auto algebra_wrapper_zero=algebra_wrapper._create_zero();
+        delete algebra_wrapper_zero;
+        ARIADNE_TEST_EXECUTE(algebra_wrapper._iadd(cx));
+        ARIADNE_TEST_EXECUTE(algebra_wrapper._imul(cx));
+        ARIADNE_TEST_EXECUTE(algebra_wrapper._isma(cx,algebra_wrapper));
+        ARIADNE_TEST_EXECUTE(algebra_wrapper._ifma(algebra_wrapper,algebra_wrapper));
+        auto algebra_wrapper_radd=algebra_wrapper._rapply(BinaryRingOperator(Add()),cx);
+        delete algebra_wrapper_radd;
+        auto algebra_wrapper_power=algebra_wrapper._apply(GradedRingOperator(Pow()),2u);
+        delete algebra_wrapper_power;
         Algebra<X> interface_algebra(new AlgebraInterfaceStub<X>());
         ARIADNE_TEST_EXECUTE(interface_algebra.extract<AlgebraInterfaceStub<X>>());
         ARIADNE_TEST_FAIL(ax.extract<AlgebraInterfaceStub<X>>());
