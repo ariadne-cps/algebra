@@ -723,7 +723,8 @@ Void test_additional_expansion_instantiation(PR const& pr)
     ARIADNE_TEST_EXECUTE(copy_target=copy_alias);
 
     Expansion<MultiIndex,X> move_target(2u,pr);
-    ARIADNE_TEST_EXECUTE(move_target=Expansion<MultiIndex,X>(source));
+    Expansion<MultiIndex,X> move_source(source);
+    ARIADNE_TEST_EXECUTE(move_target=std::move(move_source));
     Expansion<MultiIndex,X>* move_alias=&move_target;
     ARIADNE_TEST_EXECUTE(move_target=std::move(*move_alias));
 }
