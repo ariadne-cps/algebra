@@ -76,6 +76,10 @@ template<class X> Void TestChebyshevPolynomial<X>::test()
     FloatBounds<PR>::set_output_places(18);
     FloatApproximation<PR>::set_output_places(8);
 
+    ARIADNE_TEST_EQUALS(pow2(0u),1);
+    ARIADNE_TEST_EQUALS(pow2(3u),8);
+    ARIADNE_TEST_EQUALS(powm1(0u),1);
+    ARIADNE_TEST_EQUALS(powm1(1u),-1);
     ARIADNE_TEST_CALL(test_univariate());
     ARIADNE_TEST_CALL(test_multivariate());
 }
