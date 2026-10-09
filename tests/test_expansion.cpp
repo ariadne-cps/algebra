@@ -215,6 +215,18 @@ template<class F> Void TestExpansion<F>::test_helpers()
     auto tight_inserted=tight.insert(tight.begin(),first_index,coefficient_two);
     ARIADNE_TEST_EQUALS(tight_inserted->index(),first_index);
 
+    ExpansionType tight_sum(2u,characteristics(coefficient_one),1u);
+    tight_sum.append(zero_index,coefficient_one);
+    ARIADNE_TEST_EXECUTE(tight_sum.append_sum(zero_index,first_index,coefficient_two));
+    ARIADNE_TEST_EQUALS(tight_sum.size(),2u);
+
+    ExpansionType write_cases(2u,prec);
+    write_cases.append(MultiIndex({1u,1u}),coefficient_one);
+    write_cases.append(zero_index,coefficient_one);
+    std::ostringstream write_stream;
+    Array<String> write_names({"x","y"});
+    ARIADNE_TEST_EXECUTE(write_cases._write(write_stream,write_names));
+
     ExpansionType reverse_sortable(2u,prec);
     reverse_sortable.append(zero_index,coefficient_one);
     reverse_sortable.append(first_index,coefficient_two);
