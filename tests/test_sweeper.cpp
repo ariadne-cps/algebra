@@ -48,6 +48,7 @@ Void test_threshold_sweeper()
     ARIADNE_TEST_PRINT(sweeper_mp);
 
     ARIADNE_TEST_FAIL((void)ThresholdSweeper<FloatDP>(dp,-1e-8));
+    ARIADNE_TEST_FAIL((void)ThresholdSweeper<FloatDP>(dp,FloatDP(-1,dp)));
 
     MultiIndex constant_index({0u});
     ARIADNE_TEST_ASSERT(sweeper_dp.discard(constant_index,FloatDP(0u,dp)));
