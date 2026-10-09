@@ -73,7 +73,7 @@ class TestDifferential {
     DifferentialType x1,x2,x3;
   public:
     TestDifferential()
-        : x1(2,4,pr), x2(2,4,pr), x3(1,4,pr)
+        : c1(pr), x1(2,4,pr), x2(2,4,pr), x3(1,4,pr)
     {
         c1=ScalarType(3.0_x,pr);
         x1=DifferentialType(2,4,{{{0,0},2.0_x},{{1,0},1.0_x},{{2,0},0.5_x}},pr);
@@ -198,7 +198,7 @@ class TestDifferential {
 
     Void test_gradient() {
         // Regression test based on errors in Henon evaluation.
-        Vector<FloatDPApproximation> x={{0.875_x,-0.125_x},pr};
+        Vector<FloatDPApproximation> x({0.875_x,-0.125_x},pr);
         Vector< Differential<FloatDPApproximation> > dx=Differential<FloatDPApproximation>::variables(1u,x);
         Differential<FloatDPApproximation> dfx=1.5_x-dx[0]*dx[0]-0.25_x*dx[1];
         ARIADNE_TEST_PRINT(dfx);
@@ -212,7 +212,7 @@ class TestDifferential {
         // Test Hessian matrix of
         FloatDPApproximation a00={1.5_x,pr}; FloatDPApproximation a01={2.5_x,pr}; FloatDPApproximation a11={3.5_x,pr};
         ExactDouble y0=0.875_x; ExactDouble y1=-1.25_x;
-        Vector<FloatDPApproximation> x={{y0,y1},pr};
+        Vector<FloatDPApproximation> x({y0,y1},pr);
         Vector< Differential<FloatDPApproximation> > dx=Differential<FloatDPApproximation>::variables(2u,x);
         Differential<FloatDPApproximation> dfx=a00*dx[0]*dx[0]+a01*dx[0]*dx[1]+a11*dx[1]*dx[1];
         ARIADNE_TEST_PRINT(dfx);
