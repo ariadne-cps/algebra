@@ -99,7 +99,8 @@ template<class X> class Algebra
   public:
     using Handle<const Interface>::Handle;
     template<AnAlgebraOver<X> A> Algebra(A const&);
-    template<class A> A extract() const;
+    template<class A> requires BaseOf<AlgebraInterface<X>,A> A extract() const;
+    template<class A> requires (!BaseOf<AlgebraInterface<X>,A>) A extract() const;
     Algebra(const Algebra<X>& a) : Handle<const AlgebraInterface<X>>(a) { }
     Algebra<X>& operator=(const Algebra<X>& a) { (*this).Handle<const AlgebraInterface<X>>::operator=(std::shared_ptr< const AlgebraInterface<X> >(a.managed_pointer()->_create_copy())); return *this; }
     Algebra<X>& operator=(const X& c) { return *this = this->create_constant(c); }
@@ -132,7 +133,8 @@ template<class X> class TranscendentalAlgebra
     using Handle<const Interface>::Handle;
     TranscendentalAlgebra() : TranscendentalAlgebra(nullptr) { }
     template<ATranscendentalAlgebraOver<X> A> explicit TranscendentalAlgebra(const A& a);
-    template<class A> A extract() const;
+    template<class A> requires BaseOf<TranscendentalAlgebraInterface<X>,A> A extract() const;
+    template<class A> requires (!BaseOf<TranscendentalAlgebraInterface<X>,A>) A extract() const;
     TranscendentalAlgebra<X>& operator=(const X& c) { return *this = this->create_constant(c); }
     TranscendentalAlgebra<X> create() const { return TranscendentalAlgebra<X>(this->managed_pointer()->_create_zero()); }
     TranscendentalAlgebra<X> clone() const { return TranscendentalAlgebra<X>(this->managed_pointer()->_create_copy()); }
@@ -272,18 +274,36 @@ template<class X> class SymbolicAlgebra
 template<class X> template<AnAlgebraOver<X> A> Algebra<X>::Algebra(A const& a)
     : Handle<const AlgebraInterface<X>>(make_algebra(a)) { }
 
-template<class X> template<class A> A Algebra<X>::extract() const {
-    if constexpr(BaseOf<AlgebraInterface<X>,A>) { auto ap=dynamic_cast<A const*>(this->raw_pointer()); ARIADNE_PRECONDITION(ap); return *ap; }
-    else { auto awp=dynamic_cast<AlgebraWrapper<A,X>const*>(this->raw_pointer()); ARIADNE_PRECONDITION(awp); return *awp; }
+template<class X> template<class A> requires BaseOf<AlgebraInterface<X>,A>
+A Algebra<X>::extract() const {
+    auto ap=dynamic_cast<A const*>(this->raw_pointer());
+    ARIADNE_PRECONDITION(ap);
+    return *ap;
+}
+
+template<class X> template<class A> requires (!BaseOf<AlgebraInterface<X>,A>)
+A Algebra<X>::extract() const {
+    auto awp=dynamic_cast<AlgebraWrapper<A,X>const*>(this->raw_pointer());
+    ARIADNE_PRECONDITION(awp);
+    return *awp;
 }
 
 
 template<class X> template<ATranscendentalAlgebraOver<X> A> TranscendentalAlgebra<X>::TranscendentalAlgebra(A const& a)
     : Handle<const TranscendentalAlgebraInterface<X>>(make_elementary_algebra(a)) { }
 
-template<class X> template<class A> A TranscendentalAlgebra<X>::extract() const {
-    if constexpr(BaseOf<TranscendentalAlgebraInterface<X>,A>) { auto ap=dynamic_cast<A const*>(this->raw_pointer()); ARIADNE_PRECONDITION(ap); return *ap; }
-    else { auto awp=dynamic_cast<TranscendentalAlgebraWrapper<A,X>const*>(this->raw_pointer()); ARIADNE_PRECONDITION(awp); return *awp; }
+template<class X> template<class A> requires BaseOf<TranscendentalAlgebraInterface<X>,A>
+A TranscendentalAlgebra<X>::extract() const {
+    auto ap=dynamic_cast<A const*>(this->raw_pointer());
+    ARIADNE_PRECONDITION(ap);
+    return *ap;
+}
+
+template<class X> template<class A> requires (!BaseOf<TranscendentalAlgebraInterface<X>,A>)
+A TranscendentalAlgebra<X>::extract() const {
+    auto awp=dynamic_cast<TranscendentalAlgebraWrapper<A,X>const*>(this->raw_pointer());
+    ARIADNE_PRECONDITION(awp);
+    return *awp;
 }
 
 
