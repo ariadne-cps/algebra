@@ -729,6 +729,28 @@ Void test_additional_expansion_instantiation(PR const& pr)
     ARIADNE_TEST_EXECUTE(move_target=std::move(*move_alias));
 }
 
+template<class X, class PR>
+Void test_univariate_expansion_assignment_instantiation(PR const& pr)
+{
+    X coefficient_one(1u,pr);
+
+    Expansion<UniIndex,X> source(SizeOne(),pr);
+    source.append(UniIndex(1u),coefficient_one);
+
+    Expansion<UniIndex,X> copy_target(SizeOne(),pr);
+    ARIADNE_TEST_EXECUTE(copy_target=source);
+    Expansion<UniIndex,X>& copy_alias=copy_target;
+    ARIADNE_TEST_EXECUTE(copy_target=copy_alias);
+    ARIADNE_TEST_EQUALS(copy_target.size(),1u);
+
+    Expansion<UniIndex,X> move_target(SizeOne(),pr);
+    Expansion<UniIndex,X> move_source(source);
+    ARIADNE_TEST_EXECUTE(move_target=std::move(move_source));
+    Expansion<UniIndex,X>* move_alias=&move_target;
+    ARIADNE_TEST_EXECUTE(move_target=std::move(*move_alias));
+    ARIADNE_TEST_EQUALS(move_target.size(),1u);
+}
+
 Void test_unit_coefficient_output() {
     // Built-in doubles have decidable equality, so unit coefficients can be
     // omitted while unit constants must still be printed.
@@ -807,14 +829,23 @@ Int main() {
         ARIADNE_TEST_EQUALS(upper.size(),1u);
     }
 
+    test_additional_expansion_instantiation<RoundedFloatDP>(double_precision);
     test_additional_expansion_instantiation<FloatDPApproximation>(double_precision);
     test_additional_expansion_instantiation<FloatDPBounds>(double_precision);
     test_additional_expansion_instantiation<FloatDPUpperInterval>(double_precision);
 
+    test_univariate_expansion_assignment_instantiation<RoundedFloatDP>(double_precision);
+    test_univariate_expansion_assignment_instantiation<FloatDPApproximation>(double_precision);
+    test_univariate_expansion_assignment_instantiation<FloatDPBounds>(double_precision);
+
     auto multiple_precision=precision(128_bits);
+    test_additional_expansion_instantiation<RoundedFloatMP>(multiple_precision);
     test_additional_expansion_instantiation<FloatMPApproximation>(multiple_precision);
     test_additional_expansion_instantiation<FloatMPBounds>(multiple_precision);
     test_additional_expansion_instantiation<FloatMPUpperInterval>(multiple_precision);
+
+    test_univariate_expansion_assignment_instantiation<FloatMPApproximation>(multiple_precision);
+    test_univariate_expansion_assignment_instantiation<FloatMPBounds>(multiple_precision);
 
     RoundedFloatDP zero_dp{0,double_precision};
     RoundedFloatMP zero_mp{0,multiple_precision};
