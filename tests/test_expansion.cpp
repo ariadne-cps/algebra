@@ -609,11 +609,15 @@ Int main() {
     }
 
     {
+        RoundedFloatDP coefficient_zero(0,double_precision);
         RoundedFloatDP coefficient_one(1,double_precision);
         RoundedFloatDP coefficient_two(2,double_precision);
-        Expansion<UniIndex,RoundedFloatDP> univariate({{0u,coefficient_one},{2u,coefficient_two}});
+        Expansion<UniIndex,RoundedFloatDP> univariate({{0u,coefficient_one},{1u,coefficient_zero},{2u,coefficient_two}});
         ARIADNE_TEST_EQUALS(univariate.size(),2u);
         ARIADNE_TEST_EQUALS(univariate[UniIndex(2u)],coefficient_two);
+        univariate.append(UniIndex(1u),coefficient_one);
+        std::ostringstream univariate_stream;
+        ARIADNE_TEST_EXECUTE(univariate._write(univariate_stream,String("x")));
     }
 
     FloatDP raw_dp(0,double_precision);
