@@ -287,9 +287,6 @@ class TestDifferential {
         DifferentialType compose_degree_zero=DifferentialType::constant(1u,0u,X(1u,pr));
         ARIADNE_TEST_FAIL((void)compose(compose_degree_zero,compose_one));
 
-        Array<DifferentialType> empty_differential_array;
-        ARIADNE_TEST_FAIL(delete new DifferentialVectorType(empty_differential_array));
-
         Vector<X> one_value(1u,pr);
         Vector<X> two_values(2u,pr);
         Vector<X> one_parameter(1u,pr);

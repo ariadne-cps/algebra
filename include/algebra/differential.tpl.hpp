@@ -681,7 +681,6 @@ template<class X> Vector<Differential<X>>::Vector(InitializerList<Differential<X
 template<class X> Vector<Differential<X>>::Vector(Array<Differential<X>> ary)
     : _ary(std::move(ary))
 {
-    ARIADNE_PRECONDITION(_ary.size()>0);
 }
 
 
