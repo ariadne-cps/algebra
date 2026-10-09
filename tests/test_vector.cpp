@@ -41,6 +41,7 @@ class TestVector {
   public:
     Void test();
   private:
+    Void test_range();
     Void test_constructors();
     Void test_comparisons();
     Void test_arithmetic();
@@ -50,6 +51,7 @@ class TestVector {
 Void
 TestVector::test()
 {
+    ARIADNE_TEST_CALL(test_range());
     ARIADNE_TEST_CALL(test_constructors());
     ARIADNE_TEST_CALL(test_comparisons());
     ARIADNE_TEST_CALL(test_arithmetic());
@@ -76,6 +78,34 @@ static_assert(check_concept());
 
 } // namespace
 
+
+Void
+TestVector::test_range()
+{
+    Range prefix_range=range(4u);
+    ARIADNE_TEST_EQUALS(prefix_range.start(),0u);
+    ARIADNE_TEST_EQUALS(prefix_range.stop(),4u);
+    ARIADNE_TEST_EQUALS(prefix_range.size(),4u);
+    ARIADNE_TEST_EQUALS(prefix_range.stride(),1u);
+    ARIADNE_TEST_EQUALS(prefix_range[2u],2u);
+
+    Range offset_range=range(2u,5u);
+    ARIADNE_TEST_EQUALS(offset_range.start(),2u);
+    ARIADNE_TEST_EQUALS(offset_range.stop(),5u);
+    ARIADNE_TEST_EQUALS(offset_range.size(),3u);
+    ARIADNE_TEST_EQUALS(offset_range[1u],3u);
+
+    RangeIterator range_iterator(2u);
+    ARIADNE_TEST_EQUALS(*range_iterator,2u);
+    ARIADNE_TEST_ASSERT(range_iterator!=RangeIterator(3u));
+    ARIADNE_TEST_EXECUTE(++range_iterator);
+    ARIADNE_TEST_EQUALS(*range_iterator,3u);
+
+    auto first=begin(offset_range);
+    auto last=end(offset_range);
+    ARIADNE_TEST_EQUALS(*first,2u);
+    ARIADNE_TEST_ASSERT(first!=last);
+}
 
 Void
 TestVector::test_constructors()
