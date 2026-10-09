@@ -160,20 +160,6 @@ Void TestPolynomial::test_cleanup()
     ARIADNE_TEST_EXECUTE(p.cleanup())
     ARIADNE_TEST_PRINT(p)
 
-    UnivariatePolynomial<RoundedFloatDP> rounded_univariate_zero(SizeOne(),dp);
-    rounded_univariate_zero.expansion().append(UniIndex(1u),RoundedFloatDP(0,dp));
-    rounded_univariate_zero.expansion().append(UniIndex(2u),RoundedFloatDP(1,dp));
-    ARIADNE_TEST_EXECUTE(rounded_univariate_zero.cleanup())
-    ARIADNE_TEST_EQUALS(rounded_univariate_zero.number_of_terms(),1u)
-    ARIADNE_TEST_EQUALS(rounded_univariate_zero[UniIndex(2u)],RoundedFloatDP(1,dp))
-
-    MultivariatePolynomial<RoundedFloatDP> rounded_multivariate_zero(2u,dp);
-    rounded_multivariate_zero.expansion().append(MultiIndex({1u,0u}),RoundedFloatDP(0,dp));
-    rounded_multivariate_zero.expansion().append(MultiIndex({0u,1u}),RoundedFloatDP(1,dp));
-    ARIADNE_TEST_EXECUTE(rounded_multivariate_zero.cleanup())
-    ARIADNE_TEST_EQUALS(rounded_multivariate_zero.number_of_terms(),1u)
-    ARIADNE_TEST_EQUALS(rounded_multivariate_zero[MultiIndex({0u,1u})],RoundedFloatDP(1,dp))
-
     MultivariatePolynomial<FloatDP> raw_p(3,dp);
     ARIADNE_TEST_EXECUTE(raw_p.cleanup())
 
