@@ -92,7 +92,8 @@ class TestAlgebra {
         ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Exp(),dx));
 
         Factorial factorial(3u);
-        ARIADNE_TEST_EXECUTE(static_cast<FloatDPBounds>(factorial));
+        FloatDPBounds factorial_value=factorial;
+        ARIADNE_TEST_PRINT(factorial_value);
         ARIADNE_TEST_EXECUTE(rec(factorial));
 
         ARIADNE_TEST_ASSIGN(dx,tax.extract<DX>());
