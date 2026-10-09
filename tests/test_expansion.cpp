@@ -806,8 +806,17 @@ Int main() {
         ARIADNE_TEST_EQUALS(upper.size(),1u);
     }
 
+    test_additional_expansion_instantiation<FloatDPApproximation>(double_precision);
+    test_additional_expansion_instantiation<FloatDPBounds>(double_precision);
+    test_additional_expansion_instantiation<FloatDPUpperInterval>(double_precision);
+
+    auto multiple_precision=precision(128_bits);
+    test_additional_expansion_instantiation<FloatMPApproximation>(multiple_precision);
+    test_additional_expansion_instantiation<FloatMPBounds>(multiple_precision);
+    test_additional_expansion_instantiation<FloatMPUpperInterval>(multiple_precision);
+
     RoundedFloatDP zero_dp{0,double_precision};
-    RoundedFloatMP zero_mp{0,precision(128_bits)};
+    RoundedFloatMP zero_mp{0,multiple_precision};
     TestExpansion<RoundedFloatDP>(zero_dp).test();
     TestExpansion<Rounded<FloatMP>>(zero_mp).test();
     return ARIADNE_TEST_FAILURES;
