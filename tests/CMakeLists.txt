@@ -9,6 +9,7 @@ set(UNIT_TESTS
     test_multi_index
     test_polynomial
     test_chebyshev_polynomial
+    test_sweeper
     test_series
     test_vector
 )
