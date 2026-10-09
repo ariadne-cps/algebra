@@ -80,12 +80,94 @@ Void test_sweeper_handle()
     ARIADNE_TEST_EQUALS(sweep_terms.front().coefficient(),FloatDP(1u,dp));
 }
 
+Void test_sweeper_overloads()
+{
+    ThresholdSweeper<FloatDP> threshold_sweeper(dp,FloatDP(0.25_x,dp));
+    SweeperInterface<FloatDP> const& threshold_interface=threshold_sweeper;
+
+    Expansion<MultiIndex,FloatDP> float_terms(1u,dp);
+    float_terms.append(MultiIndex({0u}),FloatDP(0.125_x,dp));
+    float_terms.append(MultiIndex({1u}),FloatDP(1.0_x,dp));
+    FloatDPError float_error(0u,dp);
+    ARIADNE_TEST_EXECUTE(threshold_interface.sweep(float_terms,float_error));
+    ARIADNE_TEST_EQUALS(float_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(float_terms.front().index(),MultiIndex({1u}));
+
+    Expansion<MultiIndex,FloatDPBounds> bounds_terms(1u,dp);
+    bounds_terms.append(MultiIndex({0u}),FloatDPBounds(0.125_x,dp));
+    bounds_terms.append(MultiIndex({1u}),FloatDPBounds(1.0_x,dp));
+
+    Expansion<MultiIndex,FloatDPApproximation> approximation_terms(bounds_terms);
+    Expansion<MultiIndex,FloatDPUpperInterval> upper_terms(bounds_terms);
+
+    FloatDPError bounds_error(0u,dp);
+    ARIADNE_TEST_EXECUTE(threshold_interface.sweep(bounds_terms,bounds_error));
+    ARIADNE_TEST_EQUALS(bounds_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(bounds_terms.front().index(),MultiIndex({1u}));
+
+    ARIADNE_TEST_EXECUTE(threshold_interface.sweep(approximation_terms));
+    ARIADNE_TEST_EQUALS(approximation_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(approximation_terms.front().index(),MultiIndex({1u}));
+
+    FloatDPError upper_error(0u,dp);
+    ARIADNE_TEST_EXECUTE(threshold_interface.sweep(upper_terms,upper_error));
+    ARIADNE_TEST_EQUALS(upper_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(upper_terms.front().index(),MultiIndex({1u}));
+}
+
+Void test_relative_sweeper()
+{
+    RelativeThresholdSweeper<FloatDP> relative_sweeper(dp,FloatDP(0.25_x,dp));
+    ARIADNE_TEST_EQUALS(relative_sweeper.relative_sweep_threshold(),FloatDP(0.25_x,dp));
+    ARIADNE_TEST_FAIL((void)RelativeThresholdSweeper<FloatDP>(dp,FloatDP(0u,dp)));
+    ARIADNE_TEST_PRINT(relative_sweeper);
+
+    SweeperInterface<FloatDP> const& relative_interface=relative_sweeper;
+    ARIADNE_TEST_PRINT(relative_interface.precision());
+
+    SweeperInterface<FloatDP>* relative_copy=relative_sweeper._copy();
+    ARIADNE_TEST_PRINT(relative_copy->precision());
+    delete relative_copy;
+
+    Expansion<MultiIndex,FloatDP> float_terms(1u,dp);
+    float_terms.append(MultiIndex({0u}),FloatDP(0.125_x,dp));
+    float_terms.append(MultiIndex({1u}),FloatDP(1.0_x,dp));
+    FloatDPError float_error(0u,dp);
+    ARIADNE_TEST_EXECUTE(relative_interface.sweep(float_terms,float_error));
+    ARIADNE_TEST_EQUALS(float_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(float_terms.front().index(),MultiIndex({1u}));
+
+    Expansion<MultiIndex,FloatDPBounds> bounds_source(1u,dp);
+    bounds_source.append(MultiIndex({0u}),FloatDPBounds(0.125_x,dp));
+    bounds_source.append(MultiIndex({1u}),FloatDPBounds(1.0_x,dp));
+
+    Expansion<MultiIndex,FloatDPBounds> bounds_terms(bounds_source);
+    Expansion<MultiIndex,FloatDPApproximation> approximation_terms(bounds_source);
+    Expansion<MultiIndex,FloatDPUpperInterval> upper_terms(bounds_source);
+
+    FloatDPError bounds_error(0u,dp);
+    ARIADNE_TEST_EXECUTE(relative_interface.sweep(bounds_terms,bounds_error));
+    ARIADNE_TEST_EQUALS(bounds_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(bounds_terms.front().index(),MultiIndex({1u}));
+
+    ARIADNE_TEST_EXECUTE(relative_interface.sweep(approximation_terms));
+    ARIADNE_TEST_EQUALS(approximation_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(approximation_terms.front().index(),MultiIndex({1u}));
+
+    FloatDPError upper_error(0u,dp);
+    ARIADNE_TEST_EXECUTE(relative_interface.sweep(upper_terms,upper_error));
+    ARIADNE_TEST_EQUALS(upper_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(upper_terms.front().index(),MultiIndex({1u}));
+}
+
 } // namespace
 
 Int main()
 {
     ARIADNE_TEST_CALL(test_threshold_sweeper());
     ARIADNE_TEST_CALL(test_sweeper_handle());
+    ARIADNE_TEST_CALL(test_sweeper_overloads());
+    ARIADNE_TEST_CALL(test_relative_sweeper());
 
     return ARIADNE_TEST_FAILURES;
 }

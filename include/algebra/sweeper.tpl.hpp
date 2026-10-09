@@ -61,7 +61,7 @@ Void SweeperBase<F>::_sweep(Expansion<MultiIndex,FloatBounds<PR>>& p, FloatError
     FloatError<PR> te(0.0_x,e.precision());
     while(adv!=end) {
         if(this->_discard(adv->index(),mag(adv->coefficient()).raw())) {
-            te+mag(adv->coefficient());
+            te+=mag(adv->coefficient());
         } else {
             *curr=*adv;
             ++curr;
@@ -102,7 +102,7 @@ Void SweeperBase<F>::_sweep(Expansion<MultiIndex,FloatUpperInterval<PR>>& p, Flo
     FloatError<PR> te(0.0_x,e.precision());
     while(adv!=end) {
         if(this->_discard(adv->index(),mag(adv->coefficient()).raw())) {
-            te+mag(adv->coefficient());
+            te+=mag(adv->coefficient());
         } else {
             *curr=*adv;
             ++curr;
