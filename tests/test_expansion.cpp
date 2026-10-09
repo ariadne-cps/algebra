@@ -258,6 +258,38 @@ template<class F> Void TestExpansion<F>::test_helpers()
         bad_sorted.append(first_index,coefficient_two);
         bad_sorted.append(zero_index,coefficient_one);
         ARIADNE_TEST_FAIL(bad_sorted.check());
+
+        ExpansionType first_only_base(2u,prec);
+        first_only_base.append(first_index,zero);
+        SortedExpansion<MI,F,GradedIndexLess> first_only(std::move(first_only_base));
+        ARIADNE_TEST_EQUALS(first_only.get(zero_index),zero);
+        ARIADNE_TEST_EXECUTE(first_only.insert(zero_index,coefficient_one));
+
+        ExpansionType zero_only_base(2u,prec);
+        zero_only_base.append(zero_index,zero);
+        SortedExpansion<MI,F,GradedIndexLess> zero_only(std::move(zero_only_base));
+
+        ExpansionType first_zero_base(2u,prec);
+        first_zero_base.append(first_index,zero);
+        SortedExpansion<MI,F,GradedIndexLess> first_zero(std::move(first_zero_base));
+
+        ExpansionType zero_first_base(2u,prec);
+        zero_first_base.append(zero_index,zero);
+        zero_first_base.append(first_index,zero);
+        SortedExpansion<MI,F,GradedIndexLess> zero_first(std::move(zero_first_base));
+
+        ARIADNE_TEST_EXECUTE((void)(zero_only==first_zero));
+        ARIADNE_TEST_EXECUTE((void)(first_zero==zero_only));
+        ARIADNE_TEST_EXECUTE((void)(zero_first==zero_only));
+        ARIADNE_TEST_EXECUTE((void)(zero_only==zero_first));
+
+        Expansion<UniIndex,F> univariate_embed(prec);
+        univariate_embed.append(UniIndex(0u),coefficient_one);
+        univariate_embed.append(UniIndex(2u),coefficient_two);
+        auto embedded=embed(1u,univariate_embed,1u);
+        ARIADNE_TEST_EQUALS(embedded.argument_size(),3u);
+        ARIADNE_TEST_EQUALS(embedded[MultiIndex({0u,0u,0u})],coefficient_one);
+        ARIADNE_TEST_EQUALS(embedded[MultiIndex({0u,2u,0u})],coefficient_two);
     }
 
     std::ostringstream os;
