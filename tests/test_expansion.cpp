@@ -702,6 +702,32 @@ Void test_exact_coefficient_helpers() {
     ARIADNE_TEST_EQUALS(raw.back().coefficient(),FloatDP(3,dp));
 }
 
+template<class X, class PR>
+Void test_additional_expansion_instantiation(PR const& pr)
+{
+    X coefficient_zero(0u,pr);
+    X coefficient_one(1u,pr);
+
+    Expansion<MultiIndex,X> init_case({
+        {{0u,0u},coefficient_zero},
+        {{1u,0u},coefficient_one}
+    });
+    ARIADNE_TEST_EQUALS(init_case.size(),1u);
+
+    Expansion<MultiIndex,X> source(2u,pr);
+    source.append(MultiIndex({1u,0u}),coefficient_one);
+
+    Expansion<MultiIndex,X> copy_target(2u,pr);
+    ARIADNE_TEST_EXECUTE(copy_target=source);
+    Expansion<MultiIndex,X>& copy_alias=copy_target;
+    ARIADNE_TEST_EXECUTE(copy_target=copy_alias);
+
+    Expansion<MultiIndex,X> move_target(2u,pr);
+    ARIADNE_TEST_EXECUTE(move_target=Expansion<MultiIndex,X>(source));
+    Expansion<MultiIndex,X>* move_alias=&move_target;
+    ARIADNE_TEST_EXECUTE(move_target=std::move(*move_alias));
+}
+
 Void test_unit_coefficient_output() {
     // Built-in doubles have decidable equality, so unit coefficients can be
     // omitted while unit constants must still be printed.
