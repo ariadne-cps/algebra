@@ -94,6 +94,9 @@ class TestAlgebra {
         ARIADNE_TEST_ASSIGN(dx,ax.extract<DX>());
         auto algebra_wrapper=ax.extract<AlgebraWrapper<DX,X>>();
         ARIADNE_TEST_PRINT(algebra_wrapper);
+        using OtherAlgebraWrapper=AlgebraWrapper<X,X>;
+        ARIADNE_TEST_FAIL(ax.extract<OtherAlgebraWrapper>());
+        ARIADNE_TEST_FAIL(ax.extract<X>());
 
         Algebra<ValidatedNumber> validated_algebra(new ValidatedAlgebraInterfaceStub());
         AlgebraInterface<ValidatedNumber> const& validated_interface=validated_algebra;
@@ -135,6 +138,9 @@ class TestAlgebra {
         ARIADNE_TEST_ASSIGN(dx,tax.extract<DX>());
         auto transcendental_wrapper=tax.extract<TranscendentalAlgebraWrapper<DX,X>>();
         ARIADNE_TEST_PRINT(transcendental_wrapper);
+        using OtherTranscendentalWrapper=TranscendentalAlgebraWrapper<X,X>;
+        ARIADNE_TEST_FAIL(tax.extract<OtherTranscendentalWrapper>());
+        ARIADNE_TEST_FAIL(tax.extract<X>());
 
     }
 };
