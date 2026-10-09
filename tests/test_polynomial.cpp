@@ -297,11 +297,29 @@ Void TestPolynomial::test_evaluate_horner()
     Vector<X> short_v({2.0_x,3.0_x},dp);
     ARIADNE_TEST_FAIL((void)evaluate(p,short_v))
 
+    Expansion<MultiIndex,X> register_expansion(3u,dp);
+    register_expansion.append(MultiIndex({2u,1u,2u}),X(1u,dp));
+    register_expansion.append(MultiIndex({1u,1u,2u}),X(2u,dp));
+    register_expansion.append(MultiIndex({0u,0u,1u}),X(3u,dp));
+    X register_expected =
+        v[0]*v[0]*v[1]*v[2]*v[2] +
+        X(2u,dp)*v[0]*v[1]*v[2]*v[2] +
+        X(3u,dp)*v[2];
+    ARIADNE_TEST_EQUALS(horner_evaluate(register_expansion,v),register_expected)
+
     Expansion<MultiIndex,X> unordered(2u,dp);
     unordered.append(MultiIndex({1u,0u}),X(1u,dp));
     unordered.append(MultiIndex({0u,1u}),X(1u,dp));
     Vector<X> uv({2.0_x,3.0_x},dp);
     ARIADNE_TEST_FAIL((void)horner_evaluate(unordered,uv))
+
+    Expansion<UniIndex,X> univariate_empty(SizeOne(),dp);
+    ARIADNE_TEST_EQUALS(horner_evaluate(univariate_empty,X(2u,dp)),X(0u,dp))
+
+    Expansion<UniIndex,X> univariate_ordered(SizeOne(),dp);
+    univariate_ordered.append(UniIndex(2u),X(1u,dp));
+    univariate_ordered.append(UniIndex(0u),X(3u,dp));
+    ARIADNE_TEST_EQUALS(horner_evaluate(univariate_ordered,X(2u,dp)),X(7u,dp))
 
     Expansion<UniIndex,X> univariate_unordered(SizeOne(),dp);
     univariate_unordered.append(UniIndex(0u),X(1u,dp));
