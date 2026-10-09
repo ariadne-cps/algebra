@@ -50,6 +50,7 @@ class TestPolynomial
     Void test_indexing();
     Void test_modifiers();
     Void test_arithmetic();
+    Void test_partial_evaluate();
     Void test_evaluate_horner();
     Void test_variables();
     Void test_find();
@@ -63,6 +64,7 @@ Void TestPolynomial::test()
     ARIADNE_TEST_CALL(test_indexing())
     ARIADNE_TEST_CALL(test_modifiers())
     ARIADNE_TEST_CALL(test_arithmetic())
+    ARIADNE_TEST_CALL(test_partial_evaluate())
     ARIADNE_TEST_CALL(test_evaluate_horner())
     ARIADNE_TEST_CALL(test_variables())
 
@@ -306,6 +308,65 @@ Void TestPolynomial::test_modifiers()
 
 Void TestPolynomial::test_arithmetic()
 {
+    RoundedFloatDP coefficient_zero(0,dp);
+    RoundedFloatDP coefficient_one(1,dp);
+    RoundedFloatDP coefficient_two(2,dp);
+    RoundedFloatDP coefficient_three(3,dp);
+
+    P unary_source({
+        {{0u,0u},coefficient_one},
+        {{1u,0u},coefficient_two}
+    });
+    P negative_expected({
+        {{0u,0u},-coefficient_one},
+        {{1u,0u},-coefficient_two}
+    });
+    ARIADNE_TEST_EXECUTE(unary_source.check())
+    ARIADNE_TEST_EQUAL(+unary_source,unary_source)
+    ARIADNE_TEST_EQUAL(-unary_source,negative_expected)
+
+    P scaled=unary_source;
+    ARIADNE_TEST_EXECUTE(scaled*=coefficient_two)
+    ARIADNE_TEST_EQUALS(scaled[MultiIndex({0u,0u})],coefficient_two)
+    ARIADNE_TEST_EXECUTE(scaled*=coefficient_zero)
+    ARIADNE_TEST_EQUALS(scaled.number_of_terms(),0u)
+
+    P subtract_left({
+        {{0u,0u},coefficient_one},
+        {{1u,0u},coefficient_two},
+        {{3u,0u},coefficient_three}
+    });
+    P subtract_right({
+        {{0u,0u},coefficient_three},
+        {{2u,0u},coefficient_two},
+        {{3u,0u},coefficient_one}
+    });
+    ARIADNE_TEST_EXECUTE(subtract_left-subtract_right)
+    ARIADNE_TEST_EXECUTE(subtract_right-subtract_left)
+
+    P lone_term({{{2u,0u},coefficient_two}});
+    P empty_two_variables(2u,dp);
+    ARIADNE_TEST_EXECUTE(lone_term-empty_two_variables)
+    ARIADNE_TEST_EXECUTE(empty_two_variables-lone_term)
+
+    P mismatched_arguments(3u,dp);
+    ARIADNE_TEST_FAIL((void)(subtract_left+mismatched_arguments))
+    ARIADNE_TEST_FAIL((void)(subtract_left-mismatched_arguments))
+    ARIADNE_TEST_FAIL((void)(subtract_left*mismatched_arguments))
+
+    MultivariateMonomial<RoundedFloatDP> monomial(MultiIndex({1u,1u}),coefficient_two);
+    P monomial_product({
+        {{0u,0u},coefficient_one},
+        {{1u,0u},coefficient_three}
+    });
+    ARIADNE_TEST_EXECUTE(monomial_product*=monomial)
+    ARIADNE_TEST_EQUALS(monomial_product[MultiIndex({1u,1u})],coefficient_two)
+    ARIADNE_TEST_EQUALS(monomial_product[MultiIndex({2u,1u})],RoundedFloatDP(6,dp))
+
+    MultivariateMonomial<RoundedFloatDP> zero_monomial(MultiIndex({1u,0u}),coefficient_zero);
+    ARIADNE_TEST_EXECUTE(monomial_product*=zero_monomial)
+    ARIADNE_TEST_EQUALS(monomial_product.number_of_terms(),0u)
+
     ARIADNE_TEST_EQUAL(P(3,dp)+P(3,dp),P(3,dp))
     ARIADNE_TEST_EQUAL(P(3,dp)+P({ {{2,1,0},2.0_x} },dp),P({ {{2,1,0},2.0_x} },dp))
     ARIADNE_TEST_EQUAL(P(3,dp)+P({ {{2,1,0},2.0_x}, {{0,1,0},3.0_x}, {{1,1,0},5.0_x} },dp), P({ {{0,1,0},3.0_x}, {{1,1,0},5.0_x}, {{2,1,0},2.0_x} },dp))
@@ -338,6 +399,45 @@ Void TestPolynomial::test_arithmetic()
     ARIADNE_TEST_EQUALS(evaluate(8*y*y*(y*y-1)+1,w),8*w*w*(w*w-1)+1);
     ARIADNE_TEST_EQUALS(compose(2*y*y-1,x0),2*x0*x0-1);
      */
+}
+
+Void TestPolynomial::test_partial_evaluate()
+{
+    RoundedFloatDP coefficient_zero(0,dp);
+    RoundedFloatDP coefficient_one(1,dp);
+    RoundedFloatDP coefficient_two(2,dp);
+
+    P source({
+        {{0u,0u,0u},RoundedFloatDP(2,dp)},
+        {{0u,1u,0u},RoundedFloatDP(3,dp)},
+        {{0u,2u,0u},RoundedFloatDP(5,dp)},
+        {{1u,3u,0u},RoundedFloatDP(7,dp)},
+        {{0u,0u,1u},RoundedFloatDP(11,dp)}
+    });
+
+    auto at_zero=partial_evaluate(source,1u,coefficient_zero);
+    ARIADNE_TEST_EQUALS(at_zero.argument_size(),2u)
+    ARIADNE_TEST_EQUALS(at_zero[MultiIndex({0u,0u})],RoundedFloatDP(2,dp))
+    ARIADNE_TEST_EQUALS(at_zero[MultiIndex({0u,1u})],RoundedFloatDP(11,dp))
+
+    auto at_one=partial_evaluate(source,1u,coefficient_one);
+    ARIADNE_TEST_EQUALS(at_one[MultiIndex({0u,0u})],RoundedFloatDP(10,dp))
+    ARIADNE_TEST_EQUALS(at_one[MultiIndex({1u,0u})],RoundedFloatDP(7,dp))
+    ARIADNE_TEST_EQUALS(at_one[MultiIndex({0u,1u})],RoundedFloatDP(11,dp))
+
+    auto at_two=partial_evaluate(source,1u,coefficient_two);
+    ARIADNE_TEST_EQUALS(at_two[MultiIndex({0u,0u})],RoundedFloatDP(28,dp))
+    ARIADNE_TEST_EQUALS(at_two[MultiIndex({1u,0u})],RoundedFloatDP(56,dp))
+    ARIADNE_TEST_EQUALS(at_two[MultiIndex({0u,1u})],RoundedFloatDP(11,dp))
+
+    P linear({
+        {{0u,0u},coefficient_one},
+        {{0u,1u},coefficient_two}
+    });
+    auto linear_at_two=partial_evaluate(linear,1u,coefficient_two);
+    ARIADNE_TEST_EQUALS(linear_at_two[MultiIndex({0u})],RoundedFloatDP(5,dp))
+
+    ARIADNE_TEST_FAIL((void)partial_evaluate(source,3u,coefficient_one))
 }
 
 Void TestPolynomial::test_evaluate_horner()
@@ -423,6 +523,9 @@ Void TestPolynomial::test_evaluate_horner()
 
 Void TestPolynomial::test_variables()
 {
+    ARIADNE_TEST_EXECUTE(UnivariatePolynomial<RoundedFloatDP>::coordinates(SizeOne(),dp))
+    ARIADNE_TEST_FAIL((void)MultivariatePolynomial<RoundedFloatDP>::coordinate(2u,2u,dp))
+
     Vector< MultivariatePolynomial<RoundedFloatDP> > x=MultivariatePolynomial<RoundedFloatDP>::variables(3,dp);
     Array< Vector<RoundedFloatDP> > e=Vector<RoundedFloatDP>::basis(2,dp);
 

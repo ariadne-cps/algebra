@@ -315,9 +315,6 @@ template<class I, class X> struct AlgebraOperations<Polynomial<I,X>> {
     static Polynomial<I,X> apply(Mul, const Polynomial<I,X>& p1, const Polynomial<I,X>& p2);
     static Polynomial<I,X> apply(Add, Polynomial<I,X> p, const X& c);
     static Polynomial<I,X> apply(Mul, Polynomial<I,X> p, const X& c);
-    static Polynomial<I,X> apply(Mul, Polynomial<I,X> p, const Monomial<I,X>& m);
-    static Polynomial<I,X>& iapply(Add, Polynomial<I,X>& p, const X& c);
-    static Polynomial<I,X>& iapply(Mul, Polynomial<I,X>& p, const X& c);
     static Polynomial<I,X>& iapply(Mul, Polynomial<I,X>& p, const Monomial<I,X>& m);
 
 };

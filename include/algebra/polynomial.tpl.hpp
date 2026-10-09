@@ -30,7 +30,6 @@ namespace Ariadne {
 
 template<class X> inline bool is_null(X const& x) { return decide(x==0); }
 template<class X> inline bool is_unit(X const& x) { return decide(x==1); }
-template<class X> inline bool is_positive(X const& x) { return decide(x>=0); }
 
 inline MultiIndex zero_index(SizeType as) { return MultiIndex::zero(as); }
 inline DegreeType zero_index(SizeOne) { return 0u; }
@@ -70,7 +69,7 @@ template<class I, class X> Polynomial<I,X> Polynomial<I,X>::_constant(ArgumentSi
     Polynomial<I,X> r(as,nul(c)); r[zero_index(as)]=c; return r;}
 
 template<class I, class X> Polynomial<I,X> Polynomial<I,X>::_coordinate(ArgumentSizeType as, VariableIndexType j, const X& z) {
-    ARIADNE_ASSERT(j<as); Polynomial<I,X> r(as,z); r[unit_index(as,j)]=1; return r;
+    ARIADNE_PRECONDITION(j<as); Polynomial<I,X> r(as,z); r[unit_index(as,j)]=1; return r;
 }
 
 template<class I, class X> auto Polynomial<I,X>::coordinates(ArgumentSizeType as, X const& z) -> Argument<Polynomial<I,X>> {
@@ -189,10 +188,8 @@ FwdIter unique_key(FwdIter first, FwdIter last, Op op) {
         if(curr!=next) { *curr=*next; }
         ++next;
         while(next!=last && curr->index()==next->index()) {
-            if(curr->index()==next->index()) {
-                curr->coefficient()=op(curr->coefficient(),next->coefficient());
-                ++next;
-            }
+            curr->coefficient()=op(curr->coefficient(),next->coefficient());
+            ++next;
         }
         // Removes zero entries; the code below is preferred to the case "curr->coefficient()!=0" for ValidatedKleenean results
         if(definitely(curr->coefficient()==0)) { }
@@ -245,11 +242,6 @@ template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::a
     return p;
 }
 
-template<class I, class X> Polynomial<I,X>& AlgebraOperations<Polynomial<I,X>>::iapply(Add, Polynomial<I,X>& p, const X& c) {
-    p[zero_index(p.argument_size())]+=c;
-    return p;
-}
-
 template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::apply(Mul, Polynomial<I,X> p, const X& c) {
     if(is_null(c)) {
         p.expansion().clear();
@@ -261,19 +253,8 @@ template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::a
     return p;
 }
 
-template<class I, class X> Polynomial<I,X>& AlgebraOperations<Polynomial<I,X>>::iapply(Mul, Polynomial<I,X>& p, const X& c) {
-    if(is_null(c)) {
-        p.expansion().clear();
-    } else {
-        for(auto iter=p.begin(); iter!=p.end(); ++iter) {
-            iter->coefficient()*=c;
-        }
-    }
-    return p;
-}
-
 template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::apply(Add, const Polynomial<I,X>& p1, const Polynomial<I,X>& p2) {
-    ARIADNE_ASSERT(p1.argument_size()==p2.argument_size());
+    ARIADNE_PRECONDITION(p1.argument_size()==p2.argument_size());
     typename Polynomial<I,X>::IndexComparisonType less;
     Polynomial<I,X> r(p1.argument_size(),(p1.zero_coefficient()+p2.zero_coefficient()));
     auto iter1=p1.begin(); auto iter2=p2.begin();
@@ -301,7 +282,7 @@ template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::a
 }
 
 template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::apply(Sub, const Polynomial<I,X>& p1, const Polynomial<I,X>& p2) {
-    ARIADNE_ASSERT(p1.argument_size()==p2.argument_size());
+    ARIADNE_PRECONDITION(p1.argument_size()==p2.argument_size());
     typename Polynomial<I,X>::IndexComparisonType less;
     Polynomial<I,X> r(p1.argument_size(),(p1.zero_coefficient()-p2.zero_coefficient()));
     auto iter1=p1.begin(); auto iter2=p2.begin();
@@ -329,7 +310,7 @@ template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::a
 }
 
 template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::apply(Mul, const Polynomial<I,X>& p1, const Polynomial<I,X>& p2) {
-    ARIADNE_ASSERT(p1.argument_size()==p2.argument_size());
+    ARIADNE_PRECONDITION(p1.argument_size()==p2.argument_size());
     Polynomial<I,X> r(p1.argument_size(),(p1.zero_coefficient()*p2.zero_coefficient()));
     for(auto iter1=p1.begin(); iter1!=p1.end(); ++iter1) {
         for(auto iter2=p2.begin(); iter2!=p2.end(); ++iter2) {
@@ -338,15 +319,6 @@ template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::a
         }
     }
     return r;
-}
-
-template<class I, class X> Polynomial<I,X> AlgebraOperations<Polynomial<I,X>>::apply(Mul, Polynomial<I,X> p, const Monomial<I,X>& m) {
-    if(is_null(m.coefficient())) { p.clear(); }
-    for(auto iter=p.begin(); iter!=p.end(); ++iter) {
-        iter->index()+=m.index();
-        iter->coefficient()*=m.coefficient();
-    }
-    return p;
 }
 
 template<class I, class X> Polynomial<I,X>& AlgebraOperations<Polynomial<I,X>>::iapply(Mul, Polynomial<I,X>& p, const Monomial<I,X>& m) {
@@ -380,6 +352,7 @@ Polynomial<I,X>
 Polynomial<I,X>::_partial_evaluate(const Polynomial<I,X>& x, SizeType k, const X& c)
 {
     if constexpr (Same<I,MultiIndex>) {
+        ARIADNE_PRECONDITION(k<x.argument_size());
         Polynomial<I,X> r(x.argument_size()-1u,x.zero_coefficient());
         MultiIndex ra(r.argument_size());
         if(is_null(c)) {
@@ -402,7 +375,6 @@ Polynomial<I,X>::_partial_evaluate(const Polynomial<I,X>& x, SizeType k, const X
                 MultiIndex::IndexType xak=xa[k];
                 for(SizeType i=0; i!=k; ++i) { ra[i]=xa[i]; }
                 for(SizeType i=k; i!=ra.size(); ++i) { ra[i]=xa[i+1u]; }
-                assert(ra.degree()+xak==xa.degree());
                 p[xak].expansion().append(ra,xv);
             }
 
@@ -426,7 +398,6 @@ Polynomial<I,X>::_partial_evaluate(const Polynomial<I,X>& x, SizeType k, const X
                 MultiIndex::IndexType xak=xa[k];
                 for(SizeType i=0; i!=k; ++i) { ra[i]=xa[i]; }
                 for(SizeType i=k; i!=ra.size(); ++i) { ra[i]=xa[i+1u]; }
-                assert(ra.degree()+xak==xa.degree());
                 p[xak].expansion().append(ra,xv);
             }
             for(SizeType i=1; i!=p.size(); ++i) {
