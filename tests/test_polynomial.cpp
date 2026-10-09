@@ -195,9 +195,13 @@ Void TestPolynomial::test_constructors()
     exact_cancellation.expansion().append(UniIndex(1u),FloatDPBounds(1,dp));
     exact_cancellation.expansion().append(UniIndex(1u),FloatDPBounds(-1,dp));
     exact_cancellation.expansion().append(UniIndex(2u),FloatDPBounds(2,dp));
+    // Reverse lexicographic order visits the constant after the cancelled terms,
+    // so cleanup must move it into the gap left by their removal.
+    exact_cancellation.expansion().append(UniIndex(0u),FloatDPBounds(3,dp));
     ARIADNE_TEST_EXECUTE(exact_cancellation.cleanup())
-    ARIADNE_TEST_EQUALS(exact_cancellation.number_of_terms(),1u)
+    ARIADNE_TEST_EQUALS(exact_cancellation.number_of_terms(),2u)
     ARIADNE_TEST_EQUALS(exact_cancellation[UniIndex(2u)],FloatDPBounds(2,dp))
+    ARIADNE_TEST_EQUALS(exact_cancellation[UniIndex(0u)],FloatDPBounds(3,dp))
 
 }
 
