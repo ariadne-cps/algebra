@@ -167,6 +167,8 @@ template<class F> Void TestExpansion<F>::test_helpers()
     ARIADNE_TEST_EXECUTE(left.swap(right));
     ARIADNE_TEST_EQUALS(left.front().index(),first_index);
     ARIADNE_TEST_EQUALS(left.front().coefficient(),coefficient_two);
+    ARIADNE_TEST_EQUALS(left.back().index(),first_index);
+    ARIADNE_TEST_EQUALS(left.back().coefficient(),coefficient_two);
     ExpansionType const& const_left=left;
     ARIADNE_TEST_EQUALS(const_left.front().index(),first_index);
     ARIADNE_TEST_EQUALS(const_left.back().coefficient(),coefficient_two);
@@ -193,6 +195,10 @@ template<class F> Void TestExpansion<F>::test_helpers()
     spare.reserve(4u);
     spare.append(zero_index,coefficient_one);
     spare.append(second_index,coefficient_three);
+    ARIADNE_TEST_EXECUTE(spare.append_sum(zero_index,first_index,coefficient_two));
+    ARIADNE_TEST_EQUALS(spare.back().index(),first_index);
+    ARIADNE_TEST_EQUALS(spare.back().coefficient(),coefficient_two);
+    ARIADNE_TEST_EXECUTE(spare.erase(spare.end()-1));
     auto inserted=spare.insert(spare.begin()+1,first_index,coefficient_two);
     ARIADNE_TEST_EQUALS(inserted->index(),first_index);
     ARIADNE_TEST_EXECUTE(spare.erase(inserted));
@@ -202,6 +208,15 @@ template<class F> Void TestExpansion<F>::test_helpers()
     tight.append(zero_index,coefficient_one);
     auto tight_inserted=tight.insert(tight.begin(),first_index,coefficient_two);
     ARIADNE_TEST_EQUALS(tight_inserted->index(),first_index);
+
+    ExpansionType reverse_sortable(2u,prec);
+    reverse_sortable.append(zero_index,coefficient_one);
+    reverse_sortable.append(first_index,coefficient_two);
+    reverse_sortable.append(second_index,coefficient_three);
+    ARIADNE_TEST_EXECUTE(reverse_sortable.sort(ReverseLexicographicIndexLess()));
+    ARIADNE_TEST_ASSERT(reverse_sortable.is_sorted(ReverseLexicographicIndexLess()));
+    ARIADNE_TEST_EXECUTE(reverse_sortable.reverse_lexicographic_sort());
+    ARIADNE_TEST_ASSERT(reverse_sortable.is_sorted(ReverseLexicographicIndexLess()));
 
     if constexpr (Same<F,RoundedFloatDP>) {
         ExpansionType sortable(2u,prec);
@@ -223,6 +238,7 @@ template<class F> Void TestExpansion<F>::test_helpers()
     }
 
     std::ostringstream os;
+    ARIADNE_TEST_EXECUTE(os << ReverseLexicographicIndexLess());
     Array<String> names({"x","y"});
     ARIADNE_TEST_EXECUTE(values._write(os,names));
     Array<String> wrong_names({"x"});
@@ -563,6 +579,17 @@ template<class F> Void TestExpansion<F>::test_embed()
 }
 
 Int main() {
+    ARIADNE_TEST_EQUALS(Ariadne::nul(1.0),0.0);
+    ARIADNE_TEST_EQUALS(Ariadne::abs(-2.0),2.0);
+
+    {
+        RoundedFloatDP coefficient_one(1,double_precision);
+        RoundedFloatDP coefficient_two(2,double_precision);
+        Expansion<UniIndex,RoundedFloatDP> univariate({{0u,coefficient_one},{2u,coefficient_two}});
+        ARIADNE_TEST_EQUALS(univariate.size(),2u);
+        ARIADNE_TEST_EQUALS(univariate[UniIndex(2u)],coefficient_two);
+    }
+
     FloatDP raw_dp(0,double_precision);
     FloatMP raw_mp(0,precision(128_bits));
     ARIADNE_TEST_EXECUTE(characteristics(raw_dp));
