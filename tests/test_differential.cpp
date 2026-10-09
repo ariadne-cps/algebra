@@ -274,9 +274,9 @@ class TestDifferential {
         ARIADNE_TEST_FAIL(AlgebraOperations<DifferentialType>::apply(Min(),low,wrong_as));
         ARIADNE_TEST_FAIL(AlgebraOperations<DifferentialType>::apply(Max(),high,wrong_as));
 
-        DifferentialType explicit_values(2u,2u,{{{0u,0u},X(1u,pr)},{{1u,0u},X(2u,pr)}});
+        DifferentialType explicit_values(2u,2u,{{{0u,0u},1.0_x},{{1u,0u},2.0_x}},pr);
         ARIADNE_TEST_PRINT(explicit_values);
-        ARIADNE_TEST_FAIL((void)DifferentialType(2u,1u,{{{0u},X(1u,pr)}}));
+        ARIADNE_TEST_FAIL((void)DifferentialType(2u,1u,{{{0u},1.0_x}},pr));
     }
 
 
@@ -600,11 +600,6 @@ Void test_differential_tpl_instantiation_branches(PR const& pr) {
     ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Mul(),high,low));
     ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Mul(),low,high));
 
-    UnivariateDifferential<X> series(2u,pr);
-    series[0u]=coefficient_one;
-    series[1u]=coefficient_one;
-    ARIADNE_TEST_EXECUTE(compose(series,linear_only));
-
     D degree_zero=D::constant(1u,0u,coefficient_one);
     ARIADNE_TEST_EXECUTE(derivative(degree_zero,0u));
 
@@ -625,6 +620,17 @@ Void test_differential_tpl_instantiation_branches(PR const& pr) {
     ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Add(),low,wrong_as));
     ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Sub(),low,wrong_as));
     ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Mul(),low,wrong_as));
+}
+
+template<class X, class PR>
+Void test_differential_tpl_compose_branch(PR const& pr) {
+    X coefficient_one(1u,pr);
+    Differential<X> linear_only(1u,2u,X(0u,pr));
+    linear_only.set_gradient(0u,coefficient_one);
+    UnivariateDifferential<X> series(2u,pr);
+    series[0u]=coefficient_one;
+    series[1u]=coefficient_one;
+    ARIADNE_TEST_EXECUTE(compose(series,linear_only));
 }
 
 Int main() {
@@ -653,6 +659,13 @@ Int main() {
     test_differential_tpl_instantiation_branches<FloatMPApproximation>(mp);
     test_differential_tpl_instantiation_branches<FloatMPBounds>(mp);
     test_differential_tpl_instantiation_branches<FloatMPUpperInterval>(mp);
+
+    test_differential_tpl_compose_branch<RoundedFloatDP>(dp);
+    test_differential_tpl_compose_branch<FloatDPApproximation>(dp);
+    test_differential_tpl_compose_branch<FloatDPBounds>(dp);
+    test_differential_tpl_compose_branch<FloatDPUpperInterval>(dp);
+    test_differential_tpl_compose_branch<FloatMPApproximation>(mp);
+    test_differential_tpl_compose_branch<FloatMPBounds>(mp);
 
     TestDifferential< Differential<FloatDPApproximation> > tf;
     TestDifferentialVector< Differential<FloatDPApproximation> > tfv;
