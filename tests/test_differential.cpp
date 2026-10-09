@@ -261,6 +261,7 @@ class TestDifferentialVector {
         ARIADNE_TEST_CALL(test_linear_flow());
         ARIADNE_TEST_CALL(test_solve());
         ARIADNE_TEST_CALL(test_mapping());
+        ARIADNE_TEST_CALL(test_header_helpers());
     }
 
     Void test_degree() {
@@ -410,6 +411,46 @@ class TestDifferentialVector {
         x=static_cast<DifferentialVectorType>(project(xt,Range(0,n)));
         t=xt[n];
         ARIADNE_TEST_EQUAL(phi[0],(x[0]+3)*exp(2*t)-6*t-3);
+    }
+
+    Void test_header_helpers() {
+        DifferentialType delegated(2u,2u,pr);
+        ARIADNE_TEST_EQUALS(delegated.argument_size(),2u);
+        ARIADNE_TEST_EQUALS(delegated.degree(),2u);
+
+        DifferentialType positive=DifferentialType::constant(1u,2u,X(4u,pr));
+        ARIADNE_TEST_EXECUTE(AlgebraOperations<DifferentialType>::apply(UnaryElementaryOperator(Sqrt()),positive));
+
+        DifferentialVectorType v(2u,2u,2u,pr);
+        v[0]=DifferentialType::variable(2u,2u,X(1u,pr),0u);
+        v[1]=DifferentialType::variable(2u,2u,X(2u,pr),1u);
+        DifferentialVectorType const& cv=v;
+        auto vr=cv[Range(0u,1u)];
+        ARIADNE_TEST_EQUALS(vr.size(),1u);
+        auto chrs=cv.element_characteristics();
+        ARIADNE_TEST_EQUALS(chrs.argument_size(),2u);
+        ARIADNE_TEST_EQUAL(cv.get(0u),cv[0u]);
+        ARIADNE_TEST_EXECUTE(v.set(0u,cv[1u]));
+        ARIADNE_TEST_FAIL(v.set(v.size(),cv[0u]));
+        DifferentialType wrong=DifferentialType::constant(1u,2u,X(0u,pr));
+        ARIADNE_TEST_FAIL(v.set(0u,wrong));
+
+        auto generator=[this](SizeType i) {
+            return DifferentialType::constant(1u,1u,X(static_cast<Nat>(i),pr));
+        };
+        DifferentialVectorType generated(1u,generator);
+        ARIADNE_TEST_EQUALS(generated.size(),1u);
+        ARIADNE_TEST_FAIL(DifferentialVectorType(0u,generator));
+
+        DifferentialVectorType empty(0u,1u,1u,pr);
+        ARIADNE_TEST_FAIL(DifferentialVectorType(empty+empty));
+        ARIADNE_TEST_FAIL(v=empty+empty);
+
+        X z(pr);
+        DifferentialVectorType df={DifferentialType::constant(2u,0u,z)};
+        DifferentialVectorType dx0={DifferentialType::variable(2u,1u,z,0u)};
+        DifferentialVectorType da={DifferentialType::constant(2u,0u,z)};
+        ARIADNE_TEST_EXECUTE(v.flow(df,dx0,da));
     }
 
     Void test_mapping() {

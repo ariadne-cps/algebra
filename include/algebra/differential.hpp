@@ -411,6 +411,15 @@ class Vector< Differential<X> >
     //BOOST_CONCEPT_ASSERT((DifferentialVectorConcept<DifferentialVector<X> >));
   public:
     UniformArray< Differential<X> > _ary;
+  private:
+    template<class G> static Differential<X> _checked_prototype(SizeType n, G const& g) {
+        ARIADNE_PRECONDITION(n>0);
+        return g(0u);
+    }
+    template<class E> static DifferentialCharacteristics<X> _checked_element_characteristics(const VectorExpression<E>& ve) {
+        ARIADNE_PRECONDITION(ve().size()>0);
+        return characteristics(ve()[0u]);
+    }
   public:
     // The type of the class
     typedef Vector< Differential<X> > SelfType;
@@ -539,7 +548,7 @@ Vector<Differential<X>>::Vector(SizeType rs, SizeType as, DegreeType d, Initiali
 
 template<class X> template<class G> requires InvocableReturning<Differential<X>,G,SizeType>
 Vector<Differential<X>>::Vector(SizeType n, G const& g)
-    : _ary(n,g,(assert(n>0),g(0))) { }
+    : _ary(n,g,_checked_prototype(n,g)) { }
 
 template<class X> template<class G, class... PRS> requires InvocableReturning<Differential<X>,G,SizeType> and Constructible<Differential<X>,PRS...>
 Vector<Differential<X>>::Vector(SizeType n, G const& g, PRS... prs)
@@ -548,16 +557,16 @@ Vector<Differential<X>>::Vector(SizeType n, G const& g, PRS... prs)
 
 template<class X> template<class E>
 Vector<Differential<X>>::Vector(const VectorExpression<E>& ve)
-    : _ary(ve().size(), ((assert(ve().size()>0),characteristics(ve()[0u]))),Uninitialised())
+    : _ary(ve().size(), _checked_element_characteristics(ve),Uninitialised())
 {
     for(SizeType i=0; i!=_ary.size(); ++i) { new (&static_cast<Differential<X>&>(_ary[i])) Differential<X>(ve()[i]); }
-    ARIADNE_ASSERT(_ary.size()!=0);
 }
 
 template<class X> template<class E>
 Vector<Differential<X>>& Vector<Differential<X>>::operator=(const VectorExpression<E>& ve) {
+    ARIADNE_PRECONDITION(ve().size()!=0);
     _ary.resize(ve().size()); for(SizeType i=0; i!=_ary.size(); ++i) { static_cast<Differential<X>&>(_ary[i])=ve()[i]; }
-    ARIADNE_ASSERT(_ary.size()!=0); return *this;
+    return *this;
 }
 
 
