@@ -23,7 +23,7 @@
  */
 
 #include "numeric/numeric.hpp"
-#include "algebra/univariate_differential.hpp"
+#include "algebra/differential.hpp"
 #include "algebra/univariate_differential.tpl.hpp"
 
 #include "utility/test.hpp"
