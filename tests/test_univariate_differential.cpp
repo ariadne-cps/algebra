@@ -38,29 +38,29 @@ using D=UnivariateDifferential<X>;
 Void test_data_access()
 {
     X one(1u,dp);
-    X two(2u,dp);
+    X coefficient_two(2u,dp);
     X three(3u,dp);
 
     Array<X> coefficients(InitializerList<ExactDouble>{1.0_x,2.0_x,3.0_x},dp);
     D differential(coefficients);
 
     ARIADNE_TEST_EQUALS(differential.value(),one);
-    ARIADNE_TEST_EQUALS(differential.gradient(),two);
+    ARIADNE_TEST_EQUALS(differential.gradient(),coefficient_two);
     ARIADNE_TEST_EQUALS(differential.half_hessian(),three);
     ARIADNE_TEST_EQUALS(differential.hessian(),X(6u,dp));
     ARIADNE_TEST_EQUALS(differential.argument_size(),1u);
 
-    ARIADNE_TEST_EQUALS(differential.array()[1u],two);
+    ARIADNE_TEST_EQUALS(differential.array()[1u],coefficient_two);
     D const& const_differential=differential;
     ARIADNE_TEST_EQUALS(const_differential.array()[2u],three);
     ARIADNE_TEST_EXECUTE(differential.array()[2u]=X(4u,dp));
     ARIADNE_TEST_EQUALS(differential[2u],X(4u,dp));
 
-    D from_list(2u,InitializerList<X>{one,two,three});
+    D from_list(2u,InitializerList<X>{one,coefficient_two,three});
     ARIADNE_TEST_EQUALS(from_list[0u],one);
-    ARIADNE_TEST_EQUALS(from_list[1u],two);
+    ARIADNE_TEST_EQUALS(from_list[1u],coefficient_two);
     ARIADNE_TEST_EQUALS(from_list[2u],three);
-    ARIADNE_TEST_FAIL((void)D(2u,InitializerList<X>{one,two}));
+    ARIADNE_TEST_FAIL((void)D(2u,InitializerList<X>{one,coefficient_two}));
 
     D degree_zero(0u,one);
     ARIADNE_TEST_FAIL((void)degree_zero.gradient());
@@ -75,18 +75,18 @@ Void test_data_access()
 Void test_inplace_and_calculus()
 {
     X one(1u,dp);
-    X two(2u,dp);
+    X coefficient_two(2u,dp);
     X three(3u,dp);
 
-    D differential(2u,InitializerList<X>{one,two,three});
+    D differential(2u,InitializerList<X>{one,coefficient_two,three});
     ARIADNE_TEST_EXECUTE(differential+=one);
-    ARIADNE_TEST_EQUALS(differential[0u],two);
-    ARIADNE_TEST_EXECUTE(differential*=two);
+    ARIADNE_TEST_EQUALS(differential[0u],coefficient_two);
+    ARIADNE_TEST_EXECUTE(differential*=coefficient_two);
     ARIADNE_TEST_EQUALS(differential[0u],X(4u,dp));
     ARIADNE_TEST_EQUALS(differential[1u],X(4u,dp));
     ARIADNE_TEST_EQUALS(differential[2u],X(6u,dp));
 
-    D source(2u,InitializerList<X>{one,two,three});
+    D source(2u,InitializerList<X>{one,coefficient_two,three});
     auto primitive=antiderivative(source);
     ARIADNE_TEST_EQUAL(primitive.degree(),3u);
     ARIADNE_TEST_EQUALS(primitive[0u],X(0u,dp));
@@ -105,7 +105,7 @@ Void test_inplace_and_calculus()
     auto composition=compose(exponential_series,variable);
     ARIADNE_TEST_EQUALS(composition[0u],one);
     ARIADNE_TEST_EQUALS(composition[1u],one);
-    ARIADNE_TEST_EQUALS(composition[2u],one/two);
+    ARIADNE_TEST_EQUALS(composition[2u],one/coefficient_two);
 }
 
 Void test_derivative()
