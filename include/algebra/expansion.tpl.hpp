@@ -63,7 +63,7 @@ template<class I, class X> Expansion<I,X>::Expansion(ArgumentSizeType as, Charac
 template<class I, class X> Expansion<I,X>::Expansion(InitializerList<Pair<IndexInitializerType,X>> lst)
     : Expansion( Expansion(size_of(lst.begin()->first),nul(lst.begin()->second),std::max(DEFAULT_CAPACITY,lst.size()) ) )
 {
-    I a=make_zero_index<I>(this->argument_size());
+    I a=make_zero_index(this->argument_size());
     X x;
     for(auto iter=lst.begin();
         iter!=lst.end(); ++iter)
@@ -91,7 +91,7 @@ template<class I, class X> Expansion<I,X>::Expansion(InitializerList<Pair<IndexI
     _indices.reserve(cap);
     _coefficients.reserve(cap);
 
-    I a=make_zero_index<I>(this->argument_size());
+    I a=make_zero_index(this->argument_size());
     X x=this->zero_coefficient();
     for(auto iter=lst.begin();
         iter!=lst.end(); ++iter)
@@ -218,7 +218,7 @@ template<class I, class X> Void Expansion<I,X>::resize(SizeType new_size) {
         if(this->capacity() < new_size) {
             this->reserve(new_size);
         }
-        I a=make_zero_index<I>(this->argument_size());
+        I a=make_zero_index(this->argument_size());
         X c=this->zero_coefficient();
         for (SizeType i=this->size(); i!=new_size; ++i) {
             this->append(a,c);
@@ -491,7 +491,7 @@ template<class I, class X> Expansion<MultiIndex,X> Expansion<I,X>::_embed(SizeTy
     ArgumentSizeType old_size=x.argument_size();
     SizeType new_size=before_size+old_size+after_size;
     Expansion<MultiIndex,X> r(new_size, x.coefficient_characteristics(), x.capacity());
-    IndexType old_index=make_zero_index<I>(old_size);
+    IndexType old_index=make_zero_index(old_size);
     MultiIndex new_index(new_size);
     for(typename Expansion<I,X>::ConstIterator iter=x.begin(); iter!=x.end(); ++iter) {
         old_index=iter->index();
