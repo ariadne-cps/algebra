@@ -283,7 +283,7 @@ template<class F> Void TestExpansion<F>::test_helpers()
         ARIADNE_TEST_EXECUTE((void)(zero_first==zero_only));
         ARIADNE_TEST_EXECUTE((void)(zero_only==zero_first));
 
-        Expansion<UniIndex,F> univariate_embed(prec);
+        Expansion<UniIndex,F> univariate_embed(SizeOne(),prec);
         univariate_embed.append(UniIndex(0u),coefficient_one);
         univariate_embed.append(UniIndex(2u),coefficient_two);
         auto embedded=embed(1u,univariate_embed,1u);
