@@ -331,6 +331,7 @@ Void TestPolynomial::test_evaluate_horner()
     ARIADNE_TEST_EQUALS(univariate_polynomial_zero.number_of_terms(),0u)
     auto univariate_polynomial_value=horner_evaluate(univariate_ordered,u);
     ARIADNE_TEST_EQUAL(univariate_polynomial_value,u*u+X(3u,dp))
+    ARIADNE_TEST_EQUALS(univariate_polynomial_value.degree(),2u)
 
     HornerPolynomial m0=HornerPolynomial::coordinate(2u,0u,dp);
     auto multivariate_polynomial_zero=horner_evaluate(univariate_empty,m0);
