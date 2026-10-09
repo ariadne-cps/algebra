@@ -106,6 +106,47 @@ class TestGraded
     }
   private:
     void test_class() {
+        X coefficient_one(1,pr);
+        X coefficient_two(2,pr);
+        X coefficient_minus_one(-1,pr);
+        X coefficient_minus_two(-2,pr);
+
+        Graded<X> direct({coefficient_one,coefficient_two});
+        Graded<X> copied(direct);
+        ARIADNE_TEST_EQUALS(copied.size(),2u);
+
+        std::ostringstream generic_stream;
+        ARIADNE_TEST_EXECUTE(generic_stream << copied);
+
+        Graded<X> generic_empty(pr);
+        std::ostringstream generic_empty_stream;
+        ARIADNE_TEST_EXECUTE(generic_empty._write(generic_empty_stream));
+
+        FloatDP raw_zero(0,dp);
+        FloatDP raw_one(1,dp);
+        ARIADNE_TEST_ASSERT(compatible(raw_zero,raw_one));
+        ARIADNE_TEST_EQUALS(create(raw_one),raw_zero);
+
+        Graded<FloatDP> raw_empty(dp);
+        std::ostringstream raw_empty_stream;
+        ARIADNE_TEST_EXECUTE(raw_empty._write(raw_empty_stream));
+
+        Graded<FloatDP> raw_values(FloatDP(0,dp));
+        raw_values.extend(FloatDP(1,dp));
+        raw_values.extend(FloatDP(-1,dp));
+        raw_values.extend(FloatDP(2,dp));
+        raw_values.extend(FloatDP(-2,dp));
+        raw_values.extend(FloatDP(0,dp));
+        std::ostringstream raw_stream;
+        ARIADNE_TEST_EXECUTE(raw_values._write(raw_stream));
+
+        Graded<FloatDP> raw_nonzero(FloatDP(3,dp));
+        raw_nonzero.extend(FloatDP(1,dp));
+        std::ostringstream raw_nonzero_stream;
+        ARIADNE_TEST_EXECUTE(raw_nonzero._write(raw_nonzero_stream));
+
+        ARIADNE_TEST_EXECUTE((void)coefficient_minus_one);
+        ARIADNE_TEST_EXECUTE((void)coefficient_minus_two);
     }
 
     void test_sqr() {
