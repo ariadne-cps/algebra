@@ -111,10 +111,10 @@ template<class X> class Algebra
     Algebra<X> create_constant(X const& c) const { return Algebra<X>(this->managed_pointer()->_create_constant(c)); }
     friend OutputStream& operator<<(OutputStream& os, Algebra<X> const& a) { return a.managed_pointer()->_write(os); }
   private:
-    template<class A> static AlgebraInterface<X>* make_algebra(A const& a) {
-        if constexpr(BaseOf<AlgebraInterface<X>,A>) { return new A(a); }
-        else { return new AlgebraWrapper<A,X>(a); }
-    }
+    template<class A> requires BaseOf<AlgebraInterface<X>,A>
+    static AlgebraInterface<X>* make_algebra(A const& a) { return new A(a); }
+    template<class A> requires (!BaseOf<AlgebraInterface<X>,A>)
+    static AlgebraInterface<X>* make_algebra(A const& a) { return new AlgebraWrapper<A,X>(a); }
 };
 
 
@@ -142,10 +142,10 @@ template<class X> class TranscendentalAlgebra
     TranscendentalAlgebra<X> create_constant(X const& c) const { return TranscendentalAlgebra<X>(this->managed_pointer()->_create_constant(c)); }
     friend OutputStream& operator<<(OutputStream& os, TranscendentalAlgebra<X> const& a) { return a.managed_pointer()->_write(os); }
   private:
-    template<class A> static TranscendentalAlgebraInterface<X>* make_elementary_algebra(A const& a) {
-        if constexpr(BaseOf<TranscendentalAlgebraInterface<X>,A>) { return new A(a); }
-        else { return new TranscendentalAlgebraWrapper<A,X>(a); }
-    }
+    template<class A> requires BaseOf<TranscendentalAlgebraInterface<X>,A>
+    static TranscendentalAlgebraInterface<X>* make_elementary_algebra(A const& a) { return new A(a); }
+    template<class A> requires (!BaseOf<TranscendentalAlgebraInterface<X>,A>)
+    static TranscendentalAlgebraInterface<X>* make_elementary_algebra(A const& a) { return new TranscendentalAlgebraWrapper<A,X>(a); }
 };
 
 //! \brief Generic class for elements of unital algebras.
@@ -162,7 +162,8 @@ template<class X> class ElementaryAlgebra
     using Handle<const Interface>::Handle;
     ElementaryAlgebra() : ElementaryAlgebra(nullptr) { }
     template<AnElementaryAlgebraOver<X> A> explicit ElementaryAlgebra(const A& a);
-    template<class A> A extract() const;
+    template<class A> requires BaseOf<ElementaryAlgebraInterface<X>,A> A extract() const;
+    template<class A> requires (!BaseOf<ElementaryAlgebraInterface<X>,A>) A extract() const;
     ElementaryAlgebra<X>& operator=(const X& c) { return *this = this->create_constant(c); }
     ElementaryAlgebra<X> create() const { return ElementaryAlgebra<X>(this->managed_pointer()->_create_zero()); }
     ElementaryAlgebra<X> clone() const { return ElementaryAlgebra<X>(this->managed_pointer()->_create_copy()); }
@@ -170,10 +171,10 @@ template<class X> class ElementaryAlgebra
     ElementaryAlgebra<X> create_constant(X const& c) const { return ElementaryAlgebra<X>(this->managed_pointer()->_create_constant(c)); }
     friend OutputStream& operator<<(OutputStream& os, ElementaryAlgebra<X> const& a) { return a.managed_pointer()->_write(os); }
   private:
-    template<class A> static ElementaryAlgebraInterface<X>* make_elementary_algebra(A const& a) {
-        if constexpr(BaseOf<ElementaryAlgebraInterface<X>,A>) { return new A(a); }
-        else { return new ElementaryAlgebraWrapper<A,X>(a); }
-    }
+    template<class A> requires BaseOf<ElementaryAlgebraInterface<X>,A>
+    static ElementaryAlgebraInterface<X>* make_elementary_algebra(A const& a) { return new A(a); }
+    template<class A> requires (!BaseOf<ElementaryAlgebraInterface<X>,A>)
+    static ElementaryAlgebraInterface<X>* make_elementary_algebra(A const& a) { return new ElementaryAlgebraWrapper<A,X>(a); }
 };
 
 
@@ -310,9 +311,18 @@ A TranscendentalAlgebra<X>::extract() const {
 template<class X> template<AnElementaryAlgebraOver<X> A> ElementaryAlgebra<X>::ElementaryAlgebra(A const& a)
     : Handle<const ElementaryAlgebraInterface<X>>(make_elementary_algebra(a)) { }
 
-template<class X> template<class A> A ElementaryAlgebra<X>::extract() const {
-    if constexpr(BaseOf<ElementaryAlgebraInterface<X>,A>) { auto ap=dynamic_cast<A const*>(this->raw_pointer()); assert(ap); return *ap; }
-    else { auto awp=dynamic_cast<ElementaryAlgebraWrapper<A,X>const*>(this->raw_pointer()); assert(awp); return *awp; }
+template<class X> template<class A> requires BaseOf<ElementaryAlgebraInterface<X>,A>
+A ElementaryAlgebra<X>::extract() const {
+    auto ap=dynamic_cast<A const*>(this->raw_pointer());
+    ARIADNE_PRECONDITION(ap);
+    return *ap;
+}
+
+template<class X> template<class A> requires (!BaseOf<ElementaryAlgebraInterface<X>,A>)
+A ElementaryAlgebra<X>::extract() const {
+    auto awp=dynamic_cast<ElementaryAlgebraWrapper<A,X>const*>(this->raw_pointer());
+    ARIADNE_PRECONDITION(awp);
+    return *awp;
 }
 
 
