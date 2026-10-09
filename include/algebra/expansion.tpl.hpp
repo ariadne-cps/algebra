@@ -320,7 +320,6 @@ template<class I, class X> Bool Expansion<I,X>::same_as(const Expansion<I,X>& ot
     auto iter1=this->begin();
     auto iter2=other.begin();
     auto end1=this->end();
-    auto end2=other.end();
 
     if (this->size()!=other.size()) { return false; }
     if (this->argument_size()!=other.argument_size()) { return false; }
