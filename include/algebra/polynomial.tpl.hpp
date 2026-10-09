@@ -89,7 +89,7 @@ template<class I, class X> auto Polynomial<I,X>::variables(ArgumentSizeType as, 
 template<class I, class X> Polynomial<I,X>& Polynomial<I,X>::operator=(const X& x) {
     this->_expansion.clear();
     if constexpr (Same<I,MultiIndex>) { this->_expansion.append(MultiIndex(this->argument_size()),x); }
-    if constexpr (Same<I,UniIndex>) { this->_expansion.append(DegreeType(0u),x); }
+    if constexpr (Same<I,UniIndex>) { this->_expansion.append(UniIndex(0u),x); }
     return *this;
 }
 
@@ -101,7 +101,7 @@ template<class I, class X> SizeType Polynomial<I,X>::number_of_terms() const { r
 template<class I, class X> DegreeType Polynomial<I,X>::degree() const {
     DegreeType deg=0u; for(auto iter=this->_expansion.begin(); iter!=this->_expansion.end(); ++iter) {
         if constexpr (Same<I,MultiIndex>) { deg=std::max(deg,iter->index().degree()); }
-        else if constexpr (Same<I,UniIndex>) { deg=std::max(deg,iter->index()); }
+        else if constexpr (Same<I,UniIndex>) { deg=std::max(deg,iter->index().degree()); }
     }
     return deg;
 }
