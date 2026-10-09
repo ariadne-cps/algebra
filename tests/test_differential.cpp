@@ -442,14 +442,14 @@ class TestDifferentialVector {
         ARIADNE_TEST_EQUALS(generated.size(),1u);
         ARIADNE_TEST_FAIL(DifferentialVectorType(0u,generator));
 
-        DifferentialVectorType empty(0u,1u,1u,pr);
-        ARIADNE_TEST_FAIL(DifferentialVectorType(empty+empty));
-        ARIADNE_TEST_FAIL(v=empty+empty);
+        auto empty_range=cv[Range(0u,0u)];
+        ARIADNE_TEST_FAIL((void)DifferentialVectorType(empty_range));
+        ARIADNE_TEST_FAIL(v=empty_range);
 
         X z(pr);
-        DifferentialVectorType df={DifferentialType::constant(2u,0u,z)};
+        DifferentialVectorType df={DifferentialType::constant(2u,1u,z)};
         DifferentialVectorType dx0={DifferentialType::variable(2u,1u,z,0u)};
-        DifferentialVectorType da={DifferentialType::constant(2u,0u,z)};
+        DifferentialVectorType da={DifferentialType::variable(2u,1u,z,1u)};
         ARIADNE_TEST_EXECUTE(v.flow(df,dx0,da));
     }
 
