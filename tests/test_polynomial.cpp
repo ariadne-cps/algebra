@@ -188,14 +188,14 @@ Void TestPolynomial::test_constructors()
     // Repeated indices
     ARIADNE_TEST_EQUAL(MultivariatePolynomial<RoundedFloatDP>({ {{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{1,0},7.0_x}, {{1,2},11.0_x} },dp), MultivariatePolynomial<RoundedFloatDP>({ {{0,0},2.0_x}, {{1,0},10.0_x}, {{1,2},16.0_x} },dp))
 
-    // Exact floating-point cancellation exercises removal of a combined zero term.
-    Expansion<MultiIndex,double> cancelling_terms({
-        {{1u,0u},1.0},
-        {{1u,0u},-1.0}
-    });
-    cancelling_terms.index_sort(ReverseLexicographicLess());
-    auto cancelling_end=unique_key(cancelling_terms.begin(),cancelling_terms.end(),std::plus<double>());
-    ARIADNE_TEST_EQUALS(static_cast<SizeType>(cancelling_end-cancelling_terms.begin()),0u)
+    // Exercise both cleanup outcomes in the same exact-coefficient Polynomial instantiation.
+    UnivariatePolynomial<FloatDP> exact_cancellation(SizeOne(),dp);
+    exact_cancellation.expansion().append(UniIndex(1u),FloatDP(1,dp));
+    exact_cancellation.expansion().append(UniIndex(1u),FloatDP(-1,dp));
+    exact_cancellation.expansion().append(UniIndex(2u),FloatDP(2,dp));
+    ARIADNE_TEST_EXECUTE(exact_cancellation.cleanup())
+    ARIADNE_TEST_EQUALS(exact_cancellation.number_of_terms(),1u)
+    ARIADNE_TEST_EQUALS(exact_cancellation[UniIndex(2u)],FloatDP(2,dp))
 
 }
 
