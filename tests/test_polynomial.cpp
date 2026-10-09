@@ -188,6 +188,10 @@ Void TestPolynomial::test_constructors()
     // Repeated indices
     ARIADNE_TEST_EQUAL(MultivariatePolynomial<RoundedFloatDP>({ {{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{1,0},7.0_x}, {{1,2},11.0_x} },dp), MultivariatePolynomial<RoundedFloatDP>({ {{0,0},2.0_x}, {{1,0},10.0_x}, {{1,2},16.0_x} },dp))
 
+    // Repeated terms cancelling exactly are removed by cleanup.
+    P cancelling_terms({{{1u,0u},1.0_x},{{1u,0u},-1.0_x}},dp);
+    ARIADNE_TEST_EQUALS(cancelling_terms.number_of_terms(),0u)
+
 }
 
 Void TestPolynomial::test_indexing()
