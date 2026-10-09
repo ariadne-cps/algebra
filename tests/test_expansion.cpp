@@ -770,6 +770,23 @@ Void test_univariate_expansion_assignment_instantiation(PR const& pr)
     ARIADNE_TEST_EQUALS(move_target.size(),1u);
 }
 
+template<class X, class PR>
+Void test_graded_check_instantiation(PR const& pr)
+{
+    using E=SortedExpansion<MultiIndex,X,GradedIndexLess>;
+    X one(1u,pr);
+
+    E sorted(2u,pr);
+    sorted.append(MultiIndex({0u,0u}),one);
+    sorted.append(MultiIndex({1u,0u}),one);
+    ARIADNE_TEST_EXECUTE(sorted.check());
+
+    E unsorted(2u,pr);
+    unsorted.append(MultiIndex({1u,0u}),one);
+    unsorted.append(MultiIndex({0u,0u}),one);
+    ARIADNE_TEST_THROWS(unsorted.check(),std::runtime_error);
+}
+
 Void test_unit_coefficient_output() {
     // Built-in doubles have decidable equality, so unit coefficients can be
     // omitted while unit constants must still be printed.
@@ -865,6 +882,13 @@ Int main() {
 
     test_univariate_expansion_assignment_instantiation<FloatMPApproximation>(multiple_precision);
     test_univariate_expansion_assignment_instantiation<FloatMPBounds>(multiple_precision);
+
+    test_graded_check_instantiation<FloatDPApproximation>(double_precision);
+    test_graded_check_instantiation<FloatDPBounds>(double_precision);
+    test_graded_check_instantiation<FloatDPUpperInterval>(double_precision);
+    test_graded_check_instantiation<FloatMPApproximation>(multiple_precision);
+    test_graded_check_instantiation<FloatMPBounds>(multiple_precision);
+    test_graded_check_instantiation<FloatMPUpperInterval>(multiple_precision);
 
     {
         Expansion<MultiIndex,FloatDPUpperInterval> dp_upper_reserve(2u,double_precision);
