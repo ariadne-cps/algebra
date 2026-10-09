@@ -433,7 +433,7 @@ template<class A> Void sincos(Graded<A>& s, Graded<A>& c, const Graded<A>& a) {
     // Then c[n]=-Sum_{m=1}^{n} (m*f[m]*s[n-m])/n
     DegreeType d = a.degree();
     A z=create(a[0]);
-    ARIADNE_ASSERT(s.size()==0 && c.size()==0);
+    ARIADNE_PRECONDITION(s.size()==0 && c.size()==0);
     for(DegreeType i=0; i<=d; ++i) { s.append(z); c.append(z); }
     s[0]=sin(a[0]);
     c[0]=cos(a[0]);

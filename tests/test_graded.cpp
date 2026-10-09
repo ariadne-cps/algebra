@@ -163,6 +163,14 @@ class TestGraded
 
         Graded<X> invalid_argument({coefficient_one,coefficient_two});
         Graded<X> invalid_result({coefficient_one,coefficient_two});
+
+        Graded<X> sincos_empty_s(pr);
+        Graded<X> sincos_empty_c(pr);
+        Graded<X> sincos_nonempty_s(coefficient_one);
+        Graded<X> sincos_nonempty_c(coefficient_one);
+        ARIADNE_TEST_FAIL(sincos(sincos_nonempty_s,sincos_empty_c,invalid_argument));
+        ARIADNE_TEST_FAIL(sincos(sincos_empty_s,sincos_nonempty_c,invalid_argument));
+
         ARIADNE_TEST_FAIL(sqr(invalid_result,invalid_argument));
         ARIADNE_TEST_FAIL(rec(invalid_result,invalid_argument));
         ARIADNE_TEST_FAIL(pow(invalid_result,invalid_argument,2));
