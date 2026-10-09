@@ -123,6 +123,7 @@ class TestMultiIndex
         ARIADNE_TEST_FAIL(a.set(a.size(),0u));
 
         MultiIndex short_index({1u});
+        ARIADNE_TEST_ASSERT(!(a==short_index));
         ARIADNE_TEST_FAIL(a.assign(short_index));
         ARIADNE_TEST_FAIL(graded_less(a,short_index));
         ARIADNE_TEST_FAIL(lexicographic_less(a,short_index));
@@ -144,6 +145,9 @@ class TestMultiIndex
         MultiIndex& same_alias=same_size;
         ARIADNE_TEST_EXECUTE(same_size=same_alias);
         ARIADNE_TEST_EXECUTE(same_size.resize(same_size.size()));
+        ARIADNE_TEST_EXECUTE(same_size.resize(3u));
+        ARIADNE_TEST_EQUALS(same_size.size(),3u);
+        ARIADNE_TEST_EXECUTE(same_size.clear());
     }
 
     Void test_comparison() {
