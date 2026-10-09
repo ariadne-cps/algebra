@@ -311,6 +311,11 @@ Void TestPolynomial::test_evaluate_horner()
         X(3u,dp)*v[2];
     ARIADNE_TEST_EQUALS(horner_evaluate(register_expansion,v),register_expected)
 
+    // With a single term, all powers are applied in the final Horner loop.
+    Expansion<MultiIndex,X> monomial(3u,dp);
+    monomial.append(MultiIndex({2u,1u,2u}),X(3u,dp));
+    ARIADNE_TEST_EQUALS(horner_evaluate(monomial,v),X(900u,dp))
+
     Expansion<MultiIndex,X> unordered(2u,dp);
     unordered.append(MultiIndex({1u,0u}),X(1u,dp));
     unordered.append(MultiIndex({0u,1u}),X(1u,dp));
