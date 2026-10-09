@@ -123,13 +123,10 @@ template<class I, class X> Expansion<I,X>::Expansion(const Expansion<I,X>& e)
 
 template<class I, class X> Expansion<I,X>& Expansion<I,X>::operator=(const Expansion<I,X>& e)
 {
-    if(this!=&e) {
-        // Perform memory reallocation if necessary
-        this->_indices = e._indices;
-        this->_coefficients = e._coefficients;
-        this->_indices.reserve(e.capacity());
-        this->_coefficients.reserve(e.capacity());
-    }
+    this->_indices = e._indices;
+    this->_coefficients = e._coefficients;
+    this->_indices.reserve(e.capacity());
+    this->_coefficients.reserve(e.capacity());
     return *this;
 }
 
