@@ -71,6 +71,30 @@ class TestAlgebra {
         ARIADNE_TEST_CONSTRUCT(TAX,tax,(dx));
         ARIADNE_TEST_ASSIGN(tax,div(tax,tax+cx));
         ARIADNE_TEST_ASSIGN(tax,rec(tax));
+
+        ARIADNE_TEST_EXECUTE(hlf(tax));
+        ARIADNE_TEST_EXECUTE(div(cx,tax));
+        ARIADNE_TEST_EXECUTE(pow(tax,Int(2)));
+        ARIADNE_TEST_EXECUTE(pow(tax,Int(-1)));
+        ARIADNE_TEST_EXECUTE(sqrt(tax));
+        ARIADNE_TEST_EXECUTE(log(tax));
+        ARIADNE_TEST_EXECUTE(sin(tax));
+        ARIADNE_TEST_EXECUTE(cos(tax));
+        ARIADNE_TEST_EXECUTE(tan(tax));
+        ARIADNE_TEST_EXECUTE(tanh(tax));
+        ARIADNE_TEST_EXECUTE(atan(tax));
+
+        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Hlf(),dx));
+        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Sqr(),dx));
+        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Div(),dx,dx));
+        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Pow(),dx,Int(2)));
+        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Pow(),dx,Int(-1)));
+        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Exp(),dx));
+
+        Factorial factorial(3u);
+        ARIADNE_TEST_EXECUTE(static_cast<FloatDPBounds>(factorial));
+        ARIADNE_TEST_EXECUTE(rec(factorial));
+
         ARIADNE_TEST_ASSIGN(dx,tax.extract<DX>());
 
     }
