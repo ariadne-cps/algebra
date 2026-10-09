@@ -95,6 +95,7 @@ class TestDifferential {
         ARIADNE_TEST_CALL(test_compose());
         ARIADNE_TEST_CALL(test_gradient());
         ARIADNE_TEST_CALL(test_hessian());
+        ARIADNE_TEST_CALL(test_tpl_helpers());
     }
 
     Void test_degree() {
@@ -222,6 +223,61 @@ class TestDifferential {
         ARIADNE_TEST_EQUALS(H[0][1],a01*2);
         ARIADNE_TEST_EQUALS(H[1][1],a11*2);
     }
+
+    Void test_tpl_helpers() {
+        ARIADNE_TEST_EXECUTE(+x1);
+        ARIADNE_TEST_ASSERT(x1!=x2);
+        ARIADNE_TEST_EXECUTE(x1.coefficient_characteristics());
+        auto created=x1.create();
+        ARIADNE_TEST_EQUALS(created.argument_size(),x1.argument_size());
+        ARIADNE_TEST_EQUALS(created.degree(),x1.degree());
+
+        DifferentialType indexed=x1;
+        ARIADNE_TEST_EXECUTE(indexed[0u]=X(7u,pr));
+        DifferentialType const& cindexed=indexed;
+        ARIADNE_TEST_EXECUTE(cindexed[0u]);
+        ARIADNE_TEST_EXECUTE(indexed.set_gradient(1u,X(8u,pr)));
+
+        Covector<X> g(2u,pr);
+        g[0u]=X(2u,pr); g[1u]=X(-3,pr);
+        auto affine1=DifferentialType::affine(2u,2u,X(4u,pr),g);
+        auto affine2=DifferentialType::affine(2u,X(4u,pr),g);
+        ARIADNE_TEST_PRINT(affine1);
+        ARIADNE_TEST_PRINT(affine2);
+        Covector<X> short_g(1u,pr);
+        ARIADNE_TEST_FAIL(DifferentialType::affine(2u,2u,X(4u,pr),short_g));
+
+        Vector<X> values({1.0_x,2.0_x},pr);
+        Matrix<X> G({{1.0_x,0.0_x},{0.0_x,2.0_x}},pr);
+        ARIADNE_TEST_EXECUTE(DifferentialType::affine(2u,values,G));
+        ARIADNE_TEST_EXECUTE(DifferentialType::identity(2u,X(1u,pr)));
+        ARIADNE_TEST_EXECUTE(DifferentialType::identity(2u,values));
+
+        ARIADNE_TEST_FAIL(DifferentialType::constants(1u,2u,2u,values));
+        ARIADNE_TEST_FAIL(DifferentialType::variables(1u,2u,2u,values));
+        ARIADNE_TEST_FAIL(DifferentialType::variables(2u,3u,2u,values));
+
+        DifferentialType low=DifferentialType::constant(1u,1u,X(-2,pr));
+        DifferentialType high=DifferentialType::constant(1u,1u,X(3u,pr));
+        DifferentialType zero=DifferentialType::constant(1u,1u,X(0u,pr));
+        ARIADNE_TEST_EXECUTE(AlgebraOperations<DifferentialType>::apply(Min(),low,high));
+        ARIADNE_TEST_EXECUTE(AlgebraOperations<DifferentialType>::apply(Min(),high,low));
+        ARIADNE_TEST_EXECUTE(AlgebraOperations<DifferentialType>::apply(Max(),low,high));
+        ARIADNE_TEST_EXECUTE(AlgebraOperations<DifferentialType>::apply(Max(),high,low));
+        ARIADNE_TEST_FAIL(AlgebraOperations<DifferentialType>::apply(Min(),low,low));
+        ARIADNE_TEST_FAIL(AlgebraOperations<DifferentialType>::apply(Max(),high,high));
+        ARIADNE_TEST_EXECUTE(AlgebraOperations<DifferentialType>::apply(Abs(),low));
+        ARIADNE_TEST_EXECUTE(AlgebraOperations<DifferentialType>::apply(Abs(),high));
+        ARIADNE_TEST_FAIL(AlgebraOperations<DifferentialType>::apply(Abs(),zero));
+        DifferentialType wrong_as=DifferentialType::constant(2u,1u,X(1u,pr));
+        ARIADNE_TEST_FAIL(AlgebraOperations<DifferentialType>::apply(Min(),low,wrong_as));
+        ARIADNE_TEST_FAIL(AlgebraOperations<DifferentialType>::apply(Max(),high,wrong_as));
+
+        DifferentialType explicit_values(2u,2u,{{{0u,0u},X(1u,pr)},{{1u,0u},X(2u,pr)}});
+        ARIADNE_TEST_PRINT(explicit_values);
+        ARIADNE_TEST_FAIL((void)DifferentialType(2u,1u,{{{0u},X(1u,pr)}}));
+    }
+
 
 
 };
@@ -463,6 +519,28 @@ class TestDifferentialVector {
         DifferentialVectorType dx0={DifferentialType::variable(2u,1u,z,0u)};
         DifferentialVectorType da={DifferentialType::variable(2u,1u,z,1u)};
         ARIADNE_TEST_EXECUTE(v.flow(df,dx0,da));
+
+        auto vv=v.value();
+        ARIADNE_TEST_EXECUTE(v.set_value(vv));
+        Vector<X> wrong_values(2u,pr);
+        ARIADNE_TEST_FAIL(v.set_value(wrong_values));
+
+        DifferentialVectorType compose_source(1u,1u,2u,pr);
+        compose_source[0u]=DifferentialType::variable(1u,2u,X(1u,pr),0u);
+        ARIADNE_TEST_EXECUTE(DifferentialType::_compose(compose_source,compose_source));
+
+        DifferentialVectorType lie_source(1u,1u,2u,pr);
+        lie_source[0u]=DifferentialType::variable(1u,2u,X(1u,pr),0u);
+        ARIADNE_TEST_EXECUTE(lie_derivative(lie_source,lie_source));
+
+        Vector<X> x0({0.0_x},pr);
+        Vector<X> a({0.0_x},pr);
+        DifferentialVectorType autonomous_param_df={DifferentialType::constant(2u,1u,X(0u,pr))};
+        ARIADNE_TEST_EXECUTE(flow(autonomous_param_df,x0,a));
+
+        X t0(0u,pr);
+        DifferentialVectorType timed_param_df={DifferentialType::constant(3u,1u,X(0u,pr))};
+        ARIADNE_TEST_EXECUTE(flow(timed_param_df,x0,t0,a));
     }
 
     Void test_mapping() {
@@ -493,7 +571,7 @@ Int main() {
         ARIADNE_TEST_EQUALS(dc[0],0);
     }
 
-//    TestDifferential< Differential<FloatDPApproximation> > tf;
+    TestDifferential< Differential<FloatDPApproximation> > tf;
     TestDifferentialVector< Differential<FloatDPApproximation> > tfv;
     return ARIADNE_TEST_FAILURES;
 }

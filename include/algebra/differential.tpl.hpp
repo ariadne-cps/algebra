@@ -63,7 +63,7 @@ Differential<X>::Differential(SizeType as, DegreeType deg,
                               InitializerList< Pair<InitializerList<DegreeType>,X> > lst)
     : _expansion(Expansion<MultiIndex,X>(lst)), _degree(deg)
 {
-    ARIADNE_ASSERT(this->argument_size()==as);
+    ARIADNE_PRECONDITION(this->argument_size()==as);
     this->cleanup();
 }
 
@@ -102,7 +102,7 @@ template<class X> Differential<X> Differential<X>::variable(SizeType as, DegreeT
 }
 
 template<class X> Differential<X> Differential<X>::affine(SizeType as, DegreeType deg, const X& x, const Covector<X>& g) {
-    ARIADNE_ASSERT_MSG(as==g.size(), "g.size()="<<g.size()<<" must equal as="<<as);
+    ARIADNE_PRECONDITION_MSG(as==g.size(), "g.size()="<<g.size()<<" must equal as="<<as);
     Differential<X> r(as,deg,nul(x));
     MultiIndex a(as);
     r._expansion.append(a,x);
@@ -120,12 +120,12 @@ template<class X> Differential<X> Differential<X>::affine(DegreeType deg, const 
 
 
 template<class X> Vector<Differential<X>> Differential<X>::constants(SizeType rs, SizeType as, DegreeType deg, const Vector<X>& c) {
-    ARIADNE_ASSERT(c.size()==rs);
+    ARIADNE_PRECONDITION(c.size()==rs);
     return constants(as,deg,c);
 }
 
 template<class X> Vector<Differential<X>> Differential<X>::variables(SizeType rs, SizeType as, DegreeType deg, const Vector<X>& x) {
-    ARIADNE_ASSERT(x.size()==rs);  ARIADNE_ASSERT(as==x.size());
+    ARIADNE_PRECONDITION(x.size()==rs);  ARIADNE_PRECONDITION(as==x.size());
     return variables(deg,x);
 }
 
@@ -511,7 +511,7 @@ Differential<X> AlgebraOperations<Differential<X>>::apply(Pow, const Differentia
 
 template<class X> Differential<X> AlgebraOperations<Differential<X>>::apply(Min, const Differential<X>& x1, const Differential<X>& x2) {
     // FIXME: Maybe need different code for validated and approximate paradigms
-    ARIADNE_ASSERT_MSG(x1.argument_size()==x2.argument_size(),"x1="<<x1<<" x2="<<x2);
+    ARIADNE_PRECONDITION_MSG(x1.argument_size()==x2.argument_size(),"x1="<<x1<<" x2="<<x2);
     if(decide(x1.value()==x2.value())) {
         ARIADNE_THROW(std::runtime_error,"min(Differential<X> x1, Differential<X> x2)","x1[0]==x2[0]");
     }
@@ -520,7 +520,7 @@ template<class X> Differential<X> AlgebraOperations<Differential<X>>::apply(Min,
 
 
 template<class X> Differential<X> AlgebraOperations<Differential<X>>::apply(Max, const Differential<X>& x1,const Differential<X>& x2) {
-    ARIADNE_ASSERT_MSG(x1.argument_size()==x2.argument_size(),"x1="<<x1<<" x2="<<x2);
+    ARIADNE_PRECONDITION_MSG(x1.argument_size()==x2.argument_size(),"x1="<<x1<<" x2="<<x2);
     if(decide(x1.value()==x2.value())) {
         ARIADNE_THROW(std::runtime_error,"max(Differential<X> x1, Differential<X> x2)","x1[0]==x2[0]");
     }
@@ -733,7 +733,7 @@ template<class X> Matrix<X> Vector<Differential<X>>::jacobian() const {
 }
 
 template<class X> Void Vector<Differential<X>>::set_value(const Vector<X>& c) {
-    ARIADNE_ASSERT(this->result_size()==c.size());
+    ARIADNE_PRECONDITION(this->result_size()==c.size());
     for(SizeType i=0; i!=c.size(); ++i) {
         (*this)[i].set_value(c[i]);
     }
