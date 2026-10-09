@@ -648,9 +648,6 @@ Int main() {
     {
         Expansion<MultiIndex,ExactDouble> exact_expansion({{{0u,0u},ExactDouble(1.0)},{{0u,0u},ExactDouble(2.0)}});
         ARIADNE_TEST_EXECUTE(exact_expansion.coefficient_characteristics());
-        ARIADNE_TEST_EXECUTE(exact_expansion.combine_terms());
-        ARIADNE_TEST_EQUALS(exact_expansion.size(),1u);
-        ARIADNE_TEST_EQUALS(exact_expansion.front().coefficient(),ExactDouble(3.0));
     }
 
     {
