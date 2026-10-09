@@ -31,6 +31,7 @@
 
 
 #include "numeric/numeric.hpp"
+#include "interval/interval.hpp"
 #include "algebra/vector.hpp"
 #include "algebra/covector.hpp"
 #include "algebra/differential.hpp"
@@ -556,47 +557,40 @@ class TestDifferentialVector {
 template<class X, class PR>
 Void test_differential_tpl_instantiation_branches(PR const& pr) {
     using D=Differential<X>;
-    X z(0u,pr);
-    X one(1u,pr);
-    X two(2u,pr);
+    X coefficient_zero(0u,pr);
+    X coefficient_one(1u,pr);
+    X coefficient_two(2u,pr);
 
     Expansion<MultiIndex,X> expansion(1u,pr);
-    expansion.append(MultiIndex({0u}),one);
-    expansion.append(MultiIndex({2u}),two);
+    expansion.append(MultiIndex({0u}),coefficient_one);
+    expansion.append(MultiIndex({2u}),coefficient_two);
     ARIADNE_TEST_EXECUTE((void)D(expansion,1u));
 
-    Map<MultiIndex,X> map;
-    map.insert(MultiIndex({0u}),one);
-    map.insert(MultiIndex({2u}),two);
-    ARIADNE_TEST_EXECUTE((void)D(map,1u));
-    Map<MultiIndex,X> empty_map;
-    ARIADNE_TEST_FAIL((void)D(empty_map,1u));
-
-    D empty(1u,2u,z);
-    D constant=D::constant(1u,2u,one);
-    D high(1u,2u,z);
-    high[MultiIndex({2u})]=one;
-    D low(1u,1u,z);
-    low[MultiIndex({0u})]=one;
+    D empty(1u,2u,coefficient_zero);
+    D constant=D::constant(1u,2u,coefficient_one);
+    D high(1u,2u,coefficient_zero);
+    high[MultiIndex({2u})]=coefficient_one;
+    D low(1u,1u,coefficient_zero);
+    low[MultiIndex({0u})]=coefficient_one;
 
     ARIADNE_TEST_EXECUTE((void)(empty==constant));
     ARIADNE_TEST_EXECUTE((void)(constant==high));
     ARIADNE_TEST_EXECUTE((void)(high==constant));
 
-    D const_missing(1u,2u,z);
+    D const_missing(1u,2u,coefficient_zero);
     D const& const_ref=const_missing;
     ARIADNE_TEST_EXECUTE((void)const_ref[MultiIndex({1u})]);
 
-    D linear_only(1u,2u,z);
-    linear_only.set_gradient(0u,one);
+    D linear_only(1u,2u,coefficient_zero);
+    linear_only.set_gradient(0u,coefficient_one);
     ARIADNE_TEST_EXECUTE(linear_only.half_hessian());
 
-    D cubic_only(1u,3u,z);
-    cubic_only[MultiIndex({3u})]=one;
+    D cubic_only(1u,3u,coefficient_zero);
+    cubic_only[MultiIndex({3u})]=coefficient_one;
     ARIADNE_TEST_EXECUTE(cubic_only.half_hessian());
 
-    D mixed_gap(3u,2u,z);
-    mixed_gap[MultiIndex({1u,0u,1u})]=one;
+    D mixed_gap(3u,2u,coefficient_zero);
+    mixed_gap[MultiIndex({1u,0u,1u})]=coefficient_one;
     ARIADNE_TEST_EXECUTE(mixed_gap.half_hessian());
 
     ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Add(),high,low));
@@ -607,19 +601,19 @@ Void test_differential_tpl_instantiation_branches(PR const& pr) {
     ARIADNE_TEST_EXECUTE(AlgebraOperations<D>::apply(Mul(),low,high));
 
     UnivariateDifferential<X> series(2u,pr);
-    series[0u]=one;
-    series[1u]=one;
+    series[0u]=coefficient_one;
+    series[1u]=coefficient_one;
     ARIADNE_TEST_EXECUTE(compose(series,linear_only));
 
-    D degree_zero=D::constant(1u,0u,one);
+    D degree_zero=D::constant(1u,0u,coefficient_one);
     ARIADNE_TEST_EXECUTE(derivative(degree_zero,0u));
 
-    D valid_check=D::constant(1u,1u,one);
+    D valid_check=D::constant(1u,1u,coefficient_one);
     ARIADNE_TEST_EXECUTE(valid_check.check());
-    D empty_check(1u,1u,z);
+    D empty_check(1u,1u,coefficient_zero);
     ARIADNE_TEST_EXECUTE(empty_check.check());
-    D invalid_check(1u,1u,z);
-    invalid_check.expansion().append(MultiIndex({2u}),one);
+    D invalid_check(1u,1u,coefficient_zero);
+    invalid_check.expansion().append(MultiIndex({2u}),coefficient_one);
     ARIADNE_TEST_FAIL(invalid_check.check());
 
     MultiIndex wrong_index({0u,0u});
@@ -627,7 +621,7 @@ Void test_differential_tpl_instantiation_branches(PR const& pr) {
     D const& constant_ref=constant;
     ARIADNE_TEST_FAIL((void)constant_ref[wrong_index]);
 
-    D wrong_as=D::constant(2u,1u,one);
+    D wrong_as=D::constant(2u,1u,coefficient_one);
     ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Add(),low,wrong_as));
     ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Sub(),low,wrong_as));
     ARIADNE_TEST_FAIL(AlgebraOperations<D>::apply(Mul(),low,wrong_as));

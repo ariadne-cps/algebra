@@ -52,29 +52,6 @@ inline DegreeType max(DegreeType d1, DegreeType d2) { return std::max(d1,d2); }
 
 template<class X> Differential<X>::Differential(SizeType as, DegreeType deg, X const& z) : _expansion(as,get_characteristics(z)), _degree(deg) { }
 
-template<class X> Expansion<MultiIndex,X> _differential_expansion_from_map(const Map<MultiIndex,X>& map) {
-    ARIADNE_PRECONDITION(!map.empty());
-    Expansion<MultiIndex,X> expansion(map.begin()->first.size(),get_characteristics(map.begin()->second));
-    for(auto const& term : map) { expansion.append(term.first,term.second); }
-    expansion.graded_sort();
-    return expansion;
-}
-
-template<class X> Differential<X>::Differential(const Map<MultiIndex,X>& map, DegreeType deg)
-    : Differential<X>(_differential_expansion_from_map(map),deg)
-{
-}
-
-template<class X>
-Differential<X>::Differential(SizeType as, DegreeType deg,
-                              InitializerList< Pair<InitializerList<DegreeType>,X> > lst)
-    : _expansion(Expansion<MultiIndex,X>(lst)), _degree(deg)
-{
-    ARIADNE_PRECONDITION(this->argument_size()==as);
-    this->cleanup();
-}
-
-
 template<class X> Differential<X>::Differential(const Expansion<MultiIndex,X>& e, DegreeType deg)
     : _expansion(e.argument_size(),e.coefficient_characteristics()),_degree(deg)
 {

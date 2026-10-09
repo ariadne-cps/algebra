@@ -144,8 +144,6 @@ class Differential
         : Differential(as,deg,X(0u,prs...)) { }
     explicit Differential(SizeType as, DegreeType deg, X const& z);
     template<class XX> explicit Differential(DifferentialCharacteristics<XX> chrs);
-    //! \brief Construct a differential from a mapping giving a coefficient for a finite number of multi-indices.
-    explicit Differential(const Map<MultiIndex,X>& map, DegreeType deg);
     //! \brief Construct a differential of degree \a deg from the power-series expansion \a e.
     //! Terms in \a e of degree higher than \a deg are truncated
     explicit Differential(const Expansion<MultiIndex,X>& e, DegreeType deg);
