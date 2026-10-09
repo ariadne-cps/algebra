@@ -327,11 +327,21 @@ Void TestPolynomial::test_evaluate_horner()
     ARIADNE_TEST_FAIL((void)horner_evaluate(univariate_unordered,X(2u,dp)))
 
     UnivariatePolynomial<X> u=UnivariatePolynomial<X>::coordinate(SizeOne(),IndexZero(),dp);
+    auto univariate_polynomial_zero=horner_evaluate(univariate_empty,u);
+    ARIADNE_TEST_EQUALS(univariate_polynomial_zero.number_of_terms(),0u)
+    auto univariate_polynomial_value=horner_evaluate(univariate_ordered,u);
+    ARIADNE_TEST_EQUAL(univariate_polynomial_value,u*u+X(3u,dp))
+
+    HornerPolynomial m0=HornerPolynomial::coordinate(2u,0u,dp);
+    auto multivariate_polynomial_zero=horner_evaluate(univariate_empty,m0);
+    ARIADNE_TEST_EQUALS(multivariate_polynomial_zero.number_of_terms(),0u)
+    auto multivariate_polynomial_value=horner_evaluate(univariate_ordered,m0);
+    ARIADNE_TEST_EQUAL(multivariate_polynomial_value,m0*m0+X(3u,dp))
+
     Vector<UnivariatePolynomial<X>> uq({u,u});
     MultivariatePolynomial<X> q2({ {{1,0},1.0_x}, {{0,1},1.0_x}, {{0,0},1.0_x} },dp);
     ARIADNE_TEST_EXECUTE(compose(q2,uq))
 
-    HornerPolynomial m0=HornerPolynomial::coordinate(2u,0u,dp);
     HornerPolynomial m1=HornerPolynomial::coordinate(2u,1u,dp);
     Vector<HornerPolynomial> mq({m0,m1});
     ARIADNE_TEST_EXECUTE(compose(q2,mq))
