@@ -245,7 +245,7 @@ template<class I, class X>Void combine_terms(Expansion<I,X>& e) {
         }
         e.resize(static_cast<SizeType>(curr-begin));
     } else {
-        ARIADNE_ASSERT_MSG(false, "Cannot combine terms of an expansion if the coefficients do not support inplace addition.");
+        throw std::runtime_error("Cannot combine terms of an expansion if the coefficients do not support inplace addition.");
     }
 }
 
@@ -589,8 +589,9 @@ template<class I, class X, class CMP> Void SortedExpansion<I,X,CMP>::insert(cons
     if (iter==this->end() || iter->index()!=a) {
         iter=this->Expansion<I,X>::insert(iter,a,c);
     } else {
-        ARIADNE_THROW(std::runtime_error,"Expansion<I,X>::set(const I& a, const X& c):\n    e="<<*this,
-                      " Index "<<a<<" already has a coefficient.");
+        StringStream message;
+        message << "SortedExpansion<I,X,CMP>::insert: index " << a << " already has a coefficient in " << *this;
+        throw std::runtime_error(message.str());
     }
 }
 

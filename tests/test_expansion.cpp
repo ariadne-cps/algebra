@@ -661,6 +661,11 @@ Void test_sorted_equality_edge_cases() {
     ARIADNE_TEST_ASSERT(!(two_variables==three_variables));
     ARIADNE_TEST_ASSERT(!(three_variables==two_variables));
 
+    two_variables.insert(MultiIndex({1u,0u}),RoundedFloatDP(2,dp));
+    E original=two_variables;
+    ARIADNE_TEST_THROWS(two_variables.insert(MultiIndex({1u,0u}),RoundedFloatDP(3,dp)),std::runtime_error);
+    ARIADNE_TEST_ASSERT(same(two_variables,original));
+
     using Grouped=SortedExpansion<MultiIndex,RoundedFloatDP,DegreeIndexLess>;
     for(Int left_value=0; left_value!=2; ++left_value) {
         for(Int right_value=0; right_value!=2; ++right_value) {
