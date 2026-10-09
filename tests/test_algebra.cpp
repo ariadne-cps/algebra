@@ -53,6 +53,21 @@ class ValidatedAlgebraInterfaceStub : public AlgebraInterface<ValidatedNumber> {
     OutputStream& _write(OutputStream& os) const override { return os << "ValidatedAlgebraInterfaceStub"; }
 };
 
+template<class X> class TranscendentalAlgebraInterfaceStub : public TranscendentalAlgebraInterface<X> {
+  public:
+    TranscendentalAlgebraInterface<X>* _create_copy() const override { return new TranscendentalAlgebraInterfaceStub(*this); }
+    TranscendentalAlgebraInterface<X>* _create_zero() const override { return new TranscendentalAlgebraInterfaceStub(*this); }
+    TranscendentalAlgebraInterface<X>* _create_constant(X const&) const override { return new TranscendentalAlgebraInterfaceStub(*this); }
+
+    TranscendentalAlgebraInterface<X>* _apply(BinaryFieldOperator,TranscendentalAlgebraInterface<X> const&) const override { return new TranscendentalAlgebraInterfaceStub(*this); }
+    TranscendentalAlgebraInterface<X>* _apply(BinaryFieldOperator,X const&) const override { return new TranscendentalAlgebraInterfaceStub(*this); }
+    TranscendentalAlgebraInterface<X>* _rapply(BinaryFieldOperator,X const&) const override { return new TranscendentalAlgebraInterfaceStub(*this); }
+    TranscendentalAlgebraInterface<X>* _apply(UnaryTranscendentalOperator) const override { return new TranscendentalAlgebraInterfaceStub(*this); }
+    TranscendentalAlgebraInterface<X>* _apply(GradedFieldOperator,Int) const override { return new TranscendentalAlgebraInterfaceStub(*this); }
+
+    OutputStream& _write(OutputStream& os) const override { return os << "TranscendentalAlgebraInterfaceStub"; }
+};
+
 } // namespace
 
 class TestAlgebra {
@@ -138,8 +153,7 @@ class TestAlgebra {
         ARIADNE_TEST_ASSIGN(dx,tax.extract<DX>());
         auto transcendental_wrapper=tax.extract<TranscendentalAlgebraWrapper<DX,X>>();
         ARIADNE_TEST_PRINT(transcendental_wrapper);
-        using OtherTranscendentalWrapper=TranscendentalAlgebraWrapper<UnivariateDifferential<X>,X>;
-        ARIADNE_TEST_FAIL(tax.extract<OtherTranscendentalWrapper>());
+        ARIADNE_TEST_FAIL(tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
         ARIADNE_TEST_FAIL(tax.extract<X>());
 
     }
