@@ -191,9 +191,15 @@ FwdIter unique_key(FwdIter first, FwdIter last, Op op) {
             curr->coefficient()=op(curr->coefficient(),next->coefficient());
             ++next;
         }
-        // Removes zero entries; the code below is preferred to the case "curr->coefficient()!=0" for ValidatedKleenean results
-        if(definitely(curr->coefficient()==0)) { }
-        else { ++curr; }
+        // ApproximateKleenean can never be definitely true, so approximate
+        // coefficient types cannot remove entries through this test.
+        using ZeroComparisonType=decltype(curr->coefficient()==0);
+        if constexpr (Same<ZeroComparisonType,ApproximateKleenean>) {
+            ++curr;
+        } else {
+            if(definitely(curr->coefficient()==0)) { }
+            else { ++curr; }
+        }
     }
     return curr;
 }
