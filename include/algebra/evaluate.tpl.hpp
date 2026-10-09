@@ -135,7 +135,7 @@ template<class X, class Y> ArithmeticType<X,Y> horner_evaluate(const Expansion<U
         c=iter->coefficient();
         // Since terms are ordered in reverse,
         // previous index must have higher value
-        assert(a>na);
+        ARIADNE_PRECONDITION(a>na);
         // Set r[k]=(((c+r[0])*x[0]^a[0]+r[1])*x[1]^a[1]+...+r[k])*x[k]^(a[k]-na[k])
         // Omit zero terms where possible
         for(SizeType ii=na; ii!=a; ++ii) {

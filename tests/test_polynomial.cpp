@@ -275,14 +275,14 @@ Void TestPolynomial::test_arithmetic()
 Void TestPolynomial::test_evaluate_horner()
 {
     using X=RoundedFloatDP;
-    using P=MultivariatePolynomial<X>;
+    using HornerPolynomial=MultivariatePolynomial<X>;
 
     Vector<X> v({2.0_x,3.0_x,5.0_x},dp);
 
-    P empty(3u,dp);
+    HornerPolynomial empty(3u,dp);
     ARIADNE_TEST_EQUALS(evaluate(empty,v),X(0u,dp))
 
-    P p({ {{2,0,2},1.0_x}, {{1,1,2},2.0_x}, {{0,2,1},3.0_x}, {{1,0,1},4.0_x},
+    HornerPolynomial p({ {{2,0,2},1.0_x}, {{1,1,2},2.0_x}, {{0,2,1},3.0_x}, {{1,0,1},4.0_x},
           {{0,1,0},5.0_x}, {{2,0,0},6.0_x}, {{0,0,0},7.0_x} },dp);
     X expected =
         X(1u,dp)*v[0]*v[0]*v[2]*v[2] +
@@ -298,19 +298,24 @@ Void TestPolynomial::test_evaluate_horner()
     ARIADNE_TEST_FAIL((void)evaluate(p,short_v))
 
     Expansion<MultiIndex,X> unordered(2u,dp);
-    unordered.append(MultiIndex({0u,1u}),X(1u,dp));
     unordered.append(MultiIndex({1u,0u}),X(1u,dp));
+    unordered.append(MultiIndex({0u,1u}),X(1u,dp));
     Vector<X> uv({2.0_x,3.0_x},dp);
     ARIADNE_TEST_FAIL((void)horner_evaluate(unordered,uv))
+
+    Expansion<UniIndex,X> univariate_unordered(SizeOne(),dp);
+    univariate_unordered.append(UniIndex(0u),X(1u,dp));
+    univariate_unordered.append(UniIndex(1u),X(1u,dp));
+    ARIADNE_TEST_FAIL((void)horner_evaluate(univariate_unordered,X(2u,dp)))
 
     UnivariatePolynomial<X> u=UnivariatePolynomial<X>::coordinate(SizeOne(),IndexZero(),dp);
     Vector<UnivariatePolynomial<X>> uq({u,u});
     MultivariatePolynomial<X> q2({ {{1,0},1.0_x}, {{0,1},1.0_x}, {{0,0},1.0_x} },dp);
     ARIADNE_TEST_EXECUTE(compose(q2,uq))
 
-    P m0=P::coordinate(2u,0u,dp);
-    P m1=P::coordinate(2u,1u,dp);
-    Vector<P> mq({m0,m1});
+    HornerPolynomial m0=HornerPolynomial::coordinate(2u,0u,dp);
+    HornerPolynomial m1=HornerPolynomial::coordinate(2u,1u,dp);
+    Vector<HornerPolynomial> mq({m0,m1});
     ARIADNE_TEST_EXECUTE(compose(q2,mq))
 }
 
