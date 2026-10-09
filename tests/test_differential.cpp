@@ -78,7 +78,7 @@ class TestDifferential {
         c1=ScalarType(3.0_x,pr);
         x1=DifferentialType(2,4,{{{0,0},2.0_x},{{1,0},1.0_x},{{2,0},0.5_x}},pr);
         x2=DifferentialType(2,4,{{{0,0},3.0_x},{{1,0},1.0_x},{{2,0},0.25_x}},pr);
-        x3=DifferentialType(1,4,{{{0,0},2.0_x},{{1,0},1.0_x},{{2,0},0.125_x}},pr);
+        x3=DifferentialType(1,4,{{{0},2.0_x},{{1},1.0_x},{{2},0.125_x}},pr);
 
         ARIADNE_TEST_PRINT(x1);
         ARIADNE_TEST_PRINT(x2);
