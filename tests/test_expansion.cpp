@@ -686,6 +686,24 @@ Void test_sorted_equality_edge_cases() {
     ARIADNE_TEST_EXECUTE((void)(reverse_second==reverse_first));
 
     using Grouped=SortedExpansion<MultiIndex,RoundedFloatDP,DegreeIndexLess>;
+    Grouped grouped_empty(2u,dp), grouped_three_variables(3u,dp);
+    ARIADNE_TEST_ASSERT(!(grouped_empty==grouped_three_variables));
+
+    // Unequal degrees must also compare correctly with this ordering,
+    // including unmatched zero and nonzero terms on either side.
+    Grouped lower_degree(2u,dp), higher_degree(2u,dp);
+    lower_degree.append(MultiIndex({1u,0u}),RoundedFloatDP(0,dp));
+    higher_degree.append(MultiIndex({2u,0u}),RoundedFloatDP(0,dp));
+    ARIADNE_TEST_ASSERT(lower_degree==higher_degree);
+    ARIADNE_TEST_ASSERT(higher_degree==lower_degree);
+    ARIADNE_TEST_ASSERT(lower_degree==grouped_empty);
+    ARIADNE_TEST_ASSERT(grouped_empty==lower_degree);
+    lower_degree.front().coefficient()=1;
+    ARIADNE_TEST_ASSERT(!(lower_degree==higher_degree));
+    ARIADNE_TEST_ASSERT(!(higher_degree==lower_degree));
+    ARIADNE_TEST_ASSERT(!(lower_degree==grouped_empty));
+    ARIADNE_TEST_ASSERT(!(grouped_empty==lower_degree));
+
     for(Int left_value=0; left_value!=2; ++left_value) {
         for(Int right_value=0; right_value!=2; ++right_value) {
             Grouped left(2u,dp), right(2u,dp);
@@ -770,6 +788,23 @@ Void test_univariate_expansion_assignment_instantiation(PR const& pr)
     ARIADNE_TEST_EQUALS(move_target.size(),1u);
 }
 
+template<class X, class PR>
+Void test_graded_check_instantiation(PR const& pr)
+{
+    using E=SortedExpansion<MultiIndex,X,GradedIndexLess>;
+    X one(1u,pr);
+
+    E sorted(2u,pr);
+    sorted.append(MultiIndex({0u,0u}),one);
+    sorted.append(MultiIndex({1u,0u}),one);
+    ARIADNE_TEST_EXECUTE(sorted.check());
+
+    E unsorted(2u,pr);
+    unsorted.append(MultiIndex({1u,0u}),one);
+    unsorted.append(MultiIndex({0u,0u}),one);
+    ARIADNE_TEST_THROWS(unsorted.check(),std::runtime_error);
+}
+
 Void test_unit_coefficient_output() {
     // Built-in doubles have decidable equality, so unit coefficients can be
     // omitted while unit constants must still be printed.
@@ -792,12 +827,33 @@ Void test_unit_coefficient_output() {
     ARIADNE_TEST_EQUALS(uni_stream.str(),String(" t -t^2 +1 +2*t^3"));
 }
 
+Void test_bounds_coefficient_output() {
+    // Singleton bounds can prove that a coefficient is exactly one, unlike
+    // approximate coefficients. Check omission, signs, constants and zero.
+    Expansion<MultiIndex,FloatDPBounds> expansion(2u,dp);
+    Array<String> names({"x","y"});
+    std::ostringstream empty_stream;
+    expansion._write(empty_stream,names);
+    ARIADNE_TEST_EQUALS(empty_stream.str(),String("0"));
+
+    FloatDPBounds one(1,dp), two(2,dp);
+    expansion.append(MultiIndex({1u,1u}),one);
+    expansion.append(MultiIndex({0u,2u}),FloatDPBounds(-1,dp));
+    expansion.append(MultiIndex({0u,0u}),one);
+    expansion.append(MultiIndex({1u,0u}),two);
+    std::ostringstream stream, expected;
+    expansion._write(stream,names);
+    expected << " x*y -y^2 +" << one << " +" << two << "*x";
+    ARIADNE_TEST_EQUALS(stream.str(),expected.str());
+}
+
 } // namespace
 
 Int main() {
     ARIADNE_TEST_CALL(test_sorted_equality_edge_cases());
     ARIADNE_TEST_CALL(test_exact_coefficient_helpers());
     ARIADNE_TEST_CALL(test_unit_coefficient_output());
+    ARIADNE_TEST_CALL(test_bounds_coefficient_output());
     {
         Expansion<MultiIndex,ExactDouble> exact_expansion({{{0u,0u},ExactDouble(1.0)},{{0u,0u},ExactDouble(2.0)}});
         ARIADNE_TEST_EXECUTE(exact_expansion.coefficient_characteristics());
@@ -865,6 +921,13 @@ Int main() {
 
     test_univariate_expansion_assignment_instantiation<FloatMPApproximation>(multiple_precision);
     test_univariate_expansion_assignment_instantiation<FloatMPBounds>(multiple_precision);
+
+    test_graded_check_instantiation<FloatDPApproximation>(double_precision);
+    test_graded_check_instantiation<FloatDPBounds>(double_precision);
+    test_graded_check_instantiation<FloatDPUpperInterval>(double_precision);
+    test_graded_check_instantiation<FloatMPApproximation>(multiple_precision);
+    test_graded_check_instantiation<FloatMPBounds>(multiple_precision);
+    test_graded_check_instantiation<FloatMPUpperInterval>(multiple_precision);
 
     {
         Expansion<MultiIndex,FloatDPUpperInterval> dp_upper_reserve(2u,double_precision);
