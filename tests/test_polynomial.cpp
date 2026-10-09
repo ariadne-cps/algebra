@@ -49,6 +49,7 @@ class TestPolynomial
     Void test_constructors();
     Void test_indexing();
     Void test_arithmetic();
+    Void test_evaluate_horner();
     Void test_variables();
     Void test_find();
 };
@@ -60,6 +61,7 @@ Void TestPolynomial::test()
     ARIADNE_TEST_CALL(test_constructors())
     ARIADNE_TEST_CALL(test_indexing())
     ARIADNE_TEST_CALL(test_arithmetic())
+    ARIADNE_TEST_CALL(test_evaluate_horner())
     ARIADNE_TEST_CALL(test_variables())
 
     ARIADNE_TEST_CALL(test_find())
@@ -268,6 +270,48 @@ Void TestPolynomial::test_arithmetic()
     ARIADNE_TEST_EQUALS(evaluate(8*y*y*(y*y-1)+1,w),8*w*w*(w*w-1)+1);
     ARIADNE_TEST_EQUALS(compose(2*y*y-1,x0),2*x0*x0-1);
      */
+}
+
+Void TestPolynomial::test_evaluate_horner()
+{
+    using X=RoundedFloatDP;
+    using P=MultivariatePolynomial<X>;
+
+    Vector<X> v({2.0_x,3.0_x,5.0_x},dp);
+
+    P empty(3u,dp);
+    ARIADNE_TEST_EQUALS(evaluate(empty,v),X(0u,dp))
+
+    P p({ {{2,0,2},1.0_x}, {{1,1,2},2.0_x}, {{0,2,1},3.0_x}, {{1,0,1},4.0_x},
+          {{0,1,0},5.0_x}, {{2,0,0},6.0_x}, {{0,0,0},7.0_x} },dp);
+    X expected =
+        X(1u,dp)*v[0]*v[0]*v[2]*v[2] +
+        X(2u,dp)*v[0]*v[1]*v[2]*v[2] +
+        X(3u,dp)*v[1]*v[1]*v[2] +
+        X(4u,dp)*v[0]*v[2] +
+        X(5u,dp)*v[1] +
+        X(6u,dp)*v[0]*v[0] +
+        X(7u,dp);
+    ARIADNE_TEST_EQUALS(evaluate(p,v),expected)
+
+    Vector<X> short_v({2.0_x,3.0_x},dp);
+    ARIADNE_TEST_FAIL((void)evaluate(p,short_v))
+
+    Expansion<MultiIndex,X> unordered(2u,dp);
+    unordered.append(MultiIndex({0u,1u}),X(1u,dp));
+    unordered.append(MultiIndex({1u,0u}),X(1u,dp));
+    Vector<X> uv({2.0_x,3.0_x},dp);
+    ARIADNE_TEST_FAIL((void)horner_evaluate(unordered,uv))
+
+    UnivariatePolynomial<X> u=UnivariatePolynomial<X>::coordinate(SizeOne(),IndexZero(),dp);
+    Vector<UnivariatePolynomial<X>> uq({u,u});
+    MultivariatePolynomial<X> q2({ {{1,0},1.0_x}, {{0,1},1.0_x}, {{0,0},1.0_x} },dp);
+    ARIADNE_TEST_EXECUTE(compose(q2,uq))
+
+    P m0=P::coordinate(2u,0u,dp);
+    P m1=P::coordinate(2u,1u,dp);
+    Vector<P> mq({m0,m1});
+    ARIADNE_TEST_EXECUTE(compose(q2,mq))
 }
 
 Void TestPolynomial::test_variables()

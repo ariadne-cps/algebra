@@ -49,6 +49,7 @@ template<class X, class Y> ArithmeticType<X,Y> horner_evaluate(const Expansion<M
     typedef typename Expansion<MultiIndex,X>::ConstIterator ConstIterator;
     typedef ArithmeticType<X,Y> R;
     const SizeType n=e.argument_size();
+    ARIADNE_PRECONDITION(x.size()==n);
     const R z(e.zero_coefficient()*x.zero_element()); // The zero element of the ring Y
     if(e.number_of_nonzeros()==0) { return z; }
 
@@ -68,7 +69,7 @@ template<class X, class Y> ArithmeticType<X,Y> horner_evaluate(const Expansion<M
         while(a[k]==na[k]) { --k; }
         // Since terms are ordered reverse-lexicographically,
         // previous index must have higher kth value
-        assert(a[k]>na[k]);
+        ARIADNE_PRECONDITION(a[k]>na[k]);
         // Set r[k]=(((c+r[0])*x[0]^a[0]+r[1])*x[1]^a[1]+...+r[k])*x[k]^(a[k]-na[k])
         // Omit zero terms where possible
         t=c;
