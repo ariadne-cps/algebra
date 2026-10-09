@@ -118,6 +118,12 @@ class TestGraded
         std::ostringstream generic_stream;
         ARIADNE_TEST_EXECUTE(generic_stream << copied);
 
+        Graded<X> generic_high_degree({coefficient_one,coefficient_two,coefficient_one});
+        std::ostringstream generic_high_degree_stream;
+        ARIADNE_TEST_EXECUTE(generic_high_degree._write(generic_high_degree_stream));
+
+        ARIADNE_TEST_FAIL(Graded<X>::variable(coefficient_one,0u));
+
         Graded<X> generic_empty(pr);
         std::ostringstream generic_empty_stream;
         ARIADNE_TEST_EXECUTE(generic_empty._write(generic_empty_stream));
@@ -144,6 +150,27 @@ class TestGraded
         raw_nonzero.extend(FloatDP(1,dp));
         std::ostringstream raw_nonzero_stream;
         ARIADNE_TEST_EXECUTE(raw_nonzero._write(raw_nonzero_stream));
+
+        Graded<FloatDP> raw_negative_linear(FloatDP(0,dp));
+        raw_negative_linear.extend(FloatDP(-1,dp));
+        std::ostringstream raw_negative_linear_stream;
+        ARIADNE_TEST_EXECUTE(raw_negative_linear._write(raw_negative_linear_stream));
+
+        Graded<FloatDP> raw_all_zero(FloatDP(0,dp));
+        raw_all_zero.extend(FloatDP(0,dp));
+        std::ostringstream raw_all_zero_stream;
+        ARIADNE_TEST_EXECUTE(raw_all_zero._write(raw_all_zero_stream));
+
+        Graded<X> invalid_argument({coefficient_one,coefficient_two});
+        Graded<X> invalid_result({coefficient_one,coefficient_two});
+        ARIADNE_TEST_FAIL(sqr(invalid_result,invalid_argument));
+        ARIADNE_TEST_FAIL(rec(invalid_result,invalid_argument));
+        ARIADNE_TEST_FAIL(pow(invalid_result,invalid_argument,2));
+        ARIADNE_TEST_FAIL(sqrt(invalid_result,invalid_argument));
+        ARIADNE_TEST_FAIL(exp(invalid_result,invalid_argument));
+        ARIADNE_TEST_FAIL(log(invalid_result,invalid_argument));
+        ARIADNE_TEST_FAIL(sin(invalid_result,invalid_argument));
+        ARIADNE_TEST_FAIL(cos(invalid_result,invalid_argument));
 
         ARIADNE_TEST_EXECUTE((void)coefficient_minus_one);
         ARIADNE_TEST_EXECUTE((void)coefficient_minus_two);

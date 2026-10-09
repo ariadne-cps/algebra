@@ -111,7 +111,7 @@ template<class A> class Graded : public UniformList<A>
     static Graded<A> constant(A const& c, DegreeType deg) {
         assert(deg>=1); A z=nul(c); Graded<A> r(c); for(DegreeType d=1; d<=deg; ++d) { r.append(z); } return r; }
     static Graded<A> variable(A const& a0, DegreeType deg) {
-        assert(deg>=1); A z=nul(a0); Graded<A> r(a0); r.append(z+1);
+        ARIADNE_PRECONDITION(deg>=1); A z=nul(a0); Graded<A> r(a0); r.append(z+1);
         for(DegreeType d=2; d<=deg; ++d) { r.append(z); } return r; }
     Graded<A> create_zero() const { return Graded<A>(UniformList<A>(this->degree()+1u, Ariadne::create_zero((*this)[0u]))); }
 //    CharacteristicsType characteristics() const {
@@ -283,7 +283,7 @@ template<class A> Void pos(Graded<A>& r, const Graded<A>& a) {
 }
 
 template<class A> Void neg(Graded<A>& r, const Graded<A>& a) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     r.append(-a.back());
 }
 
@@ -329,7 +329,7 @@ template<class A> Void div(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a
 }
 
 template<class A> Void sqr(Graded<A>& r, const Graded<A>& a) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     r.append(create(a[0]));
     DegreeType d = r.degree();
     for(DegreeType i=0; i<=d; ++i) {
@@ -338,7 +338,7 @@ template<class A> Void sqr(Graded<A>& r, const Graded<A>& a) {
 }
 
 template<class A> Void rec(Graded<A>& r, const Graded<A>& a) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     r.append(create(a[0]));
     DegreeType d = r.degree();
     if(d==0) { r[d]=rec(a[0]); return; }
@@ -350,7 +350,7 @@ template<class A> Void rec(Graded<A>& r, const Graded<A>& a) {
 
 // Use formula d*a[0]*r[d] = sum_{i=0}^{d-1} ((d-i)*n-i)*a[d-i]*r[i] for d>0
 template<class A> Void pow(Graded<A>& r, const Graded<A>& a, Int n) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     r.append(create(a[0]));
     DegreeType d = r.degree();
     if(d==0u) { r[d]=pow(a[0],n); return; }
@@ -361,7 +361,7 @@ template<class A> Void pow(Graded<A>& r, const Graded<A>& a, Int n) {
 }
 
 template<class A> Void sqrt(Graded<A>& r, const Graded<A>& a) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     r.append(create(a[0]));
     DegreeType d = r.degree();
     if(d==0) { r[d]=sqrt(a[0]); return; }
@@ -373,7 +373,7 @@ template<class A> Void sqrt(Graded<A>& r, const Graded<A>& a) {
 }
 
 template<class A> Void exp(Graded<A>& r, const Graded<A>& a) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     r.append(create(a[0]));
     DegreeType d = r.degree();
     if(d==0) { r[d]+=exp(a[0]); return; }
@@ -385,7 +385,7 @@ template<class A> Void exp(Graded<A>& r, const Graded<A>& a) {
 
 template<class A> Void log(Graded<A>& r, const Graded<A>& a) {
     // y=log x; r=1/x; s=r^2;
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     r.append(create(a[0]));
     DegreeType d = r.degree();
     if(d==0) { r[d]=log(a[0]); return; }
@@ -448,7 +448,7 @@ template<class A> Void sincos(Graded<A>& s, Graded<A>& c, const Graded<A>& a) {
 }
 
 template<class A> Void sin(Graded<A>& r, const Graded<A>& a) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     Graded<A> s(a.characteristics());
     Graded<A> c(a.characteristics());
     sincos(s,c,a);
@@ -456,7 +456,7 @@ template<class A> Void sin(Graded<A>& r, const Graded<A>& a) {
 }
 
 template<class A> Void cos(Graded<A>& r, const Graded<A>& a) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     Graded<A> s(a.characteristics());
     Graded<A> c(a.characteristics());
     sincos(s,c,a);
@@ -468,7 +468,7 @@ template<class A> Void tan(Graded<A>&, const Graded<A>&) {
 }
 
 template<class A> Void tanh(Graded<A>& r, const Graded<A>& a) {
-    ARIADNE_ASSERT(r.size()+1u <= a.size());
+    ARIADNE_PRECONDITION(r.size()+1u <= a.size());
     r.append(create(a[0]));
     DegreeType d=r.degree();
     if(d==0u) { r[0]=tanh(a[0]); return; }
