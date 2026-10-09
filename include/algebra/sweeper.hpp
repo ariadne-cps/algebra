@@ -189,9 +189,9 @@ template<class F> class ThresholdSweeper : public SweeperMixin<ThresholdSweeper<
     F _sweep_threshold;
   public:
     ThresholdSweeper(PR precision, F sweep_threshold)
-        : _coefficient_precision(precision), _sweep_threshold(sweep_threshold) { ARIADNE_ASSERT(sweep_threshold>=0); }
+        : _coefficient_precision(precision), _sweep_threshold(sweep_threshold) { ARIADNE_PRECONDITION(sweep_threshold>=0); }
     ThresholdSweeper(PR precision, ApproximateDouble sweep_threshold)
-        : _coefficient_precision(precision), _sweep_threshold(cast_exact(sweep_threshold),precision) { ARIADNE_ASSERT(cast_exact(sweep_threshold)>=0); }
+        : _coefficient_precision(precision), _sweep_threshold(cast_exact(sweep_threshold),precision) { ARIADNE_PRECONDITION(cast_exact(sweep_threshold)>=0); }
     inline PR precision() const { return _coefficient_precision; }
     inline F sweep_threshold() const { return _sweep_threshold; }
     inline Bool discard(const MultiIndex&, const F& x) const { return abs(x) < this->_sweep_threshold; }
@@ -213,8 +213,8 @@ template<class F> class DegreeThresholdSweeper : public SweeperMixin<DegreeThres
           _degree_cutoff(degree_cutoff),
           _low_degree_threshold(low_degree_threshold),
           _high_degree_threshold(high_degree_threshold) {
-        ARIADNE_ASSERT(low_degree_threshold>=0);
-        ARIADNE_ASSERT(high_degree_threshold>=0);
+        ARIADNE_PRECONDITION(low_degree_threshold>=0);
+        ARIADNE_PRECONDITION(high_degree_threshold>=0);
     }
     inline PR precision() const { return _coefficient_precision; }
     inline Bool discard(const MultiIndex& a, const F& x) const {
@@ -234,7 +234,7 @@ template<class F> class RelativeThresholdSweeper : public RelativeSweeperMixin<R
     F _relative_sweep_threshold;
   public:
     RelativeThresholdSweeper(PR precision, F relative_sweep_threshold)
-        : _coefficient_precision(precision), _relative_sweep_threshold(relative_sweep_threshold) { ARIADNE_ASSERT(relative_sweep_threshold>0); }
+        : _coefficient_precision(precision), _relative_sweep_threshold(relative_sweep_threshold) { ARIADNE_PRECONDITION(relative_sweep_threshold>0); }
     inline PR precision() const { return _coefficient_precision; }
     inline F relative_sweep_threshold() const { return _relative_sweep_threshold; }
     inline Bool discard(const F& x, const F& nrm) const { return abs(x) < mul(approx,this->_relative_sweep_threshold,nrm); }
@@ -302,7 +302,7 @@ template<class F> class GradedThresholdSweeper : public SweeperMixin<GradedThres
     F _sweep_threshold;
 public:
     GradedThresholdSweeper(PR precision, DegreeType degree, F sweep_threshold)
-            : _coefficient_precision(precision), _sweep_threshold(sweep_threshold), _degree(degree) { ARIADNE_ASSERT(sweep_threshold>=0); }
+            : _coefficient_precision(precision), _sweep_threshold(sweep_threshold), _degree(degree) { ARIADNE_PRECONDITION(sweep_threshold>=0); }
     DegreeType degree() const { return this->_degree; }
     inline F sweep_threshold() const { return _sweep_threshold; }
     inline PR precision() const { return _coefficient_precision; }

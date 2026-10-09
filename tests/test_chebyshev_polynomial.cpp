@@ -229,6 +229,25 @@ Int main() {
     ARIADNE_TEST_PRINT(sweeper_mp.precision());
     ARIADNE_TEST_PRINT(sweeper_mp);
 
+    ARIADNE_TEST_FAIL((void)ThresholdSweeper<FloatDP>(dp,-1e-8));
+
+    Sweeper<FloatDP> default_dp_sweeper;
+    Sweeper<FloatMP> default_mp_sweeper;
+    ARIADNE_TEST_PRINT(default_dp_sweeper.precision());
+    ARIADNE_TEST_PRINT(default_mp_sweeper.precision());
+
+    Sweeper<FloatDP> threshold_base(sweeper_dp);
+    Sweeper<FloatDP> threshold_copy(threshold_base);
+    ARIADNE_TEST_PRINT(threshold_copy.precision());
+
+    Expansion<MultiIndex,FloatDP> sweep_terms(1u,dp);
+    sweep_terms.append(MultiIndex({0u}),FloatDP(0u,dp));
+    sweep_terms.append(MultiIndex({1u}),FloatDP(1u,dp));
+    FloatDPError sweep_error(0u,dp);
+    ARIADNE_TEST_EXECUTE(threshold_copy.sweep(sweep_terms,sweep_error));
+    ARIADNE_TEST_EQUALS(sweep_terms.size(),1u);
+    ARIADNE_TEST_EQUALS(sweep_terms.front().coefficient(),FloatDP(1u,dp));
+
     return ARIADNE_TEST_FAILURES;
 }
 
