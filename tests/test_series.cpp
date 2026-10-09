@@ -22,6 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <sstream>
+
 #include "numeric/numeric.hpp"
 #include "algebra/series.hpp"
 
@@ -70,6 +72,7 @@ template<class X> class TestSeries
 
     void test() {
         ARIADNE_TEST_CALL(test_class());
+        ARIADNE_TEST_CALL(test_basic_operators());
         ARIADNE_TEST_CALL(test_rec());
         ARIADNE_TEST_CALL(test_sqrt());
         ARIADNE_TEST_CALL(test_exp());
@@ -88,6 +91,19 @@ template<class X> class TestSeries
 //        ARIADNE_TEST_EQUALS(series[32767],1.0);
         std::cerr<<std::setprecision(18);
     }
+    void test_basic_operators() {
+        const X zero(0,pr), one(1,pr), two(2,pr);
+
+        ARIADNE_TEST_EQUALS(Series<X>(Pos(),two).coefficients(2),
+                            (List<X>{two,one,zero}));
+        ARIADNE_TEST_EQUALS(Series<X>(Neg(),two).coefficients(2),
+                            (List<X>{-two,-one,zero}));
+
+        ARIADNE_TEST_FAIL((void)Series<X>(Asin(),zero)[0]);
+        ARIADNE_TEST_FAIL((void)Series<X>(Acos(),zero)[0]);
+        ARIADNE_TEST_FAIL((void)Series<X>(Abs(),zero)[0]);
+    }
+
     void test_rec() {
         ARIADNE_TEST_EQUALS(Series<X>(Rec(),X(2.0_x,pr)).coefficients(5), (List<Q>{0.5_q,-0.25_q,0.125_q,-0.0625_q,0.03125_q,-0.015625_q}) );
         ARIADNE_TEST_EQUALS(Series<X>(Rec(),X(1.0_x,pr)).coefficients(5), (List<Q>{1.0_q,-1.0_q,1.0_q,-1.0_q,1.0_q,-1.0_q}) );
@@ -145,6 +161,21 @@ template<class X> class TestSeries
 
 Int main() {
     TestSeries<RoundedFloatDP>(dp).test();
+
+    AnalyticFunction analytic_exp{Exp()};
+    FloatDPApproximation approximate_c={1.0_x,dp};
+    FloatDPBounds validated_c(1.0_x,dp);
+    FloatDP exact_c(1.0_x,dp);
+
+    auto approximate_series=analytic_exp.series(approximate_c);
+    auto validated_series=analytic_exp.series(validated_c);
+    auto exact_series=analytic_exp.series(exact_c);
+    ARIADNE_TEST_EXECUTE((void)approximate_series[0]);
+    ARIADNE_TEST_EXECUTE((void)validated_series[0]);
+    ARIADNE_TEST_EXECUTE((void)exact_series[0]);
+
+    std::ostringstream analytic_stream;
+    ARIADNE_TEST_EXECUTE(analytic_stream << analytic_exp);
 
     return ARIADNE_TEST_FAILURES;
 }
