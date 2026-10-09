@@ -208,7 +208,7 @@ template<class X> auto
 UnivariateChebyshevPolynomial<X>::_write(OutputStream& os) const -> OutputStream& {
     for (auto term : this->_terms) {
         String c = to_str(term.coefficient());
-        if (c[0]!='-') { os << "+"; }
+        if (c.find('-')>=c.find_first_of("0123456789")) { os << "+"; }
         os << c << "*T" << term.index();
     }
     return os;
@@ -431,7 +431,7 @@ MultivariateChebyshevPolynomial<X>::_write(OutputStream& os) const -> OutputStre
     for (auto term_iter = this->_terms.begin(); term_iter!=this->_terms.end(); ++term_iter) {
         auto const& term = *term_iter;
         String cs = to_str(term.coefficient());
-        if (cs[0]!='-' && term_iter!=this->_terms.begin()) { os << "+"; }
+        if (cs.find('-')>=cs.find_first_of("0123456789") && term_iter!=this->_terms.begin()) { os << "+"; }
         os << cs;
         for (SizeType i=0; i!=this->argument_size(); ++i) { if (term.index()[i]!=0) { os << "*T" << term.index()[i] << "(x" << i << ")"; } }
     }
