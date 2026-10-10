@@ -48,12 +48,7 @@ ariadne_register_public_headers(
 
 setup_project_library(
     TARGET ariadne-algebra
-    OBJECTS
-        ALGEBRA_SRC
-        INTERVAL_SRC
-        NUMERIC_SRC
-        FOUNDATION_SRC
-        UTILITY_SRC
+    OBJECTS ALGEBRA_SRC
     LINK_LIBRARIES algebra
 )
 
