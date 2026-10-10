@@ -205,14 +205,14 @@ template<class A> A NormedAlgebraOperations<A>::apply(Sqrt, const A& x)
     Series<X> sqrt_series=Series<X>(Sqrt(),X(1,pr));
     Nat d=integer_cast<Nat>(log((1-eps)*tol)/log(eps)+1);
     
-    auto trunc_err=pow(eps,d)/cast_positive(1-eps)*mag(sqrt_series[d]);
+    auto trunc_err=pow(eps,d)/cast_positive(1-eps)*mag(sqrt_series[integer_cast<DegreeType>(d)]);
     ARIADNE_DEBUG_ASSERT(0<=trunc_err.raw());
 
     A y=x/avg-1;
     A z=x.create();
-    z+=sqrt_series[d-1];
+    z+=sqrt_series[integer_cast<DegreeType>(d-1)];
     for(Nat i=0; i!=d; ++i) {
-        z=sqrt_series[d-i-1] + z * y;
+        z=sqrt_series[integer_cast<DegreeType>(d-i-1)] + z * y;
     }
     z+=z.create_ball(trunc_err);
     z*=sqrt(avg);
