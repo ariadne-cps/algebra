@@ -817,8 +817,6 @@ Vector<X>::Vector(InitializerList<Dbl> const& lst, PRS... prs)
 
 #include "numeric/float.decl.hpp"
 namespace Ariadne {
-inline Vector<FloatDP>const& cast_exact(Vector<FloatDPApproximation>const& v) {
-    return reinterpret_cast<Vector<FloatDP>const&>(v); }
 //template<class T> concept HasMemberCharacteristics = requires (T const& t) { t.characteristics(); };
 
 inline decltype(auto) characteristics(Rational const&) { return Tuple<>(); }

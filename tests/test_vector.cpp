@@ -77,6 +77,9 @@ constexpr bool check_concept()
 }
 
 static_assert(check_concept());
+static_assert(Same<
+    decltype(cast_exact(declval<Vector<FloatDPApproximation> const&>())),
+    Vector<FloatDP>>);
 
 } // namespace
 
@@ -273,7 +276,11 @@ TestVector::test_misc()
     cout << iv1 << " = " << iv2 << " / " << ix << endl;
     cout << endl;
 
-    Vector<FloatDP> ev1(cast_exact(v1));
+    Vector<FloatDP> ev1=cast_exact(v1);
+    ARIADNE_TEST_EQUALS(ev1.size(),v1.size());
+    for(SizeType i=0; i!=v1.size(); ++i) {
+        ARIADNE_TEST_EQUAL(ev1[i],v1[i].raw());
+    }
     FloatDP ex(x.raw());
     iv0=iv1+ev1;
     cout << iv0 << " = " << iv1 << " + " << ev1 << endl;
