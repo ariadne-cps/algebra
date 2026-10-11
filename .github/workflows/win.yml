@@ -49,21 +49,21 @@ jobs:
       uses: actions/cache/restore@v4
       with:
         path: ${{ github.workspace }}/.vcpkg-cache
-        key: vcpkg-windows-release-${{ env.VCPKG_REV }}-${{ hashFiles('submodules/interval/submodules/numeric/cmake/triplets/x64-windows-release.cmake') }}
+        key: vcpkg-windows-release-${{ env.VCPKG_REV }}-${{ hashFiles('ss/interval/ss/numeric/cmake/triplets/x64-windows-release.cmake') }}
         restore-keys: |
           vcpkg-windows-release-${{ env.VCPKG_REV }}-
 
     - name: Install GMP and MPFR with vcpkg
       shell: pwsh
       run: |
-        & C:/vcpkg/vcpkg.exe install gmp:x64-windows-release mpfr:x64-windows-release --host-triplet=x64-windows-release --overlay-triplets="$env:GITHUB_WORKSPACE/submodules/interval/submodules/numeric/cmake/triplets"
+        & C:/vcpkg/vcpkg.exe install gmp:x64-windows-release mpfr:x64-windows-release --host-triplet=x64-windows-release --overlay-triplets="$env:GITHUB_WORKSPACE/ss/interval/ss/numeric/cmake/triplets"
 
     - name: Save vcpkg binary cache
       if: steps.vcpkg-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
         path: ${{ github.workspace }}/.vcpkg-cache
-        key: vcpkg-windows-release-${{ env.VCPKG_REV }}-${{ hashFiles('submodules/interval/submodules/numeric/cmake/triplets/x64-windows-release.cmake') }}
+        key: vcpkg-windows-release-${{ env.VCPKG_REV }}-${{ hashFiles('ss/interval/ss/numeric/cmake/triplets/x64-windows-release.cmake') }}
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{ runner.workspace }}/build
