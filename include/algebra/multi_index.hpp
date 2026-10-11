@@ -33,7 +33,7 @@
 #include <initializer_list>
 #include <iostream>
 
-#include "utility/macros.hpp"
+#include "macro/general.hpp"
 #include "utility/array.hpp"
 #include "utility/container.hpp"
 #include "utility/uniform_list.hpp"

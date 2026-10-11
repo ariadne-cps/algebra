@@ -25,7 +25,7 @@
 #include "numeric/numeric.hpp"
 #include "algebra/graded.hpp"
 
-#include "utility/test.hpp"
+#include "macro/testing.hpp"
 
 namespace Ariadne {
 

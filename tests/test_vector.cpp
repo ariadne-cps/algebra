@@ -32,7 +32,7 @@
 #include "algebra/covector.hpp"
 #include "interval/interval.hpp"
 
-#include "utility/test.hpp"
+#include "macro/testing.hpp"
 
 using namespace std;
 using namespace Ariadne;

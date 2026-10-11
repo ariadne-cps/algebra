@@ -29,7 +29,7 @@
 #ifndef ARIADNE_SWEEPER_HPP
 #define ARIADNE_SWEEPER_HPP
 
-#include "utility/macros.hpp"
+#include "macro/general.hpp"
 #include "numeric/float.decl.hpp"
 #include "interval/interval.decl.hpp"
 #include "algebra/multi_index.hpp"

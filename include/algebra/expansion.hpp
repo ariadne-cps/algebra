@@ -36,7 +36,7 @@
 
 #include "utility/typedefs.hpp"
 #include "utility/iterator.hpp"
-#include "utility/macros.hpp"
+#include "macro/general.hpp"
 
 namespace Ariadne {
 

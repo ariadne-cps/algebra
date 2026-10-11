@@ -27,7 +27,7 @@
 
 #include "algebra/multi_index.hpp"
 
-#include "utility/test.hpp"
+#include "macro/testing.hpp"
 
 using namespace std;
 using namespace Ariadne;

@@ -26,7 +26,7 @@
 #include "algebra/differential.hpp"
 #include "algebra/univariate_differential.tpl.hpp"
 
-#include "utility/test.hpp"
+#include "macro/testing.hpp"
 
 using namespace Ariadne;
 

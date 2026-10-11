@@ -27,7 +27,7 @@
 #include "numeric/numeric.hpp"
 #include "algebra/series.hpp"
 
-#include "utility/test.hpp"
+#include "macro/testing.hpp"
 
 namespace Ariadne {
 

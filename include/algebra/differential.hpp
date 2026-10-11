@@ -31,7 +31,7 @@
 
 #include <map>
 
-#include "utility/macros.hpp"
+#include "macro/general.hpp"
 #include "utility/array.hpp"
 #include "numeric/number.decl.hpp"
 #include "numeric/float.decl.hpp"

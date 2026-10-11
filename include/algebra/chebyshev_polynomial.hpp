@@ -31,7 +31,7 @@
 #include <map>
 #include <functional>
 
-#include "utility/macros.hpp"
+#include "macro/general.hpp"
 #include "utility/typedefs.hpp"
 #include "utility/array.hpp"
 #include "utility/pointer.hpp"

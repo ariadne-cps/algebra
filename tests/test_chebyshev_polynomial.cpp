@@ -37,7 +37,7 @@
 #include "algebra/chebyshev_polynomial.tpl.hpp"
 
 
-#include "utility/test.hpp"
+#include "macro/testing.hpp"
 
 using std::cout; using std::cerr; using std::endl;
 using namespace Ariadne;

@@ -31,7 +31,7 @@
 #include <cmath>
 #include <limits>
 
-#include "utility/macros.hpp"
+#include "macro/general.hpp"
 #include "utility/array.hpp"
 #include "numeric/numeric.hpp"
 #include "algebra/vector.hpp"

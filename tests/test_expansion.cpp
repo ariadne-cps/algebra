@@ -31,7 +31,7 @@
 #include "interval/interval.hpp"
 #include "algebra/expansion.tpl.hpp"
 
-#include "utility/test.hpp"
+#include "macro/testing.hpp"
 
 using namespace std;
 using namespace Ariadne;

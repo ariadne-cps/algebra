@@ -32,7 +32,7 @@
 #include <initializer_list>
 
 #include "utility/metaprogramming.hpp"
-#include "utility/macros.hpp"
+#include "macro/general.hpp"
 #include "vector.hpp"
 
 namespace Ariadne {
