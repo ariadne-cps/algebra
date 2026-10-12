@@ -26,9 +26,7 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-if(NOT TARGET interval)
-    add_subdirectory(ss)
-endif()
+add_subdirectory(ss)
 
 add_library(algebra INTERFACE)
 target_include_directories(algebra INTERFACE
