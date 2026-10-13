@@ -99,9 +99,9 @@ jobs:
         PYTHONPATH: ${{ runner.workspace }}/build/python
       run: python tutorial_algebra.py
 
-    - name: Verify Final Installation
+    - name: Verify Uninstallation
       working-directory: ${{ runner.workspace }}/build
-      run: cmake --install . --prefix ${{ runner.workspace }}/verify-install
+      run: cmake --build . --target uninstall
 
 
   thread-sanitizer:
