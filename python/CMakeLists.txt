@@ -13,7 +13,7 @@ if(Python3_FOUND)
 
     if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
         pybind11_add_module(pyariadne
-            $<TARGET_OBJECTS:pyariadne-algebra-module-obj>
+            $<TARGET_OBJECTS:pyariadne-algebra-entry-obj>
             $<TARGET_OBJECTS:ALGEBRA_SRC>
             $<TARGET_OBJECTS:INTERVAL_SRC>
             $<TARGET_OBJECTS:NUMERIC_SRC>

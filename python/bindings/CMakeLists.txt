@@ -38,16 +38,7 @@ target_link_libraries(pyariadne-algebra INTERFACE
     pyariadne-interval
 )
 
-if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
-    add_library(pyariadne-algebra-module-obj OBJECT
-        algebra_module.cpp
-    )
-    target_include_directories(pyariadne-algebra-module-obj PRIVATE
-        "${PYTHON_COMMON_SOURCE_DIR}/include"
-    )
-    target_link_libraries(pyariadne-algebra-module-obj PRIVATE
-        pyariadne-python-common
-        pybind11::module
-    )
-    set_target_properties(pyariadne-algebra-module-obj PROPERTIES POSITION_INDEPENDENT_CODE ON)
-endif()
+ariadne_add_python_module(
+    NAME algebra
+    MODULE_SOURCE algebra_module.cpp
+)
