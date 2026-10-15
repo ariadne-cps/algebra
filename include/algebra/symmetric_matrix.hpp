@@ -496,6 +496,65 @@ ValidatedPositiveDefiniteSolveResult<Vector<FloatDPBounds>>
 validated_positive_definite_solve(
     const SymmetricMatrix<FloatDPBounds>& A,
     const Vector<FloatDPBounds>& b);
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Classification of an attempted validated equality-constrained KKT solve.
+//! \details SOLVED means that the returned enclosures contain the unique
+//! primal-dual solution for every represented real problem. The two
+//! precondition-failure states do not assert that an arbitrary KKT system
+//! is inconsistent; INDETERMINATE means no applicable certificate was found.
+enum class ValidatedKktStatus {
+    SOLVED,                          //!< All admissible KKT systems have a unique enclosed solution.
+    HESSIAN_NOT_POSITIVE_DEFINITE,  //!< No represented Hessian is strictly positive definite.
+    DEPENDENT_CONSTRAINTS,          //!< Every represented constraint matrix has dependent rows.
+    INDETERMINATE                   //!< Positive definiteness or full row rank could not be certified.
+};
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Validated primal and dual enclosures for an equality-constrained KKT system.
+//! \details Both optional vectors are present iff status==SOLVED.
+//! Otherwise no validated primal-dual pair is returned.
+struct ValidatedKktResult {
+    ValidatedKktStatus status; //!< Certification outcome, not a numerical solver flag.
+    std::optional<Vector<FloatDPBounds>> primal; //!< Enclosure of the unique primal variables.
+    std::optional<Vector<FloatDPBounds>> multipliers; //!< Enclosure of the unique equality multipliers.
+};
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Solve a strictly convex equality-constrained KKT system rigorously.
+//! \param H Symmetric n-by-n interval Hessian.
+//! \param A Interval m-by-n matrix of equality-constraint coefficients.
+//! \param f Interval right-hand side of stationarity (n entries).
+//! \param g Interval right-hand side of equality constraints (m entries).
+//! \return SOLVED and enclosures (x,lambda) if the interval computations
+//! certify H positive definite and A full row rank for *every* represented
+//! real problem. Otherwise return HESSIAN_NOT_POSITIVE_DEFINITE when that
+//! property of H is disproved universally, DEPENDENT_CONSTRAINTS when all
+//! represented A have dependent rows, or INDETERMINATE.
+//! \pre A.column_size()==H.size(), f.size()==H.size(),
+//! and g.size()==A.row_size().
+//! \details The system is H*x + A^T*lambda=f, A*x=g. Compute rigorous
+//! enclosures Y=H^{-1}[f,A^T] using the existing validated SPD solver,
+//! form a symmetric interval enclosure of S=A*H^{-1}*A^T, then solve
+//! S*lambda=A*H^{-1}*f-g and x=H^{-1}*f-H^{-1}*A^T*lambda.
+//! Each inclusion is universally quantified over the input intervals.
+//! In particular, interval multiplication of dependent quantities can
+//! widen S: failure to certify its positive definiteness returns
+//! INDETERMINATE rather than a numerical-rank decision.
+//! Row dependence is checked separately using validated_independent_rows().
+//! The empty constraint set (m=0) reduces to the SPD solve; n=m=0 is
+//! admissible. Positive-semidefinite Hessians and general indefinite KKT
+//! matrices are outside this routine's certification contract.
+//! \par Reference
+//! J. Nocedal and S. J. Wright, \em Numerical \em Optimization,
+//! 2nd ed., Springer, 2006, Chapter 16, equality-constrained quadratic
+//! programs and Schur-complement KKT systems.
+ValidatedKktResult validated_kkt_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const Vector<FloatDPBounds>& f,
+    const Vector<FloatDPBounds>& g);
+
 //!@}
 
 } // namespace Ariadne

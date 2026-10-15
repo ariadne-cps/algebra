@@ -336,6 +336,86 @@ LinearIndependenceStatus validated_independent_columns(
     return classify_linear_independence(A,false);
 }
 
+
+// Validated strictly convex equality-constrained KKT solve.
+// All computed matrices enclose the exact expressions for each common
+// selection of the input intervals; correlations need not be retained.
+ValidatedKktResult validated_kkt_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const Vector<FloatDPBounds>& f,
+    const Vector<FloatDPBounds>& g)
+{
+    const SizeType n=H.size();
+    const SizeType m=A.row_size();
+    ARIADNE_PRECONDITION(A.column_size()==n);
+    ARIADNE_PRECONDITION(f.size()==n);
+    ARIADNE_PRECONDITION(g.size()==m);
+
+    // A single validated solve encloses H^{-1}*f and all columns of
+    // H^{-1}*A^T without forming an interval inverse.
+    Matrix<FloatDPBounds> rhs(n,m+1,H.zero_element());
+    for(SizeType i=0; i!=n; ++i) {
+        rhs[i][0u]=f[i];
+        for(SizeType j=0; j!=m; ++j) {
+            rhs[i][j+1]=A[j][i];
+        }
+    }
+
+    const auto h_solve=validated_positive_definite_solve(H,rhs);
+    if(!h_solve.solution.has_value()) {
+        if(h_solve.status==PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE) {
+            return {ValidatedKktStatus::HESSIAN_NOT_POSITIVE_DEFINITE,std::nullopt,std::nullopt};
+        }
+        return {ValidatedKktStatus::INDETERMINATE,std::nullopt,std::nullopt};
+    }
+
+    if(validated_independent_rows(A)==LinearIndependenceStatus::DEPENDENT) {
+        return {ValidatedKktStatus::DEPENDENT_CONSTRAINTS,std::nullopt,std::nullopt};
+    }
+
+    const Matrix<FloatDPBounds>& Y=*h_solve.solution;
+    SymmetricMatrix<FloatDPBounds> schur(m,H.zero_element());
+    Vector<FloatDPBounds> dual_rhs(m,H.zero_element());
+
+    // Exact S is symmetric; fill each independent interval coefficient
+    // once so the representation preserves that structural symmetry.
+    for(SizeType i=0; i!=m; ++i) {
+        FloatDPBounds bi=-g[i];
+        for(SizeType k=0; k!=n; ++k) {
+            bi+=A[i][k]*Y[k][0u];
+        }
+        dual_rhs[i]=bi;
+
+        for(SizeType j=i; j!=m; ++j) {
+            FloatDPBounds sij=H.zero_element();
+            for(SizeType k=0; k!=n; ++k) {
+                sij+=A[i][k]*Y[k][j+1];
+            }
+            schur[i][j]=sij;
+        }
+    }
+
+    const auto schur_solve=validated_positive_definite_solve(schur,dual_rhs);
+    if(!schur_solve.solution.has_value()) {
+        // Failure of this interval sufficient test is not a proof
+        // of rank deficiency of the original correlated Schur family.
+        return {ValidatedKktStatus::INDETERMINATE,std::nullopt,std::nullopt};
+    }
+
+    const Vector<FloatDPBounds>& multipliers=*schur_solve.solution;
+    Vector<FloatDPBounds> primal(n,H.zero_element());
+    for(SizeType i=0; i!=n; ++i) {
+        FloatDPBounds xi=Y[i][0u];
+        for(SizeType j=0; j!=m; ++j) {
+            xi-=Y[i][j+1]*multipliers[j];
+        }
+        primal[i]=xi;
+    }
+
+    return {ValidatedKktStatus::SOLVED,std::move(primal),multipliers};
+}
+
 } // namespace Ariadne
 
 #include "interval/interval.hpp"

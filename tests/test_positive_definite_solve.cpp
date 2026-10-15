@@ -69,6 +69,198 @@ Void check_vector_solution(const S& A, const Vector<X>& b,
     }
 }
 
+
+Void check_kkt_residuals(
+    const S& H, const Matrix<X>& A, const Vector<X>& f, const Vector<X>& g,
+    const Vector<X>& x, const Vector<X>& lambda)
+{
+    ARIADNE_TEST_EQUALS(x.size(),H.size());
+    ARIADNE_TEST_EQUALS(lambda.size(),A.row_size());
+    const Matrix<X> dense_H=static_cast<Matrix<X>>(H);
+    const Vector<X> stationary=dense_H*x+transpose(A)*lambda;
+    const Vector<X> constrained=A*x;
+    for(SizeType i=0; i!=f.size(); ++i) {
+        check_contains(stationary[i],f[i]);
+    }
+    for(SizeType i=0; i!=g.size(); ++i) {
+        check_contains(constrained[i],g[i]);
+    }
+}
+
+Void test_validated_kkt_solve()
+{
+    const X zero(0u,dp);
+    const Vector<X> empty_vector(0u,zero);
+
+    // Both the zero-dimensional KKT system and the unconstrained
+    // case have unique solutions under positive definiteness.
+    const S empty_hessian(0u,zero);
+    const Matrix<X> empty_constraints(0u,0u,zero);
+    const auto empty_solution=validated_kkt_solve(
+        empty_hessian,empty_constraints,empty_vector,empty_vector);
+    ARIADNE_TEST_ASSERT(empty_solution.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(empty_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(empty_solution.multipliers.has_value());
+    check_kkt_residuals(empty_hessian,empty_constraints,empty_vector,
+                        empty_vector,*empty_solution.primal,*empty_solution.multipliers);
+
+    S scalar_hessian(1u,zero);
+    scalar_hessian[0u][0u]=X(2u,dp);
+    const Matrix<X> no_constraints(0u,1u,zero);
+    const Vector<X> unconstrained_rhs({X(6u,dp)});
+    const auto unconstrained_solution=validated_kkt_solve(
+        scalar_hessian,no_constraints,unconstrained_rhs,empty_vector);
+    ARIADNE_TEST_ASSERT(unconstrained_solution.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(unconstrained_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(unconstrained_solution.multipliers.has_value());
+    check_contains((*unconstrained_solution.primal)[0u],X(3u,dp));
+    check_kkt_residuals(scalar_hessian,no_constraints,unconstrained_rhs,
+                        empty_vector,*unconstrained_solution.primal,
+                        *unconstrained_solution.multipliers);
+
+    // One equality: H=2I, A=(1,1), f=0, g=2.
+    // Exact solution x=(1,1), lambda=-2.
+    S hessian(2u,zero);
+    hessian[0u][0u]=X(2u,dp);
+    hessian[1u][1u]=X(2u,dp);
+    Matrix<X> constraints(1u,2u,zero);
+    constraints[0u][0u]=X(1u,dp);
+    constraints[0u][1u]=X(1u,dp);
+    const Vector<X> f(2u,zero);
+    const Vector<X> g({X(2u,dp)});
+    const auto single_solution=validated_kkt_solve(hessian,constraints,f,g);
+    ARIADNE_TEST_ASSERT(single_solution.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(single_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(single_solution.multipliers.has_value());
+    check_contains((*single_solution.primal)[0u],X(1u,dp));
+    check_contains((*single_solution.primal)[1u],X(1u,dp));
+    check_contains((*single_solution.multipliers)[0u],X(-2,dp));
+    check_kkt_residuals(hessian,constraints,f,g,
+                        *single_solution.primal,*single_solution.multipliers);
+
+    // A non-diagonal Hessian and a nonzero dual variable.
+    S coupled_hessian(2u,zero);
+    coupled_hessian[0u][0u]=X(2u,dp);
+    coupled_hessian[0u][1u]=X(1u,dp);
+    coupled_hessian[1u][1u]=X(2u,dp);
+    Matrix<X> first_coordinate(1u,2u,zero);
+    first_coordinate[0u][0u]=X(1u,dp);
+    const Vector<X> coupled_f({X(11u,dp),X(8u,dp)});
+    const Vector<X> coupled_g({X(2u,dp)});
+    const auto coupled_solution=validated_kkt_solve(
+        coupled_hessian,first_coordinate,coupled_f,coupled_g);
+    ARIADNE_TEST_ASSERT(coupled_solution.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(coupled_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(coupled_solution.multipliers.has_value());
+    check_contains((*coupled_solution.primal)[0u],X(2u,dp));
+    check_contains((*coupled_solution.primal)[1u],X(3u,dp));
+    check_contains((*coupled_solution.multipliers)[0u],X(4u,dp));
+    check_kkt_residuals(coupled_hessian,first_coordinate,coupled_f,coupled_g,
+                        *coupled_solution.primal,*coupled_solution.multipliers);
+
+    // Two independent constraints: exact x=(1,2,3), lambda=(4,5).
+    S h3(3u,zero);
+    for(SizeType i=0; i!=3u; ++i) {
+        h3[i][i]=X(1u,dp);
+    }
+    Matrix<X> a2(2u,3u,zero);
+    a2[0u][0u]=X(1u,dp);
+    a2[0u][2u]=X(1u,dp);
+    a2[1u][1u]=X(1u,dp);
+    a2[1u][2u]=X(1u,dp);
+    const Vector<X> f3({X(5u,dp),X(7u,dp),X(12u,dp)});
+    const Vector<X> g2({X(4u,dp),X(5u,dp)});
+    const auto multi_solution=validated_kkt_solve(h3,a2,f3,g2);
+    ARIADNE_TEST_ASSERT(multi_solution.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(multi_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(multi_solution.multipliers.has_value());
+    check_kkt_residuals(h3,a2,f3,g2,
+                        *multi_solution.primal,*multi_solution.multipliers);
+    check_contains((*multi_solution.primal)[0u],X(1u,dp));
+    check_contains((*multi_solution.primal)[1u],X(2u,dp));
+    check_contains((*multi_solution.primal)[2u],X(3u,dp));
+    check_contains((*multi_solution.multipliers)[0u],X(4u,dp));
+    check_contains((*multi_solution.multipliers)[1u],X(5u,dp));
+
+    // A family of admissible KKT systems with a known exact member.
+    S interval_hessian(2u,zero);
+    interval_hessian[0u][0u]=X(4,5,dp);
+    interval_hessian[1u][1u]=X(4,5,dp);
+    Matrix<X> interval_constraints(1u,2u,zero);
+    interval_constraints[0u][0u]=X(1,2,dp);
+    const Vector<X> interval_f({X(4,5,dp),X(8,10,dp)});
+    const Vector<X> interval_g({X(1,2,dp)});
+    const auto interval_solution=validated_kkt_solve(
+        interval_hessian,interval_constraints,interval_f,interval_g);
+    ARIADNE_TEST_ASSERT(interval_solution.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(interval_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(interval_solution.multipliers.has_value());
+    check_kkt_residuals(interval_hessian,interval_constraints,interval_f,interval_g,
+                        *interval_solution.primal,*interval_solution.multipliers);
+    check_contains((*interval_solution.primal)[0u],X(1u,dp));
+    check_contains((*interval_solution.primal)[1u],X(2u,dp));
+    check_contains((*interval_solution.multipliers)[0u],zero);
+
+    // A provably non-SPD Hessian is a failure of this solver's precondition.
+    S negative(1u,zero);
+    negative[0u][0u]=X(-1,dp);
+    Matrix<X> scalar_constraints(1u,1u,X(1u,dp));
+    const Vector<X> scalar_rhs({X(1u,dp)});
+    const auto negative_solution=validated_kkt_solve(
+        negative,scalar_constraints,scalar_rhs,scalar_rhs);
+    ARIADNE_TEST_ASSERT(
+        negative_solution.status==ValidatedKktStatus::HESSIAN_NOT_POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(!negative_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(!negative_solution.multipliers.has_value());
+
+    S uncertain_hessian(1u,zero);
+    uncertain_hessian[0u][0u]=X(-1,1,dp);
+    const auto uncertain_h_solution=validated_kkt_solve(
+        uncertain_hessian,scalar_constraints,scalar_rhs,scalar_rhs);
+    ARIADNE_TEST_ASSERT(uncertain_h_solution.status==ValidatedKktStatus::INDETERMINATE);
+    ARIADNE_TEST_ASSERT(!uncertain_h_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(!uncertain_h_solution.multipliers.has_value());
+
+    // More constraint rows than unknowns is universally rank deficient.
+    Matrix<X> overconstrained(2u,1u,X(1u,dp));
+    const Vector<X> two_constraints({X(1u,dp),X(1u,dp)});
+    const auto dependent_solution=validated_kkt_solve(
+        scalar_hessian,overconstrained,scalar_rhs,two_constraints);
+    ARIADNE_TEST_ASSERT(
+        dependent_solution.status==ValidatedKktStatus::DEPENDENT_CONSTRAINTS);
+    ARIADNE_TEST_ASSERT(!dependent_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(!dependent_solution.multipliers.has_value());
+
+    // Repeated constraints are dependent even without dimension excess.
+    Matrix<X> repeated(2u,2u,zero);
+    repeated[0u][0u]=X(1u,dp);
+    repeated[1u][0u]=X(1u,dp);
+    const auto repeated_solution=validated_kkt_solve(
+        hessian,repeated,f,two_constraints);
+    ARIADNE_TEST_ASSERT(
+        repeated_solution.status==ValidatedKktStatus::DEPENDENT_CONSTRAINTS);
+    ARIADNE_TEST_ASSERT(!repeated_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(!repeated_solution.multipliers.has_value());
+
+    // Interval dependence of the same A entry is unresolved. Never use
+    // a midpoint-rank decision, and do not infer dependence from an
+    // interval Schur matrix which overestimates correlations.
+    Matrix<X> ambiguous(1u,1u,X(-1,1,dp));
+    const auto ambiguous_solution=validated_kkt_solve(
+        scalar_hessian,ambiguous,scalar_rhs,scalar_rhs);
+    ARIADNE_TEST_ASSERT(ambiguous_solution.status==ValidatedKktStatus::INDETERMINATE);
+    ARIADNE_TEST_ASSERT(!ambiguous_solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(!ambiguous_solution.multipliers.has_value());
+
+    Matrix<X> bad_columns(1u,2u,zero);
+    const Vector<X> bad_f(2u,zero);
+    const Vector<X> bad_g(2u,zero);
+    ARIADNE_TEST_FAIL(validated_kkt_solve(scalar_hessian,bad_columns,scalar_rhs,scalar_rhs));
+    ARIADNE_TEST_FAIL(validated_kkt_solve(scalar_hessian,scalar_constraints,bad_f,scalar_rhs));
+    ARIADNE_TEST_FAIL(validated_kkt_solve(scalar_hessian,scalar_constraints,scalar_rhs,bad_g));
+}
+
+
 Void test_empty_and_zero_rhs()
 {
     const X zero(0u,dp);
@@ -247,5 +439,6 @@ Int main()
     ARIADNE_TEST_CALL(test_scalar_and_dense_spd());
     ARIADNE_TEST_CALL(test_three_by_three_and_interval_family());
     ARIADNE_TEST_CALL(test_failure_and_indeterminate());
+    ARIADNE_TEST_CALL(test_validated_kkt_solve());
     return ARIADNE_TEST_FAILURES;
 }
