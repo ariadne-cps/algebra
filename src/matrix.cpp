@@ -27,6 +27,9 @@
 #include "numeric/numeric.hpp"
 
 #include <utility>
+#include <bit>
+#include <cstdint>
+#include <limits>
 
 #include "matrix.hpp"
 #include "symmetric_matrix.hpp"
@@ -177,6 +180,62 @@ PositiveDefinitenessStatus validated_positive_definiteness(
 }
 
 
+namespace {
+
+// Compute the correctly rounded binary64 square root of a positive
+// endpoint without using sqrt_rnd(double). In particular, Newton's
+// equality-based stopping test in sqrt_rnd can oscillate forever under
+// directed rounding.
+//
+// Positive finite IEEE-754 binary64 numbers have the same ordering as
+// their unsigned 64-bit bit patterns. Every finite binary64 x satisfies
+// sqrt(x)<2^512. A bisection on these bit patterns terminates in at most
+// 63 iterations, reaching two consecutive representable floats.
+//
+// Dyadic exactly embeds a finite binary64 value, and its products of
+// two 53-bit significands fit exactly in its 65535-bit representation.
+// Thus candidate^2<=x is an *exact* test; neither binary64 rounding,
+// the quality of a library sqrt, nor a numerical tolerance is assumed.
+FloatDP validated_sqrt_endpoint(FloatDP x, bool round_up)
+{
+    static_assert(sizeof(double)==sizeof(std::uint64_t));
+    static_assert(std::numeric_limits<double>::is_iec559);
+    if(is_inf(x)) {
+        return x;
+    }
+
+    const Dyadic target{ExactDouble(x.get_d())};
+    std::uint64_t lower=0u;
+    std::uint64_t upper=std::bit_cast<std::uint64_t>(0x1p512);
+    while(upper-lower>1u) {
+        const std::uint64_t middle=lower+(upper-lower)/2u;
+        const double candidate=std::bit_cast<double>(middle);
+        const Dyadic exact_candidate{ExactDouble(candidate)};
+        if(exact_candidate*exact_candidate<=target) {
+            lower=middle;
+        } else {
+            upper=middle;
+        }
+    }
+
+    const FloatDP lower_root(ExactDouble(std::bit_cast<double>(lower)),dp);
+    const Dyadic lower_exact{ExactDouble(lower_root.get_d())};
+    if(round_up && lower_exact*lower_exact!=target) {
+        return FloatDP(ExactDouble(std::bit_cast<double>(upper)),dp);
+    }
+    return lower_root;
+}
+
+FloatDPBounds validated_sqrt_bounds(const FloatDPBounds& positive)
+{
+    return FloatDPBounds(
+        validated_sqrt_endpoint(positive.lower_raw(),false),
+        validated_sqrt_endpoint(positive.upper_raw(),true));
+}
+
+} // namespace
+
+
 ValidatedCholeskyResult validated_cholesky_decomposition(
     const SymmetricMatrix<FloatDPBounds>& A)
 {
@@ -201,12 +260,7 @@ ValidatedCholeskyResult validated_cholesky_decomposition(
         }
 
         if(definitely(pivot.lower()>0)) {
-            // Directed double sqrt_rnd may cycle between adjacent values
-            // near a representable square. MPFR square roots terminate
-            // and round correctly; conversion back to FloatDPBounds is
-            // outward rounded, preserving the enclosure guarantee.
-            const FloatMPBounds pivot_mp(pivot,MultiplePrecision(64));
-            L[i][i]=FloatDPBounds(sqrt(pivot_mp),dp);
+            L[i][i]=validated_sqrt_bounds(pivot);
             continue;
         }
 

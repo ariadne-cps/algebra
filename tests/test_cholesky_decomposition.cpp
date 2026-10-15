@@ -26,6 +26,8 @@
 #include "algebra/symmetric_matrix.hpp"
 #include "macro/testing.hpp"
 
+#include <limits>
+
 using namespace Ariadne;
 
 namespace {
@@ -99,6 +101,38 @@ Void test_empty_and_scalar_matrices()
     ARIADNE_TEST_ASSERT(above_result.status==Status::POSITIVE_DEFINITE);
     ARIADNE_TEST_ASSERT(above_result.lower.has_value());
     check_reconstruction(near_one_above,*above_result.lower);
+
+    // Binary64 extremes: the exact comparisons must not overflow
+    // (largest finite input) or underflow (smallest subnormal input).
+    // These exercise different exponents without invoking MPFR.
+    S subnormal(1u,X(0u,dp));
+    const FloatDP subnormal_raw(
+        ExactDouble(std::numeric_limits<double>::denorm_min()),dp);
+    subnormal[0u][0u]=X(subnormal_raw);
+    auto subnormal_result=validated_cholesky_decomposition(subnormal);
+    ARIADNE_TEST_ASSERT(subnormal_result.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(subnormal_result.lower.has_value());
+    check_reconstruction(subnormal,*subnormal_result.lower);
+
+    S largest(1u,X(0u,dp));
+    const FloatDP largest_raw(
+        ExactDouble(std::numeric_limits<double>::max()),dp);
+    largest[0u][0u]=X(largest_raw);
+    auto largest_result=validated_cholesky_decomposition(largest);
+    ARIADNE_TEST_ASSERT(largest_result.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(largest_result.lower.has_value());
+    check_reconstruction(largest,*largest_result.lower);
+
+    // Unbounded positive input has a finite positive lower sqrt
+    // and an infinite upper sqrt; the universal enclosure is retained.
+    S unbounded(1u,X(0u,dp));
+    unbounded[0u][0u]=X(FloatDP(1u,dp),FloatDP::inf(dp));
+    auto unbounded_result=validated_cholesky_decomposition(unbounded);
+    ARIADNE_TEST_ASSERT(unbounded_result.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(unbounded_result.lower.has_value());
+    ARIADNE_TEST_ASSERT(is_inf((*unbounded_result.lower)[0u][0u].upper_raw()));
+    ARIADNE_TEST_ASSERT(
+        (*unbounded_result.lower)[0u][0u].lower_raw()<=FloatDP(1u,dp));
 
     S negative(1u,X(0u,dp));
     negative[0u][0u]=X(-1,dp);

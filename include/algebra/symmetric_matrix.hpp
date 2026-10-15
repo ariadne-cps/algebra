@@ -426,9 +426,10 @@ struct ValidatedCholeskyResult {
 //! is POSITIVE_DEFINITE, the unique Cholesky factor l (a=l*l^T,
 //! with positive diagonal) belongs componentwise to the returned
 //! interval matrix L. The upper triangular portion of L is exactly zero.
-//! Directed square roots are evaluated with MPFR at higher intermediate
-//! precision and converted outward to FloatDPBounds, avoiding
-//! nonterminating double-precision Newton fixed-point iterations.
+//! Directed square roots are computed in binary64 using bounded bisection
+//! of IEEE-754 floating-point values, with exact Dyadic square comparisons.
+//! They require neither MPFR nor a potentially nonterminating Newton
+//! iteration; both returned endpoints rigorously enclose the exact root.
 //!
 //! The algorithm computes successive Schur pivots
 //! d_i=a_ii-sum_{k<i} l_ik^2, and l_ij is formed by the corresponding
