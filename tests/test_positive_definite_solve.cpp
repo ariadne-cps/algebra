@@ -57,8 +57,8 @@ class InclusionAudit {
             _ok=false;
             std::cerr << "INCLUSION FAILED: " << _description
                       << " [" << component << "]\\n"
-                      << "  required: " << required << "\\n"
-                      << "  enclosure: " << enclosure << "\\n"
+                      << "  required: " << required << "\n"
+                      << "  enclosure: " << enclosure << "\n"
                       << "  lower bound OK: " << lower_ok
                       << ", upper bound OK: " << upper_ok << std::endl;
         }
