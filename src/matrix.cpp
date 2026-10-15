@@ -370,10 +370,8 @@ ValidatedKktResult validated_kkt_solve(
         return {ValidatedKktStatus::INDETERMINATE,std::nullopt,std::nullopt};
     }
 
-    if(validated_independent_rows(A)==LinearIndependenceStatus::DEPENDENT) {
-        return {ValidatedKktStatus::DEPENDENT_CONSTRAINTS,std::nullopt,std::nullopt};
-    }
-
+    // The Schur complement itself can certify full row rank; an
+    // independent Gram test is unnecessary on the success path.
     const Matrix<FloatDPBounds>& Y=*h_solve.solution;
     SymmetricMatrix<FloatDPBounds> schur(m,H.zero_element());
     Vector<FloatDPBounds> dual_rhs(m,H.zero_element());
@@ -398,8 +396,13 @@ ValidatedKktResult validated_kkt_solve(
 
     const auto schur_solve=validated_positive_definite_solve(schur,dual_rhs);
     if(!schur_solve.solution.has_value()) {
-        // Failure of this interval sufficient test is not a proof
-        // of rank deficiency of the original correlated Schur family.
+        // An inconclusive interval Schur complement is not a proof of
+        // rank deficiency: cancellations in A*H^{-1}*A^T are correlated.
+        // Only a separate universal rank certificate can prove
+        // dependent equality constraints.
+        if(validated_independent_rows(A)==LinearIndependenceStatus::DEPENDENT) {
+            return {ValidatedKktStatus::DEPENDENT_CONSTRAINTS,std::nullopt,std::nullopt};
+        }
         return {ValidatedKktStatus::INDETERMINATE,std::nullopt,std::nullopt};
     }
 

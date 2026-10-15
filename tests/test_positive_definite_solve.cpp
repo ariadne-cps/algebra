@@ -26,6 +26,11 @@
 #include "algebra/symmetric_matrix.hpp"
 #include "macro/testing.hpp"
 
+#include <iostream>
+#include <source_location>
+#include <string>
+#include <utility>
+
 using namespace Ariadne;
 
 namespace {
@@ -34,16 +39,51 @@ using X=FloatDPBounds;
 using S=SymmetricMatrix<X>;
 using Status=PositiveDefinitenessStatus;
 
-// Compare the stored exact floating-point endpoints: comparisons on
-// LowerBound/UpperBound objects are not ordinary exact endpoint comparisons.
-Void check_contains(const X& enclosure, const X& required)
+// A compact inclusion audit: print one meaningful summary per check
+// group and show the index and both actual intervals only on failure.
+// Compare exact stored endpoints rather than logical LowerBound objects.
+class InclusionAudit {
+    std::string _description;
+    SizeType _checked=0u;
+    bool _ok=true;
+  public:
+    explicit InclusionAudit(std::string description) : _description(std::move(description)) { }
+
+    Void add(const X& enclosure, const X& required, const std::string& component) {
+        ++_checked;
+        const bool lower_ok=enclosure.lower_raw()<=required.lower_raw();
+        const bool upper_ok=enclosure.upper_raw()>=required.upper_raw();
+        if(!lower_ok || !upper_ok) {
+            _ok=false;
+            std::cerr << "INCLUSION FAILED: " << _description
+                      << " [" << component << "]\\n"
+                      << "  required: " << required << "\\n"
+                      << "  enclosure: " << enclosure << "\\n"
+                      << "  lower bound OK: " << lower_ok
+                      << ", upper bound OK: " << upper_ok << std::endl;
+        }
+    }
+
+    Void finish() const {
+        std::cout << "INCLUSION " << _description << ": "
+                  << _checked << " coefficient(s) checked"
+                  << " -- " << (_ok ? "PASS" : "FAIL") << std::endl;
+        ARIADNE_TEST_ASSERT(_ok);
+    }
+};
+
+// Known exact-point solutions are checked independently of residuals.
+// The source line identifies which expected primal/dual component failed.
+Void check_contains(const X& enclosure, const X& required,
+                    std::source_location caller=std::source_location::current())
 {
-    ARIADNE_TEST_ASSERT(enclosure.lower_raw()<=required.lower_raw());
-    ARIADNE_TEST_ASSERT(enclosure.upper_raw()>=required.upper_raw());
+    InclusionAudit audit("known solution, test line "+std::to_string(caller.line()));
+    audit.add(enclosure,required,"expected exact value");
+    audit.finish();
 }
 
 // Check the algebraic residual as an interval inclusion, not equality of
-// interval matrices. Also check known solutions independently of the solve.
+// interval matrices. One aggregate report replaces per-endpoint spam.
 Void check_matrix_solution(const S& A, const Matrix<X>& B,
                            const Matrix<X>& enclosure)
 {
@@ -51,11 +91,14 @@ Void check_matrix_solution(const S& A, const Matrix<X>& B,
     ARIADNE_TEST_EQUALS(enclosure.column_size(),B.column_size());
     const Matrix<X> dense_A=static_cast<Matrix<X>>(A);
     const Matrix<X> residual=dense_A*enclosure;
+    InclusionAudit audit("SPD matrix residual: B contained in A*X");
     for(SizeType i=0; i!=B.row_size(); ++i) {
         for(SizeType j=0; j!=B.column_size(); ++j) {
-            check_contains(residual[i][j],B[i][j]);
+            audit.add(residual[i][j],B[i][j],
+                      "row "+std::to_string(i)+", column "+std::to_string(j));
         }
     }
+    audit.finish();
 }
 
 Void check_vector_solution(const S& A, const Vector<X>& b,
@@ -64,11 +107,12 @@ Void check_vector_solution(const S& A, const Vector<X>& b,
     ARIADNE_TEST_EQUALS(enclosure.size(),b.size());
     const Matrix<X> dense_A=static_cast<Matrix<X>>(A);
     const Vector<X> residual=dense_A*enclosure;
+    InclusionAudit audit("SPD vector residual: b contained in A*x");
     for(SizeType i=0; i!=b.size(); ++i) {
-        check_contains(residual[i],b[i]);
+        audit.add(residual[i],b[i],"row "+std::to_string(i));
     }
+    audit.finish();
 }
-
 
 Void check_kkt_residuals(
     const S& H, const Matrix<X>& A, const Vector<X>& f, const Vector<X>& g,
@@ -79,12 +123,17 @@ Void check_kkt_residuals(
     const Matrix<X> dense_H=static_cast<Matrix<X>>(H);
     const Vector<X> stationary=dense_H*x+transpose(A)*lambda;
     const Vector<X> constrained=A*x;
+    InclusionAudit primal_audit("KKT stationarity: f contained in H*x+A^T*lambda");
     for(SizeType i=0; i!=f.size(); ++i) {
-        check_contains(stationary[i],f[i]);
+        primal_audit.add(stationary[i],f[i],"row "+std::to_string(i));
     }
+    primal_audit.finish();
+
+    InclusionAudit equality_audit("KKT equalities: g contained in A*x");
     for(SizeType i=0; i!=g.size(); ++i) {
-        check_contains(constrained[i],g[i]);
+        equality_audit.add(constrained[i],g[i],"row "+std::to_string(i));
     }
+    equality_audit.finish();
 }
 
 Void test_validated_kkt_solve()
@@ -96,6 +145,7 @@ Void test_validated_kkt_solve()
     // case have unique solutions under positive definiteness.
     const S empty_hessian(0u,zero);
     const Matrix<X> empty_constraints(0u,0u,zero);
+    std::cout << "KKT CASE: 0x0 empty KKT" << std::endl;
     const auto empty_solution=validated_kkt_solve(
         empty_hessian,empty_constraints,empty_vector,empty_vector);
     ARIADNE_TEST_ASSERT(empty_solution.status==ValidatedKktStatus::SOLVED);
@@ -108,6 +158,7 @@ Void test_validated_kkt_solve()
     scalar_hessian[0u][0u]=X(2u,dp);
     const Matrix<X> no_constraints(0u,1u,zero);
     const Vector<X> unconstrained_rhs({X(6u,dp)});
+    std::cout << "KKT CASE: unconstrained 1x1 SPD system" << std::endl;
     const auto unconstrained_solution=validated_kkt_solve(
         scalar_hessian,no_constraints,unconstrained_rhs,empty_vector);
     ARIADNE_TEST_ASSERT(unconstrained_solution.status==ValidatedKktStatus::SOLVED);
@@ -128,6 +179,7 @@ Void test_validated_kkt_solve()
     constraints[0u][1u]=X(1u,dp);
     const Vector<X> f(2u,zero);
     const Vector<X> g({X(2u,dp)});
+    std::cout << "KKT CASE: one equality with diagonal 2x2 SPD Hessian" << std::endl;
     const auto single_solution=validated_kkt_solve(hessian,constraints,f,g);
     ARIADNE_TEST_ASSERT(single_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(single_solution.primal.has_value());
@@ -147,6 +199,7 @@ Void test_validated_kkt_solve()
     first_coordinate[0u][0u]=X(1u,dp);
     const Vector<X> coupled_f({X(11u,dp),X(8u,dp)});
     const Vector<X> coupled_g({X(2u,dp)});
+    std::cout << "KKT CASE: one equality with coupled 2x2 SPD Hessian" << std::endl;
     const auto coupled_solution=validated_kkt_solve(
         coupled_hessian,first_coordinate,coupled_f,coupled_g);
     ARIADNE_TEST_ASSERT(coupled_solution.status==ValidatedKktStatus::SOLVED);
@@ -170,6 +223,7 @@ Void test_validated_kkt_solve()
     a2[1u][2u]=X(1u,dp);
     const Vector<X> f3({X(5u,dp),X(7u,dp),X(12u,dp)});
     const Vector<X> g2({X(4u,dp),X(5u,dp)});
+    std::cout << "KKT CASE: two independent equalities in 3 dimensions" << std::endl;
     const auto multi_solution=validated_kkt_solve(h3,a2,f3,g2);
     ARIADNE_TEST_ASSERT(multi_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(multi_solution.primal.has_value());
@@ -190,6 +244,7 @@ Void test_validated_kkt_solve()
     interval_constraints[0u][0u]=X(1,2,dp);
     const Vector<X> interval_f({X(4,5,dp),X(8,10,dp)});
     const Vector<X> interval_g({X(1,2,dp)});
+    std::cout << "KKT CASE: family of interval Hessians and equalities" << std::endl;
     const auto interval_solution=validated_kkt_solve(
         interval_hessian,interval_constraints,interval_f,interval_g);
     ARIADNE_TEST_ASSERT(interval_solution.status==ValidatedKktStatus::SOLVED);
@@ -206,6 +261,7 @@ Void test_validated_kkt_solve()
     negative[0u][0u]=X(-1,dp);
     Matrix<X> scalar_constraints(1u,1u,X(1u,dp));
     const Vector<X> scalar_rhs({X(1u,dp)});
+    std::cout << "KKT CASE: nonpositive Hessian" << std::endl;
     const auto negative_solution=validated_kkt_solve(
         negative,scalar_constraints,scalar_rhs,scalar_rhs);
     ARIADNE_TEST_ASSERT(
@@ -215,6 +271,7 @@ Void test_validated_kkt_solve()
 
     S uncertain_hessian(1u,zero);
     uncertain_hessian[0u][0u]=X(-1,1,dp);
+    std::cout << "KKT CASE: uncertain Hessian" << std::endl;
     const auto uncertain_h_solution=validated_kkt_solve(
         uncertain_hessian,scalar_constraints,scalar_rhs,scalar_rhs);
     ARIADNE_TEST_ASSERT(uncertain_h_solution.status==ValidatedKktStatus::INDETERMINATE);
@@ -224,6 +281,7 @@ Void test_validated_kkt_solve()
     // More constraint rows than unknowns is universally rank deficient.
     Matrix<X> overconstrained(2u,1u,X(1u,dp));
     const Vector<X> two_constraints({X(1u,dp),X(1u,dp)});
+    std::cout << "KKT CASE: too many equality constraints" << std::endl;
     const auto dependent_solution=validated_kkt_solve(
         scalar_hessian,overconstrained,scalar_rhs,two_constraints);
     ARIADNE_TEST_ASSERT(
@@ -235,6 +293,7 @@ Void test_validated_kkt_solve()
     Matrix<X> repeated(2u,2u,zero);
     repeated[0u][0u]=X(1u,dp);
     repeated[1u][0u]=X(1u,dp);
+    std::cout << "KKT CASE: repeated equality constraints" << std::endl;
     const auto repeated_solution=validated_kkt_solve(
         hessian,repeated,f,two_constraints);
     ARIADNE_TEST_ASSERT(
@@ -246,6 +305,7 @@ Void test_validated_kkt_solve()
     // a midpoint-rank decision, and do not infer dependence from an
     // interval Schur matrix which overestimates correlations.
     Matrix<X> ambiguous(1u,1u,X(-1,1,dp));
+    std::cout << "KKT CASE: interval-ambiguous row rank" << std::endl;
     const auto ambiguous_solution=validated_kkt_solve(
         scalar_hessian,ambiguous,scalar_rhs,scalar_rhs);
     ARIADNE_TEST_ASSERT(ambiguous_solution.status==ValidatedKktStatus::INDETERMINATE);
