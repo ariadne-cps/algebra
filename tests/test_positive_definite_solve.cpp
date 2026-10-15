@@ -23,7 +23,7 @@
  */
 
 #include "numeric/numeric.hpp"
-#include "algebra/positive_definite_solve.hpp"
+#include "algebra/symmetric_matrix.hpp"
 #include "macro/testing.hpp"
 
 using namespace Ariadne;

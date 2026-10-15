@@ -2,6 +2,7 @@
  *            algebra/symmetric_matrix.hpp
  *
  *  Copyright  2013-20  Pieter Collins
+ *  Copyright  2026  Luca Geretti
  *
  ****************************************************************************/
 
@@ -30,10 +31,13 @@
 #define ARIADNE_SYMMETRIC_MATRIX_HPP
 
 #include <initializer_list>
+#include <optional>
 
 #include "utility/metaprogramming.hpp"
 #include "macro/general.hpp"
 #include "vector.hpp"
+#include "matrix.hpp"
+#include "numeric/numeric.hpp"
 
 namespace Ariadne {
 
@@ -358,6 +362,140 @@ template<class X> SymmetricMatrix<X> symmetrize(Matrix<X> const& A) {
     return S;
 }
 
+
+
+//!@{
+//! \name Validated symmetric linear algebra
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Rigorous three-way classification of positive definiteness.
+//! \details For an interval symmetric matrix, the classification refers
+//! to *every* real symmetric matrix represented by its entries.
+//! Indeterminate is not a claim that some represented matrix is singular.
+enum class PositiveDefinitenessStatus {
+    POSITIVE_DEFINITE,      //!< Every represented real matrix is positive definite.
+    NOT_POSITIVE_DEFINITE,  //!< No represented real matrix is positive definite.
+    INDETERMINATE           //!< Neither assertion could be certified.
+};
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Certify positive definiteness using an interval LDL^T elimination.
+//! \param A An interval symmetric matrix. Off-diagonal entries use the same
+//! interval in both symmetric positions; each interval encloses all
+//! possible exact coefficient values.
+//! \return POSITIVE_DEFINITE if all successive interval Schur pivots
+//! are strictly positive; NOT_POSITIVE_DEFINITE if a pivot is provably
+//! nonpositive after all preceding pivots were proved positive;
+//! otherwise INDETERMINATE.
+//! \details Arithmetic on FloatDPBounds uses directed outward rounding.
+//! The conclusion is universally quantified over all represented
+//! symmetric real matrices. An undecidable pivot is *never* rounded
+//! or treated as zero to select an arbitrary numerical rank.
+//! The zero-dimensional matrix is positive definite by convention.
+//! This is a sufficient interval test: dependency overestimation can
+//! lead to INDETERMINATE even when every represented matrix is positive
+//! definite. The method does not certify positive semidefiniteness
+//! with zero pivots, and it does not compute eigenvalues.
+//! \par Reference
+//! G. H. Golub and C. F. Van Loan, \em Matrix \em Computations,
+//! 4th ed., Johns Hopkins University Press, 2013, LDL^T factorization
+//! and symmetric Schur complements.
+PositiveDefinitenessStatus validated_positive_definiteness(
+    const SymmetricMatrix<FloatDPBounds>& A);
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief The result of an attempted validated interval Cholesky decomposition.
+//! \details The factor is present if and only if the status is
+//! POSITIVE_DEFINITE. Otherwise no complete validated factor is available.
+//! A successful lower matrix encloses the lower-triangular Cholesky factor
+//! of every real symmetric matrix represented by the interval input.
+//! In particular, the result is not a pointwise equality between interval
+//! matrices: L*transpose(L) is an interval enclosure of the input family.
+struct ValidatedCholeskyResult {
+    PositiveDefinitenessStatus status; //!< Rigorous universal classification.
+    std::optional<Matrix<FloatDPBounds>> lower; //!< Validated lower factor, if certified.
+};
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Compute a lower-triangular Cholesky enclosure with outward rounding.
+//! \param A Symmetric matrix with coefficients represented as FloatDPBounds.
+//! \return A certified Cholesky enclosure, a proof of failure of positive
+//! definiteness for all represented matrices, or INDETERMINATE.
+//! \details For each represented real symmetric matrix a, when the status
+//! is POSITIVE_DEFINITE, the unique Cholesky factor l (a=l*l^T,
+//! with positive diagonal) belongs componentwise to the returned
+//! interval matrix L. The upper triangular portion of L is exactly zero.
+//!
+//! The algorithm computes successive Schur pivots
+//! d_i=a_ii-sum_{k<i} l_ik^2, and l_ij is formed by the corresponding
+//! triangular recurrence. Each interval operation encloses its exact
+//! real counterpart. A pivot known strictly positive permits sqrt(d_i);
+//! a pivot known nonpositive, with all preceding pivots certified positive,
+//! proves that no represented matrix is positive definite; otherwise the
+//! method returns INDETERMINATE without dividing by an uncertain pivot.
+//!
+//! No floating-point tolerance is used. Dependency overestimation may
+//! yield INDETERMINATE even for a family of positive-definite matrices.
+//! An empty matrix is positive definite by convention.
+//! \par Reference
+//! G. H. Golub and C. F. Van Loan, \em Matrix \em Computations,
+//! 4th ed., Johns Hopkins University Press, 2013, Cholesky factorization.
+ValidatedCholeskyResult validated_cholesky_decomposition(
+    const SymmetricMatrix<FloatDPBounds>& A);
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Result of a validated symmetric positive-definite linear solve.
+//! \tparam T Either Matrix<FloatDPBounds> or Vector<FloatDPBounds>.
+//! \details A solution is present exactly when positive definiteness was
+//! certified. It contains every exact solution for every admissible real
+//! symmetric coefficient matrix and every admissible right-hand side.
+//! An absent solution is not a claim that the linear system is unsolvable:
+//! the positive-definiteness precondition could not be established.
+template<class T> struct ValidatedPositiveDefiniteSolveResult {
+    PositiveDefinitenessStatus status; //!< Classification of the coefficient matrix.
+    std::optional<T> solution;         //!< Validated solution enclosure if certified.
+};
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Enclose the solutions of AX=B using validated Cholesky factorisation.
+//! \param A Symmetric interval coefficient matrix.
+//! \param B Interval right-hand sides, with exactly A.size() rows.
+//! \return POSITIVE_DEFINITE together with an enclosure of every solution
+//! if Cholesky can be certified; otherwise the failure or indeterminate
+//! status of the factorisation, without a solution.
+//! \pre B.row_size()==A.size().
+//! \details For every real symmetric a in A and every real b in B,
+//! the returned X includes the unique solution x of ax=b componentwise.
+//! The algorithm first encloses a=L*L^T via validated Cholesky, then
+//! applies interval forward and backward substitution. All arithmetic
+//! is outward rounded. Correlations between entries are not retained;
+//! the returned interval matrix may be wider than the optimal enclosure.
+//! No inverse is constructed, and no numerical rank threshold is used.
+//! Zero-dimensional matrices and a zero-column right-hand side are valid.
+//! A non-SPD status does not imply that AX=B is inconsistent.
+//! \par Reference
+//! G. H. Golub and C. F. Van Loan, \em Matrix \em Computations,
+//! 4th ed., Johns Hopkins University Press, 2013, Cholesky factorization
+//! and triangular substitution.
+ValidatedPositiveDefiniteSolveResult<Matrix<FloatDPBounds>>
+validated_positive_definite_solve(
+    const SymmetricMatrix<FloatDPBounds>& A,
+    const Matrix<FloatDPBounds>& B);
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Enclose the solutions of Ax=b via validated Cholesky.
+//! \param A Symmetric interval coefficient matrix.
+//! \param b Interval right-hand side with exactly A.size() elements.
+//! \return A certified interval solution iff the input is certified SPD;
+//! otherwise the factorisation status and no solution.
+//! \pre b.size()==A.size().
+//! \details Equivalent to the matrix right-hand-side overload with
+//! one column, including its universal enclosure guarantee.
+ValidatedPositiveDefiniteSolveResult<Vector<FloatDPBounds>>
+validated_positive_definite_solve(
+    const SymmetricMatrix<FloatDPBounds>& A,
+    const Vector<FloatDPBounds>& b);
+//!@}
 
 } // namespace Ariadne
 

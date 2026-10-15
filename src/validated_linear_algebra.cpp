@@ -22,10 +22,7 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "algebra/positive_definiteness.hpp"
-#include "algebra/cholesky_decomposition.hpp"
-#include "algebra/positive_definite_solve.hpp"
-#include "algebra/linear_independence.hpp"
+#include "algebra/symmetric_matrix.hpp"
 
 #include <utility>
 

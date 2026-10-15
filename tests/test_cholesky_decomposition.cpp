@@ -23,7 +23,7 @@
  */
 
 #include "numeric/numeric.hpp"
-#include "algebra/cholesky_decomposition.hpp"
+#include "algebra/symmetric_matrix.hpp"
 #include "macro/testing.hpp"
 
 using namespace Ariadne;

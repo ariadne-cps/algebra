@@ -23,7 +23,7 @@
  */
 
 #include "numeric/numeric.hpp"
-#include "algebra/linear_independence.hpp"
+#include "algebra/matrix.hpp"
 #include "macro/testing.hpp"
 
 using namespace Ariadne;
