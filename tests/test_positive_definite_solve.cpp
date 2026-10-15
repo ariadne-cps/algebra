@@ -64,12 +64,7 @@ class InclusionAudit {
         }
     }
 
-    Void finish() const {
-        std::cout << "INCLUSION " << _description << ": "
-                  << _checked << " coefficient(s) checked"
-                  << " -- " << (_ok ? "PASS" : "FAIL") << std::endl;
-        ARIADNE_TEST_ASSERT(_ok);
-    }
+    bool valid() const { return _ok; }
 };
 
 // Known exact-point solutions are checked independently of residuals.
@@ -79,7 +74,8 @@ Void check_contains(const X& enclosure, const X& required,
 {
     InclusionAudit audit("known solution, test line "+std::to_string(caller.line()));
     audit.add(enclosure,required,"expected exact value");
-    audit.finish();
+    const bool known_exact_value_enclosed=audit.valid();
+    ARIADNE_TEST_ASSERT(known_exact_value_enclosed);
 }
 
 // Check the algebraic residual as an interval inclusion, not equality of
@@ -98,7 +94,8 @@ Void check_matrix_solution(const S& A, const Matrix<X>& B,
                       "row "+std::to_string(i)+", column "+std::to_string(j));
         }
     }
-    audit.finish();
+    const bool matrix_residual_enclosed=audit.valid();
+    ARIADNE_TEST_ASSERT(matrix_residual_enclosed);
 }
 
 Void check_vector_solution(const S& A, const Vector<X>& b,
@@ -111,7 +108,8 @@ Void check_vector_solution(const S& A, const Vector<X>& b,
     for(SizeType i=0; i!=b.size(); ++i) {
         audit.add(residual[i],b[i],"row "+std::to_string(i));
     }
-    audit.finish();
+    const bool vector_residual_enclosed=audit.valid();
+    ARIADNE_TEST_ASSERT(vector_residual_enclosed);
 }
 
 Void check_kkt_residuals(
@@ -127,13 +125,43 @@ Void check_kkt_residuals(
     for(SizeType i=0; i!=f.size(); ++i) {
         primal_audit.add(stationary[i],f[i],"row "+std::to_string(i));
     }
-    primal_audit.finish();
+    const bool kkt_stationarity_enclosed=primal_audit.valid();
+    ARIADNE_TEST_ASSERT(kkt_stationarity_enclosed);
 
     InclusionAudit equality_audit("KKT equalities: g contained in A*x");
     for(SizeType i=0; i!=g.size(); ++i) {
         equality_audit.add(constrained[i],g[i],"row "+std::to_string(i));
     }
-    equality_audit.finish();
+    const bool kkt_equalities_enclosed=equality_audit.valid();
+    ARIADNE_TEST_ASSERT(kkt_equalities_enclosed);
+}
+
+// Check both primal and multiplier components against a selected exact
+// member of an interval KKT family, with a meaningful scenario label.
+Void check_known_kkt_solution(
+    const ValidatedKktResult& solution,
+    const Vector<X>& expected_primal,
+    const Vector<X>& expected_multipliers,
+    const std::string& scenario)
+{
+    ARIADNE_TEST_ASSERT(solution.primal.has_value());
+    ARIADNE_TEST_ASSERT(solution.multipliers.has_value());
+    if(!solution.primal.has_value() || !solution.multipliers.has_value()) {
+        return;
+    }
+    ARIADNE_TEST_EQUALS(solution.primal->size(),expected_primal.size());
+    ARIADNE_TEST_EQUALS(solution.multipliers->size(),expected_multipliers.size());
+    InclusionAudit audit("KKT known solution: "+scenario);
+    for(SizeType i=0; i!=expected_primal.size(); ++i) {
+        audit.add((*solution.primal)[i],expected_primal[i],
+                  "primal["+std::to_string(i)+"]");
+    }
+    for(SizeType i=0; i!=expected_multipliers.size(); ++i) {
+        audit.add((*solution.multipliers)[i],expected_multipliers[i],
+                  "multiplier["+std::to_string(i)+"]");
+    }
+    const bool kkt_reference_solution_enclosed=audit.valid();
+    ARIADNE_TEST_ASSERT(kkt_reference_solution_enclosed);
 }
 
 Void test_validated_kkt_solve()
@@ -145,7 +173,6 @@ Void test_validated_kkt_solve()
     // case have unique solutions under positive definiteness.
     const S empty_hessian(0u,zero);
     const Matrix<X> empty_constraints(0u,0u,zero);
-    std::cout << "KKT CASE: 0x0 empty KKT" << std::endl;
     const auto empty_solution=validated_kkt_solve(
         empty_hessian,empty_constraints,empty_vector,empty_vector);
     ARIADNE_TEST_ASSERT(empty_solution.status==ValidatedKktStatus::SOLVED);
@@ -158,13 +185,13 @@ Void test_validated_kkt_solve()
     scalar_hessian[0u][0u]=X(2u,dp);
     const Matrix<X> no_constraints(0u,1u,zero);
     const Vector<X> unconstrained_rhs({X(6u,dp)});
-    std::cout << "KKT CASE: unconstrained 1x1 SPD system" << std::endl;
     const auto unconstrained_solution=validated_kkt_solve(
         scalar_hessian,no_constraints,unconstrained_rhs,empty_vector);
     ARIADNE_TEST_ASSERT(unconstrained_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(unconstrained_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(unconstrained_solution.multipliers.has_value());
-    check_contains((unconstrained_solution.primal.value())[0u],X(3u,dp));
+    check_known_kkt_solution(unconstrained_solution,Vector<X>({X(3u,dp)}),
+                             empty_vector,"unconstrained SPD system");
     check_kkt_residuals(scalar_hessian,no_constraints,unconstrained_rhs,
                         empty_vector,unconstrained_solution.primal.value(),
                         unconstrained_solution.multipliers.value());
@@ -179,14 +206,13 @@ Void test_validated_kkt_solve()
     constraints[0u][1u]=X(1u,dp);
     const Vector<X> f(2u,zero);
     const Vector<X> g({X(2u,dp)});
-    std::cout << "KKT CASE: one equality with diagonal 2x2 SPD Hessian" << std::endl;
     const auto single_solution=validated_kkt_solve(hessian,constraints,f,g);
     ARIADNE_TEST_ASSERT(single_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(single_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(single_solution.multipliers.has_value());
-    check_contains((single_solution.primal.value())[0u],X(1u,dp));
-    check_contains((single_solution.primal.value())[1u],X(1u,dp));
-    check_contains((single_solution.multipliers.value())[0u],X(-2,dp));
+    check_known_kkt_solution(single_solution,
+                             Vector<X>({X(1u,dp),X(1u,dp)}),
+                             Vector<X>({X(-2,dp)}),"one equality");
     check_kkt_residuals(hessian,constraints,f,g,
                         single_solution.primal.value(),single_solution.multipliers.value());
 
@@ -199,15 +225,14 @@ Void test_validated_kkt_solve()
     first_coordinate[0u][0u]=X(1u,dp);
     const Vector<X> coupled_f({X(11u,dp),X(8u,dp)});
     const Vector<X> coupled_g({X(2u,dp)});
-    std::cout << "KKT CASE: one equality with coupled 2x2 SPD Hessian" << std::endl;
     const auto coupled_solution=validated_kkt_solve(
         coupled_hessian,first_coordinate,coupled_f,coupled_g);
     ARIADNE_TEST_ASSERT(coupled_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(coupled_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(coupled_solution.multipliers.has_value());
-    check_contains((coupled_solution.primal.value())[0u],X(2u,dp));
-    check_contains((coupled_solution.primal.value())[1u],X(3u,dp));
-    check_contains((coupled_solution.multipliers.value())[0u],X(4u,dp));
+    check_known_kkt_solution(coupled_solution,
+                             Vector<X>({X(2u,dp),X(3u,dp)}),
+                             Vector<X>({X(4u,dp)}),"coupled Hessian");
     check_kkt_residuals(coupled_hessian,first_coordinate,coupled_f,coupled_g,
                         coupled_solution.primal.value(),coupled_solution.multipliers.value());
 
@@ -223,18 +248,15 @@ Void test_validated_kkt_solve()
     a2[1u][2u]=X(1u,dp);
     const Vector<X> f3({X(5u,dp),X(7u,dp),X(12u,dp)});
     const Vector<X> g2({X(4u,dp),X(5u,dp)});
-    std::cout << "KKT CASE: two independent equalities in 3 dimensions" << std::endl;
     const auto multi_solution=validated_kkt_solve(h3,a2,f3,g2);
     ARIADNE_TEST_ASSERT(multi_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(multi_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(multi_solution.multipliers.has_value());
     check_kkt_residuals(h3,a2,f3,g2,
                         multi_solution.primal.value(),multi_solution.multipliers.value());
-    check_contains((multi_solution.primal.value())[0u],X(1u,dp));
-    check_contains((multi_solution.primal.value())[1u],X(2u,dp));
-    check_contains((multi_solution.primal.value())[2u],X(3u,dp));
-    check_contains((multi_solution.multipliers.value())[0u],X(4u,dp));
-    check_contains((multi_solution.multipliers.value())[1u],X(5u,dp));
+    check_known_kkt_solution(multi_solution,
+                             Vector<X>({X(1u,dp),X(2u,dp),X(3u,dp)}),
+                             Vector<X>({X(4u,dp),X(5u,dp)}),"two equalities");
 
     // A family of admissible KKT systems with a known exact member.
     S interval_hessian(2u,zero);
@@ -244,7 +266,6 @@ Void test_validated_kkt_solve()
     interval_constraints[0u][0u]=X(1,2,dp);
     const Vector<X> interval_f({X(4,5,dp),X(8,10,dp)});
     const Vector<X> interval_g({X(1,2,dp)});
-    std::cout << "KKT CASE: family of interval Hessians and equalities" << std::endl;
     const auto interval_solution=validated_kkt_solve(
         interval_hessian,interval_constraints,interval_f,interval_g);
     ARIADNE_TEST_ASSERT(interval_solution.status==ValidatedKktStatus::SOLVED);
@@ -252,16 +273,15 @@ Void test_validated_kkt_solve()
     ARIADNE_TEST_ASSERT(interval_solution.multipliers.has_value());
     check_kkt_residuals(interval_hessian,interval_constraints,interval_f,interval_g,
                         interval_solution.primal.value(),interval_solution.multipliers.value());
-    check_contains((interval_solution.primal.value())[0u],X(1u,dp));
-    check_contains((interval_solution.primal.value())[1u],X(2u,dp));
-    check_contains((interval_solution.multipliers.value())[0u],zero);
+    check_known_kkt_solution(interval_solution,
+                             Vector<X>({X(1u,dp),X(2u,dp)}),
+                             Vector<X>({zero}),"interval KKT family");
 
     // A provably non-SPD Hessian is a failure of this solver's precondition.
     S negative(1u,zero);
     negative[0u][0u]=X(-1,dp);
     Matrix<X> scalar_constraints(1u,1u,X(1u,dp));
     const Vector<X> scalar_rhs({X(1u,dp)});
-    std::cout << "KKT CASE: nonpositive Hessian" << std::endl;
     const auto negative_solution=validated_kkt_solve(
         negative,scalar_constraints,scalar_rhs,scalar_rhs);
     ARIADNE_TEST_ASSERT(
@@ -271,7 +291,6 @@ Void test_validated_kkt_solve()
 
     S uncertain_hessian(1u,zero);
     uncertain_hessian[0u][0u]=X(-1,1,dp);
-    std::cout << "KKT CASE: uncertain Hessian" << std::endl;
     const auto uncertain_h_solution=validated_kkt_solve(
         uncertain_hessian,scalar_constraints,scalar_rhs,scalar_rhs);
     ARIADNE_TEST_ASSERT(uncertain_h_solution.status==ValidatedKktStatus::INDETERMINATE);
@@ -281,7 +300,6 @@ Void test_validated_kkt_solve()
     // More constraint rows than unknowns is universally rank deficient.
     Matrix<X> overconstrained(2u,1u,X(1u,dp));
     const Vector<X> two_constraints({X(1u,dp),X(1u,dp)});
-    std::cout << "KKT CASE: too many equality constraints" << std::endl;
     const auto dependent_solution=validated_kkt_solve(
         scalar_hessian,overconstrained,scalar_rhs,two_constraints);
     ARIADNE_TEST_ASSERT(
@@ -293,7 +311,6 @@ Void test_validated_kkt_solve()
     Matrix<X> repeated(2u,2u,zero);
     repeated[0u][0u]=X(1u,dp);
     repeated[1u][0u]=X(1u,dp);
-    std::cout << "KKT CASE: repeated equality constraints" << std::endl;
     const auto repeated_solution=validated_kkt_solve(
         hessian,repeated,f,two_constraints);
     ARIADNE_TEST_ASSERT(
@@ -305,7 +322,6 @@ Void test_validated_kkt_solve()
     // a midpoint-rank decision, and do not infer dependence from an
     // interval Schur matrix which overestimates correlations.
     Matrix<X> ambiguous(1u,1u,X(-1,1,dp));
-    std::cout << "KKT CASE: interval-ambiguous row rank" << std::endl;
     const auto ambiguous_solution=validated_kkt_solve(
         scalar_hessian,ambiguous,scalar_rhs,scalar_rhs);
     ARIADNE_TEST_ASSERT(ambiguous_solution.status==ValidatedKktStatus::INDETERMINATE);
