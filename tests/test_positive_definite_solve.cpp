@@ -152,7 +152,7 @@ Void test_validated_kkt_solve()
     ARIADNE_TEST_ASSERT(empty_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(empty_solution.multipliers.has_value());
     check_kkt_residuals(empty_hessian,empty_constraints,empty_vector,
-                        empty_vector,*empty_solution.primal,*empty_solution.multipliers);
+                        empty_vector,empty_solution.primal.value(),empty_solution.multipliers.value());
 
     S scalar_hessian(1u,zero);
     scalar_hessian[0u][0u]=X(2u,dp);
@@ -164,10 +164,10 @@ Void test_validated_kkt_solve()
     ARIADNE_TEST_ASSERT(unconstrained_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(unconstrained_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(unconstrained_solution.multipliers.has_value());
-    check_contains((*unconstrained_solution.primal)[0u],X(3u,dp));
+    check_contains((unconstrained_solution.primal.value())[0u],X(3u,dp));
     check_kkt_residuals(scalar_hessian,no_constraints,unconstrained_rhs,
-                        empty_vector,*unconstrained_solution.primal,
-                        *unconstrained_solution.multipliers);
+                        empty_vector,unconstrained_solution.primal.value(),
+                        unconstrained_solution.multipliers.value());
 
     // One equality: H=2I, A=(1,1), f=0, g=2.
     // Exact solution x=(1,1), lambda=-2.
@@ -184,11 +184,11 @@ Void test_validated_kkt_solve()
     ARIADNE_TEST_ASSERT(single_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(single_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(single_solution.multipliers.has_value());
-    check_contains((*single_solution.primal)[0u],X(1u,dp));
-    check_contains((*single_solution.primal)[1u],X(1u,dp));
-    check_contains((*single_solution.multipliers)[0u],X(-2,dp));
+    check_contains((single_solution.primal.value())[0u],X(1u,dp));
+    check_contains((single_solution.primal.value())[1u],X(1u,dp));
+    check_contains((single_solution.multipliers.value())[0u],X(-2,dp));
     check_kkt_residuals(hessian,constraints,f,g,
-                        *single_solution.primal,*single_solution.multipliers);
+                        single_solution.primal.value(),single_solution.multipliers.value());
 
     // A non-diagonal Hessian and a nonzero dual variable.
     S coupled_hessian(2u,zero);
@@ -205,11 +205,11 @@ Void test_validated_kkt_solve()
     ARIADNE_TEST_ASSERT(coupled_solution.status==ValidatedKktStatus::SOLVED);
     ARIADNE_TEST_ASSERT(coupled_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(coupled_solution.multipliers.has_value());
-    check_contains((*coupled_solution.primal)[0u],X(2u,dp));
-    check_contains((*coupled_solution.primal)[1u],X(3u,dp));
-    check_contains((*coupled_solution.multipliers)[0u],X(4u,dp));
+    check_contains((coupled_solution.primal.value())[0u],X(2u,dp));
+    check_contains((coupled_solution.primal.value())[1u],X(3u,dp));
+    check_contains((coupled_solution.multipliers.value())[0u],X(4u,dp));
     check_kkt_residuals(coupled_hessian,first_coordinate,coupled_f,coupled_g,
-                        *coupled_solution.primal,*coupled_solution.multipliers);
+                        coupled_solution.primal.value(),coupled_solution.multipliers.value());
 
     // Two independent constraints: exact x=(1,2,3), lambda=(4,5).
     S h3(3u,zero);
@@ -229,12 +229,12 @@ Void test_validated_kkt_solve()
     ARIADNE_TEST_ASSERT(multi_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(multi_solution.multipliers.has_value());
     check_kkt_residuals(h3,a2,f3,g2,
-                        *multi_solution.primal,*multi_solution.multipliers);
-    check_contains((*multi_solution.primal)[0u],X(1u,dp));
-    check_contains((*multi_solution.primal)[1u],X(2u,dp));
-    check_contains((*multi_solution.primal)[2u],X(3u,dp));
-    check_contains((*multi_solution.multipliers)[0u],X(4u,dp));
-    check_contains((*multi_solution.multipliers)[1u],X(5u,dp));
+                        multi_solution.primal.value(),multi_solution.multipliers.value());
+    check_contains((multi_solution.primal.value())[0u],X(1u,dp));
+    check_contains((multi_solution.primal.value())[1u],X(2u,dp));
+    check_contains((multi_solution.primal.value())[2u],X(3u,dp));
+    check_contains((multi_solution.multipliers.value())[0u],X(4u,dp));
+    check_contains((multi_solution.multipliers.value())[1u],X(5u,dp));
 
     // A family of admissible KKT systems with a known exact member.
     S interval_hessian(2u,zero);
@@ -251,10 +251,10 @@ Void test_validated_kkt_solve()
     ARIADNE_TEST_ASSERT(interval_solution.primal.has_value());
     ARIADNE_TEST_ASSERT(interval_solution.multipliers.has_value());
     check_kkt_residuals(interval_hessian,interval_constraints,interval_f,interval_g,
-                        *interval_solution.primal,*interval_solution.multipliers);
-    check_contains((*interval_solution.primal)[0u],X(1u,dp));
-    check_contains((*interval_solution.primal)[1u],X(2u,dp));
-    check_contains((*interval_solution.multipliers)[0u],zero);
+                        interval_solution.primal.value(),interval_solution.multipliers.value());
+    check_contains((interval_solution.primal.value())[0u],X(1u,dp));
+    check_contains((interval_solution.primal.value())[1u],X(2u,dp));
+    check_contains((interval_solution.multipliers.value())[0u],zero);
 
     // A provably non-SPD Hessian is a failure of this solver's precondition.
     S negative(1u,zero);
