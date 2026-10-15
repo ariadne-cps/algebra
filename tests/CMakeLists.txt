@@ -6,6 +6,7 @@ set(UNIT_TESTS
     test_expansion
     test_graded
     test_matrix
+    test_exact_linear_algebra
     test_multi_index
     test_polynomial
     test_chebyshev_polynomial
