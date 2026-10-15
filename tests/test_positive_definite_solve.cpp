@@ -507,6 +507,150 @@ Void test_validated_kkt_matrix_rhs()
 }
 
 
+// A semidefinite Hessian can still define a strictly convex quadratic
+// on the affine feasible space when H is positive on ker(A). Test the
+// augmented route without weakening any of the original SPD tests.
+Void test_kkt_augmented_hessian()
+{
+    const X zero(0u,dp);
+
+    // H=diag(0,2) is positive semidefinite but not SPD.
+    // A fixes the first coordinate. The exact solution is
+    // x=(2,3), lambda=5, for f=(5,6) and g=2.
+    S semidefinite(2u,zero);
+    semidefinite[1u][1u]=X(2u,dp);
+    Matrix<X> A(1u,2u,zero);
+    A[0u][0u]=X(1u,dp);
+    const Vector<X> f({X(5u,dp),X(6u,dp)});
+    const Vector<X> g({X(2u,dp)});
+    const auto constrained=validated_kkt_solve(semidefinite,A,f,g);
+    ARIADNE_TEST_ASSERT(constrained.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(constrained.primal.has_value());
+    ARIADNE_TEST_ASSERT(constrained.multipliers.has_value());
+    if(constrained.primal.has_value() && constrained.multipliers.has_value()) {
+        check_known_kkt_solution(constrained,
+                                 Vector<X>({X(2u,dp),X(3u,dp)}),
+                                 Vector<X>({X(5u,dp)}),
+                                 "positive semidefinite H, constrained nullspace");
+        check_kkt_residuals(semidefinite,A,f,g,
+                            *constrained.primal,*constrained.multipliers);
+    }
+
+    // The original H=[-1,1] is not certifiably SPD, but A=[2]
+    // makes H+A^T*A=[3,5] certified SPD for every interval member.
+    // The member H=0 has x=1 and lambda=2.
+    S uncertain(1u,zero);
+    uncertain[0u][0u]=X(-1,1,dp);
+    Matrix<X> A_scalar(1u,1u,X(2u,dp));
+    const Vector<X> f_scalar({X(4u,dp)});
+    const Vector<X> g_scalar({X(2u,dp)});
+    const auto uncertain_constrained=validated_kkt_solve(
+        uncertain,A_scalar,f_scalar,g_scalar);
+    ARIADNE_TEST_ASSERT(uncertain_constrained.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(uncertain_constrained.primal.has_value());
+    ARIADNE_TEST_ASSERT(uncertain_constrained.multipliers.has_value());
+    if(uncertain_constrained.primal.has_value()
+       && uncertain_constrained.multipliers.has_value()) {
+        check_known_kkt_solution(uncertain_constrained,
+                                 Vector<X>({X(1u,dp)}),
+                                 Vector<X>({X(2u,dp)}),
+                                 "interval H with constrained negative curvature");
+        check_kkt_residuals(uncertain,A_scalar,f_scalar,g_scalar,
+                            *uncertain_constrained.primal,
+                            *uncertain_constrained.multipliers);
+    }
+
+    // Even H=-1 is admissible when all negative-curvature directions
+    // are fixed by A=[2]. The multiplier in the original KKT system
+    // is unchanged by the augmentation.
+    S negative_scalar(1u,zero);
+    negative_scalar[0u][0u]=X(-1,dp);
+    const Vector<X> negative_f({X(3u,dp)});
+    const auto negative_constrained=validated_kkt_solve(
+        negative_scalar,A_scalar,negative_f,g_scalar);
+    ARIADNE_TEST_ASSERT(negative_constrained.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(negative_constrained.primal.has_value());
+    ARIADNE_TEST_ASSERT(negative_constrained.multipliers.has_value());
+    if(negative_constrained.primal.has_value()
+       && negative_constrained.multipliers.has_value()) {
+        check_known_kkt_solution(negative_constrained,
+                                 Vector<X>({X(1u,dp)}),
+                                 Vector<X>({X(2u,dp)}),
+                                 "negative Hessian, constrained degree of freedom");
+        check_kkt_residuals(negative_scalar,A_scalar,negative_f,g_scalar,
+                            *negative_constrained.primal,
+                            *negative_constrained.multipliers);
+    }
+
+    // H=0 and full-rank A=I: the constraints determine every primal
+    // variable and lambda=F. Check two right-hand sides at once.
+    S zero_hessian(2u,zero);
+    Matrix<X> identity(2u,2u,zero);
+    identity[0u][0u]=X(1u,dp);
+    identity[1u][1u]=X(1u,dp);
+    Matrix<X> F(2u,2u,zero);
+    F[0u][0u]=X(3u,dp);
+    F[1u][0u]=X(5u,dp);
+    F[0u][1u]=X(7u,dp);
+    F[1u][1u]=X(11u,dp);
+    Matrix<X> G(2u,2u,zero);
+    G[0u][0u]=X(1u,dp);
+    G[1u][0u]=X(2u,dp);
+    G[0u][1u]=X(4u,dp);
+    G[1u][1u]=X(6u,dp);
+    const auto zero_full_rank=validated_kkt_solve(
+        zero_hessian,identity,F,G);
+    ARIADNE_TEST_ASSERT(zero_full_rank.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(zero_full_rank.primal.has_value());
+    ARIADNE_TEST_ASSERT(zero_full_rank.multipliers.has_value());
+    if(zero_full_rank.primal.has_value()
+       && zero_full_rank.multipliers.has_value()) {
+        InclusionAudit audit("zero Hessian, full-rank constraints, two RHS");
+        const Matrix<X>& x=*zero_full_rank.primal;
+        const Matrix<X>& lambda=*zero_full_rank.multipliers;
+        const Matrix<X> stationarity=static_cast<Matrix<X>>(zero_hessian)*x+
+                                     transpose(identity)*lambda;
+        const Matrix<X> equalities=identity*x;
+        for(SizeType i=0; i!=2u; ++i) {
+            for(SizeType col=0; col!=2u; ++col) {
+                audit.add(x[i][col],G[i][col],
+                          "primal["+std::to_string(i)+","+std::to_string(col)+"]");
+                audit.add(lambda[i][col],F[i][col],
+                          "multiplier["+std::to_string(i)+","+std::to_string(col)+"]");
+                audit.add(stationarity[i][col],F[i][col],
+                          "stationarity["+std::to_string(i)+","+std::to_string(col)+"]");
+                audit.add(equalities[i][col],G[i][col],
+                          "equality["+std::to_string(i)+","+std::to_string(col)+"]");
+            }
+        }
+        const bool constrained_zero_hessian_enclosed=audit.valid();
+        ARIADNE_TEST_ASSERT(constrained_zero_hessian_enclosed);
+    }
+
+    // A zero-curvature direction not constrained by A cannot be
+    // certified with H+A^T*A; this is not an infeasibility result.
+    Matrix<X> missing_direction(1u,2u,zero);
+    missing_direction[0u][1u]=X(1u,dp);
+    const auto incomplete=validated_kkt_solve(
+        semidefinite,missing_direction,f,g);
+    ARIADNE_TEST_ASSERT(
+        incomplete.status==ValidatedKktStatus::HESSIAN_NOT_POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(!incomplete.primal.has_value());
+    ARIADNE_TEST_ASSERT(!incomplete.multipliers.has_value());
+
+    // No constraints: a semidefinite Hessian remains uncertifiable by
+    // either direct or augmented SPD tests.
+    const Matrix<X> no_constraints(0u,2u,zero);
+    const Vector<X> empty_g(0u,zero);
+    const auto unconstrained=validated_kkt_solve(
+        semidefinite,no_constraints,f,empty_g);
+    ARIADNE_TEST_ASSERT(
+        unconstrained.status==ValidatedKktStatus::HESSIAN_NOT_POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(!unconstrained.primal.has_value());
+    ARIADNE_TEST_ASSERT(!unconstrained.multipliers.has_value());
+}
+
+
 Void test_empty_and_zero_rhs()
 {
     const X zero(0u,dp);
@@ -687,5 +831,6 @@ Int main()
     ARIADNE_TEST_CALL(test_failure_and_indeterminate());
     ARIADNE_TEST_CALL(test_validated_kkt_solve());
     ARIADNE_TEST_CALL(test_validated_kkt_matrix_rhs());
+    ARIADNE_TEST_CALL(test_kkt_augmented_hessian());
     return ARIADNE_TEST_FAILURES;
 }

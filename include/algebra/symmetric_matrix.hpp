@@ -525,16 +525,20 @@ struct ValidatedKktResult {
 };
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Solve a strictly convex equality-constrained KKT system rigorously.
+//! \brief Solve a certified equality-constrained KKT system rigorously.
 //! \param H Symmetric n-by-n interval Hessian.
 //! \param A Interval m-by-n matrix of equality-constraint coefficients.
 //! \param f Interval right-hand side of stationarity (n entries).
 //! \param g Interval right-hand side of equality constraints (m entries).
 //! \return SOLVED and enclosures (x,lambda) if the interval computations
-//! certify H positive definite and A full row rank for *every* represented
-//! real problem. Otherwise return HESSIAN_NOT_POSITIVE_DEFINITE when that
-//! property of H is disproved universally, DEPENDENT_CONSTRAINTS when all
-//! represented A have dependent rows, or INDETERMINATE.
+//! certify the primal-dual system has a unique solution for *every*
+//! represented real problem. The sufficient conditions are H SPD,
+//! or (when H is not certified SPD) H+A^T*A SPD, together with A
+//! having full row rank. HESSIAN_NOT_POSITIVE_DEFINITE means the original
+//! Hessian is provably not SPD and neither route returned a solution;
+//! it does not assert that the KKT system is unsolvable.
+//! DEPENDENT_CONSTRAINTS means all represented A have dependent rows;
+//! otherwise the result is INDETERMINATE.
 //! \pre A.column_size()==H.size(), f.size()==H.size(),
 //! and g.size()==A.row_size().
 //! \details The system is H*x + A^T*lambda=f, A*x=g. Compute rigorous
@@ -545,11 +549,18 @@ struct ValidatedKktResult {
 //! In particular, interval multiplication of dependent quantities can
 //! widen S: failure to certify its positive definiteness returns
 //! INDETERMINATE rather than a numerical-rank decision.
+//! If direct SPD certification of H fails, the implementation
+//! tries the algebraically equivalent KKT system with augmented Hessian
+//! H+A^T*A and right-hand side f+A^T*g. The unit coefficient is fixed,
+//! not an adaptive rank tolerance. If the augmented Hessian is SPD,
+//! then H is positive definite on ker(A); a certified SPD Schur matrix
+//! then proves uniqueness even when H is semidefinite or indefinite.
+//! Interval dependency can still lead to INDETERMINATE.
 //! Row dependence is checked separately only if Schur certification fails.
 //! The vector overload delegates to the multi-right-hand-side implementation.
 //! The empty constraint set (m=0) reduces to the SPD solve; n=m=0 is
-//! admissible. Positive-semidefinite Hessians and general indefinite KKT
-//! matrices are outside this routine's certification contract.
+//! admissible. General indefinite cases not certified by augmentation
+//! remain outside this routine's successful contract.
 //! \par Reference
 //! J. Nocedal and S. J. Wright, \em Numerical \em Optimization,
 //! 2nd ed., Springer, 2006, Chapter 16, equality-constrained quadratic
@@ -572,7 +583,7 @@ struct ValidatedKktMatrixResult {
 };
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Solve KKT systems sharing a strictly positive Hessian and constraints.
+//! \brief Solve multiple certified KKT systems sharing Hessian and constraints.
 //! \param H Symmetric n-by-n interval Hessian.
 //! \param A Interval m-by-n matrix of equality constraints.
 //! \param F Interval n-by-p matrix of stationarity right-hand sides.
@@ -580,10 +591,14 @@ struct ValidatedKktMatrixResult {
 //! \pre A.column_size()==H.size(), F.row_size()==H.size(),
 //! G.row_size()==A.row_size(), F.column_size()==G.column_size().
 //! \return SOLVED with n-by-p primal and m-by-p multiplier enclosures
-//! when both H and the Schur complement are certified positive definite;
-//! otherwise the same failure/indeterminate statuses as the vector solver.
-//! \details Computes outward-rounded H^{-1}*[F,A^T], the common Schur
-//! complement A*H^{-1}*A^T, and solves its p right-hand sides together.
+//! when the chosen Hessian (H, or the augmented H+A^T*A) and its Schur
+//! complement are certified positive definite; otherwise the same
+//! failure/indeterminate statuses as the vector solver.
+//! \details First attempts outward-rounded H^{-1}*[F,A^T]. If H is not
+//! certified SPD and m>0, attempts the equivalent system formed with
+//! augmented Hessian H+A^T*A and right-hand sides F+A^T*G.
+//! The common Schur complement of the certified Hessian is then
+//! solved for all p right-hand sides together.
 //! Each admissible real KKT solution lies in the corresponding columns.
 //! A failure of Schur certification alone does not prove dependence;
 //! an independent rank certificate is required for DEPENDENT_CONSTRAINTS.

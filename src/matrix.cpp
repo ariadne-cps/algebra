@@ -422,7 +422,51 @@ ValidatedKktMatrixResult validated_kkt_solve(
         }
     }
 
-    const auto h_solve=validated_positive_definite_solve(H,rhs);
+    auto h_solve=validated_positive_definite_solve(H,rhs);
+
+    // If the original Hessian is not certified SPD, constraints can
+    // still make the *reduced* quadratic form positive definite.
+    // With A*x=g, the following two KKT systems are equivalent:
+    //
+    //   H*x + A^T*lambda = f          (H+A^T*A)*x + A^T*lambda = f+A^T*g
+    //   A*x = g                     A*x = g.
+    //
+    // For every exact H and A, positive definiteness of H+A^T*A
+    // implies positivity of H on ker(A). Thus a certified augmented
+    // Hessian and a certified Schur complement yield a unique KKT
+    // solution even when H is only semidefinite (or indefinite).
+    // This fixed unit augmentation is a sufficient test: failure is
+    // not interpreted as nonexistence of a KKT solution.
+    if(!h_solve.solution.has_value() && m!=0u) {
+        SymmetricMatrix<FloatDPBounds> augmented_h(n,H.zero_element());
+        for(SizeType i=0; i!=n; ++i) {
+            for(SizeType j=i; j!=n; ++j) {
+                FloatDPBounds entry=H[i][j];
+                for(SizeType k=0; k!=m; ++k) {
+                    entry+=(i==j) ? sqr(A[k][i]) : A[k][i]*A[k][j];
+                }
+                augmented_h[i][j]=entry;
+            }
+        }
+
+        Matrix<FloatDPBounds> augmented_rhs=rhs;
+        for(SizeType i=0; i!=n; ++i) {
+            for(SizeType col=0; col!=p; ++col) {
+                for(SizeType k=0; k!=m; ++k) {
+                    augmented_rhs[i][col]+=A[k][i]*G[k][col];
+                }
+            }
+        }
+
+        const auto augmented_solve=
+            validated_positive_definite_solve(augmented_h,augmented_rhs);
+        if(augmented_solve.solution.has_value()) {
+            // The existing Schur-complement code now solves the
+            // equivalent augmented KKT system. lambda is unchanged.
+            h_solve=std::move(augmented_solve);
+        }
+    }
+
     if(!h_solve.solution.has_value()) {
         if(h_solve.status==PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE) {
             return {ValidatedKktStatus::HESSIAN_NOT_POSITIVE_DEFINITE,std::nullopt,std::nullopt};
