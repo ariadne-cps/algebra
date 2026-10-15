@@ -10,6 +10,7 @@ set(UNIT_TESTS
     test_polynomial
     test_chebyshev_polynomial
     test_positive_definiteness
+    test_cholesky_decomposition
     test_sweeper
     test_symmetric_matrix
     test_univariate_differential

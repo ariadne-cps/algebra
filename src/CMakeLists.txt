@@ -2,6 +2,7 @@ add_library(ALGEBRA_SRC OBJECT
     vector.cpp
     matrix.cpp
     positive_definiteness.cpp
+    cholesky_decomposition.cpp
     series.cpp
     polynomial.cpp
     chebyshev_polynomial.cpp
