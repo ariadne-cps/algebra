@@ -651,6 +651,217 @@ Void test_saddle_point_augmented_leading_block()
 }
 
 
+Void test_generalized_saddle_point()
+{
+    const X zero(0u,dp);
+    S H(2u,zero);
+    H[0u][0u]=X(2u,dp);
+    H[1u][1u]=X(2u,dp);
+    Matrix<X> A(1u,2u,zero);
+    A[0u][0u]=X(1u,dp);
+    A[0u][1u]=X(1u,dp);
+    S C(1u,zero);
+    C[0u][0u]=X(2u,dp);
+    const Vector<X> f(2u,zero);
+    const Vector<X> g({X(6u,dp)});
+    const auto one=validated_saddle_point_solve(H,A,C,f,g);
+    ARIADNE_TEST_ASSERT(one.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(one.primary.has_value());
+    ARIADNE_TEST_ASSERT(one.secondary.has_value());
+    if(one.primary.has_value() && one.secondary.has_value()) {
+        check_known_saddle_point_solution(one,Vector<X>({X(1u,dp),X(1u,dp)}),
+                                          Vector<X>({X(-2,dp)}),"nonzero lower block");
+        InclusionAudit audit("generalized saddle-point vector residual");
+        const Vector<X> upper=static_cast<Matrix<X>>(H)*(*one.primary)+
+                              transpose(A)*(*one.secondary);
+        const Vector<X> lower=A*(*one.primary)-static_cast<Matrix<X>>(C)*(*one.secondary);
+        for(SizeType i=0; i!=2u; ++i) {
+            audit.add(upper[i],f[i],"upper["+std::to_string(i)+"]");
+        }
+        audit.add(lower[0u],g[0u],"lower[0]");
+        const bool generalized_vector_residual_enclosed=audit.valid();
+        ARIADNE_TEST_ASSERT(generalized_vector_residual_enclosed);
+    }
+
+    Matrix<X> F(2u,2u,zero);
+    F[0u][1u]=X(8u,dp);
+    F[1u][1u]=X(10u,dp);
+    Matrix<X> G(1u,2u,zero);
+    G[0u][0u]=X(6u,dp);
+    G[0u][1u]=X(-3,dp);
+    const auto many=validated_saddle_point_solve(H,A,C,F,G);
+    ARIADNE_TEST_ASSERT(many.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(many.primary.has_value());
+    ARIADNE_TEST_ASSERT(many.secondary.has_value());
+    if(many.primary.has_value() && many.secondary.has_value()) {
+        const Matrix<X> upper=static_cast<Matrix<X>>(H)*(*many.primary)+
+                              transpose(A)*(*many.secondary);
+        const Matrix<X> lower=A*(*many.primary)-
+                              static_cast<Matrix<X>>(C)*(*many.secondary);
+        InclusionAudit audit("generalized saddle-point two RHS");
+        for(SizeType i=0; i!=2u; ++i) {
+            for(SizeType j=0; j!=2u; ++j) {
+                audit.add(upper[i][j],F[i][j],"upper");
+            }
+        }
+        for(SizeType j=0; j!=2u; ++j) {
+            audit.add(lower[0u][j],G[0u][j],"lower");
+        }
+        audit.add((*many.primary)[0u][0u],X(1u,dp),"x00");
+        audit.add((*many.primary)[1u][0u],X(1u,dp),"x10");
+        audit.add((*many.secondary)[0u][0u],X(-2,dp),"y00");
+        audit.add((*many.primary)[0u][1u],X(2u,dp),"x01");
+        audit.add((*many.primary)[1u][1u],X(3u,dp),"x11");
+        audit.add((*many.secondary)[0u][1u],X(4u,dp),"y01");
+        const bool generalized_matrix_residual_enclosed=audit.valid();
+        ARIADNE_TEST_ASSERT(generalized_matrix_residual_enclosed);
+    }
+
+    // Dependent coupling rows are allowed when C regularizes the lower block.
+    S scalar(1u,zero);
+    scalar[0u][0u]=X(2u,dp);
+    Matrix<X> repeated(2u,1u,X(1u,dp));
+    S identity(2u,zero);
+    identity[0u][0u]=X(1u,dp);
+    identity[1u][1u]=X(1u,dp);
+    const auto dependent=validated_saddle_point_solve(
+        scalar,repeated,identity,Vector<X>({X(15u,dp)}),
+        Vector<X>({X(-1,dp),X(-2,dp)}));
+    ARIADNE_TEST_ASSERT(dependent.status==ValidatedSaddlePointStatus::SOLVED);
+    if(dependent.primary.has_value() && dependent.secondary.has_value()) {
+        check_known_saddle_point_solution(dependent,
+            Vector<X>({X(3u,dp)}),Vector<X>({X(4u,dp),X(5u,dp)}),
+            "dependent coupling, nonzero lower block");
+    }
+
+    Matrix<X> no_coupling(2u,1u,zero);
+    const auto decoupled=validated_saddle_point_solve(
+        scalar,no_coupling,identity,Vector<X>({X(6u,dp)}),
+        Vector<X>({X(-4,dp),X(-5,dp)}));
+    ARIADNE_TEST_ASSERT(decoupled.status==ValidatedSaddlePointStatus::SOLVED);
+    if(decoupled.primary.has_value() && decoupled.secondary.has_value()) {
+        check_known_saddle_point_solution(decoupled,
+            Vector<X>({X(3u,dp)}),Vector<X>({X(4u,dp),X(5u,dp)}),
+            "zero coupling, nonzero lower block");
+    }
+
+    // S can be SPD even when C is indefinite.
+    Matrix<X> strong(1u,1u,X(2u,dp));
+    S negative_C(1u,zero);
+    negative_C[0u][0u]=X(-1,dp);
+    const auto indefinite=validated_saddle_point_solve(
+        scalar,strong,negative_C,Vector<X>({X(6u,dp)}),
+        Vector<X>({X(4u,dp)}));
+    ARIADNE_TEST_ASSERT(indefinite.status==ValidatedSaddlePointStatus::SOLVED);
+    if(indefinite.primary.has_value() && indefinite.secondary.has_value()) {
+        check_known_saddle_point_solution(indefinite,
+            Vector<X>({X(1u,dp)}),Vector<X>({X(2u,dp)}),
+            "indefinite lower-right block");
+    }
+
+    // A positive interval C gives certified enclosures for a family.
+    S interval_C(1u,zero);
+    interval_C[0u][0u]=X(1,2,dp);
+    const auto interval=validated_saddle_point_solve(
+        scalar,Matrix<X>(1u,1u,X(1u,dp)),interval_C,
+        Vector<X>({X(4u,dp)}),Vector<X>({X(-3,-1,dp)}));
+    ARIADNE_TEST_ASSERT(interval.status==ValidatedSaddlePointStatus::SOLVED);
+    if(interval.primary.has_value() && interval.secondary.has_value()) {
+        check_known_saddle_point_solution(interval,
+            Vector<X>({X(1u,dp)}),Vector<X>({X(2u,dp)}),
+            "interval lower-right block");
+    }
+
+    // C=0 calls the original certified augmented route.
+    S zero_H(1u,zero);
+    S zero_C(1u,zero);
+    const Matrix<X> coupling(1u,1u,X(1u,dp));
+    const auto augmented=validated_saddle_point_solve(
+        zero_H,coupling,zero_C,Vector<X>({X(4u,dp)}),
+        Vector<X>({X(2u,dp)}));
+    ARIADNE_TEST_ASSERT(augmented.status==ValidatedSaddlePointStatus::SOLVED);
+    if(augmented.primary.has_value() && augmented.secondary.has_value()) {
+        check_known_saddle_point_solution(augmented,
+            Vector<X>({X(2u,dp)}),Vector<X>({X(4u,dp)}),
+            "explicit C=0");
+    }
+
+    S empty_H(0u,zero);
+    Matrix<X> empty_A(1u,0u,zero);
+    S lower_only(1u,zero);
+    lower_only[0u][0u]=X(2u,dp);
+    const auto no_leading=validated_saddle_point_solve(
+        empty_H,empty_A,lower_only,Vector<X>(0u,zero),
+        Vector<X>({X(-4,dp)}));
+    ARIADNE_TEST_ASSERT(no_leading.status==ValidatedSaddlePointStatus::SOLVED);
+    if(no_leading.primary.has_value() && no_leading.secondary.has_value()) {
+        check_known_saddle_point_solution(no_leading,
+            Vector<X>(0u,zero),Vector<X>({X(2u,dp)}),
+            "empty leading block");
+    }
+
+    const auto no_rhs=validated_saddle_point_solve(
+        H,A,C,Matrix<X>(2u,0u,zero),Matrix<X>(1u,0u,zero));
+    ARIADNE_TEST_ASSERT(no_rhs.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(no_rhs.primary.has_value());
+    ARIADNE_TEST_ASSERT(no_rhs.secondary.has_value());
+    if(no_rhs.primary.has_value() && no_rhs.secondary.has_value()) {
+        ARIADNE_TEST_EQUALS(no_rhs.primary->column_size(),0u);
+        ARIADNE_TEST_EQUALS(no_rhs.secondary->column_size(),0u);
+    }
+}
+
+Void test_generalized_saddle_point_failures()
+{
+    const X zero(0u,dp);
+    S H(1u,zero);
+    H[0u][0u]=X(2u,dp);
+    const Matrix<X> A(1u,1u,X(1u,dp));
+    S C(1u,zero);
+    C[0u][0u]=X(1u,dp);
+    const Vector<X> f({X(2u,dp)});
+    const Vector<X> g({X(1u,dp)});
+    const Matrix<X> F(1u,1u,X(2u,dp));
+    const Matrix<X> G(1u,1u,X(1u,dp));
+    S bad_C(2u,zero);
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,A,bad_C,f,g));
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,A,bad_C,F,G));
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,Matrix<X>(1u,2u,zero),C,f,g));
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,A,C,Vector<X>(2u,zero),g));
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,A,C,f,Vector<X>(2u,zero)));
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,Matrix<X>(1u,2u,zero),C,F,G));
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,A,C,Matrix<X>(2u,1u,zero),G));
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,A,C,F,Matrix<X>(2u,1u,zero)));
+    ARIADNE_TEST_FAIL(validated_saddle_point_solve(H,A,C,F,Matrix<X>(1u,2u,zero)));
+
+    S negative(1u,zero);
+    negative[0u][0u]=X(-1,dp);
+    const auto no_augmentation=validated_saddle_point_solve(negative,A,C,f,g);
+    ARIADNE_TEST_ASSERT(no_augmentation.status==
+        ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
+
+    S uncertain(1u,zero);
+    uncertain[0u][0u]=X(-1,1,dp);
+    const auto unknown=validated_saddle_point_solve(uncertain,A,C,f,g);
+    ARIADNE_TEST_ASSERT(unknown.status==ValidatedSaddlePointStatus::INDETERMINATE);
+
+    // An indefinite Schur complement is inconclusive even if A has dependent rows.
+    Matrix<X> dependent(2u,1u,X(1u,dp));
+    S negative_C(2u,zero);
+    negative_C[0u][0u]=X(-1,dp);
+    const auto schur_failure=validated_saddle_point_solve(
+        H,dependent,negative_C,F,Matrix<X>(2u,1u,zero));
+    ARIADNE_TEST_ASSERT(schur_failure.status==ValidatedSaddlePointStatus::INDETERMINATE);
+
+    // A zero-containing interval is not a structural zero: no fallback.
+    S uncertain_C(1u,zero);
+    uncertain_C[0u][0u]=X(-1,1,dp);
+    const auto not_structurally_zero=validated_saddle_point_solve(
+        negative,A,uncertain_C,f,g);
+    ARIADNE_TEST_ASSERT(not_structurally_zero.status==
+        ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
+}
+
 Void test_empty_and_zero_rhs()
 {
     const X zero(0u,dp);
@@ -832,5 +1043,7 @@ Int main()
     ARIADNE_TEST_CALL(test_validated_saddle_point_solve());
     ARIADNE_TEST_CALL(test_validated_saddle_point_matrix_rhs());
     ARIADNE_TEST_CALL(test_saddle_point_augmented_leading_block());
+    ARIADNE_TEST_CALL(test_generalized_saddle_point());
+    ARIADNE_TEST_CALL(test_generalized_saddle_point_failures());
     return ARIADNE_TEST_FAILURES;
 }
