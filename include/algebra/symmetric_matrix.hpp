@@ -545,7 +545,8 @@ struct ValidatedKktResult {
 //! In particular, interval multiplication of dependent quantities can
 //! widen S: failure to certify its positive definiteness returns
 //! INDETERMINATE rather than a numerical-rank decision.
-//! Row dependence is checked separately using validated_independent_rows().
+//! Row dependence is checked separately only if Schur certification fails.
+//! The vector overload delegates to the multi-right-hand-side implementation.
 //! The empty constraint set (m=0) reduces to the SPD solve; n=m=0 is
 //! admissible. Positive-semidefinite Hessians and general indefinite KKT
 //! matrices are outside this routine's certification contract.
@@ -558,6 +559,43 @@ ValidatedKktResult validated_kkt_solve(
     const Matrix<FloatDPBounds>& A,
     const Vector<FloatDPBounds>& f,
     const Vector<FloatDPBounds>& g);
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Validated enclosures for multiple equality-constrained KKT systems.
+//! \details Both matrices are present iff status is SOLVED. Every output
+//! column encloses the primal or multiplier vector for the corresponding
+//! right-hand-side column.
+struct ValidatedKktMatrixResult {
+    ValidatedKktStatus status; //!< Universal certification outcome.
+    std::optional<Matrix<FloatDPBounds>> primal; //!< n-by-p primal solution enclosure.
+    std::optional<Matrix<FloatDPBounds>> multipliers; //!< m-by-p dual solution enclosure.
+};
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Solve KKT systems sharing a strictly positive Hessian and constraints.
+//! \param H Symmetric n-by-n interval Hessian.
+//! \param A Interval m-by-n matrix of equality constraints.
+//! \param F Interval n-by-p matrix of stationarity right-hand sides.
+//! \param G Interval m-by-p matrix of equality right-hand sides.
+//! \pre A.column_size()==H.size(), F.row_size()==H.size(),
+//! G.row_size()==A.row_size(), F.column_size()==G.column_size().
+//! \return SOLVED with n-by-p primal and m-by-p multiplier enclosures
+//! when both H and the Schur complement are certified positive definite;
+//! otherwise the same failure/indeterminate statuses as the vector solver.
+//! \details Computes outward-rounded H^{-1}*[F,A^T], the common Schur
+//! complement A*H^{-1}*A^T, and solves its p right-hand sides together.
+//! Each admissible real KKT solution lies in the corresponding columns.
+//! A failure of Schur certification alone does not prove dependence;
+//! an independent rank certificate is required for DEPENDENT_CONSTRAINTS.
+//! Accepts p=0, m=0 and n=m=0. Uses no tolerance or explicit inverse.
+//! \par Reference
+//! J. Nocedal and S. J. Wright, \em Numerical \em Optimization,
+//! 2nd ed., Springer, 2006, Chapter 16, Schur-complement KKT systems.
+ValidatedKktMatrixResult validated_kkt_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const Matrix<FloatDPBounds>& F,
+    const Matrix<FloatDPBounds>& G);
 
 //!@}
 

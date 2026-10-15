@@ -337,6 +337,176 @@ Void test_validated_kkt_solve()
 }
 
 
+Void test_validated_kkt_matrix_rhs()
+{
+    const X zero(0u,dp);
+    S H(2u,zero);
+    H[0u][0u]=X(2u,dp);
+    H[1u][1u]=X(2u,dp);
+    Matrix<X> A(1u,2u,zero);
+    A[0u][0u]=X(1u,dp);
+    A[0u][1u]=X(1u,dp);
+
+    // First column: x=(1,1), lambda=-2; second: x=(2,3), lambda=4.
+    Matrix<X> F(2u,2u,zero);
+    F[0u][1u]=X(8u,dp);
+    F[1u][1u]=X(10u,dp);
+    Matrix<X> G(1u,2u,zero);
+    G[0u][0u]=X(2u,dp);
+    G[0u][1u]=X(5u,dp);
+
+    const auto multiple=validated_kkt_solve(H,A,F,G);
+    ARIADNE_TEST_ASSERT(multiple.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(multiple.primal.has_value());
+    ARIADNE_TEST_ASSERT(multiple.multipliers.has_value());
+    if(multiple.primal.has_value() && multiple.multipliers.has_value()) {
+        const Matrix<X>& X_solution=*multiple.primal;
+        const Matrix<X>& Lambda=*multiple.multipliers;
+        ARIADNE_TEST_EQUALS(X_solution.row_size(),2u);
+        ARIADNE_TEST_EQUALS(X_solution.column_size(),2u);
+        ARIADNE_TEST_EQUALS(Lambda.row_size(),1u);
+        ARIADNE_TEST_EQUALS(Lambda.column_size(),2u);
+        const Matrix<X> residual=static_cast<Matrix<X>>(H)*X_solution+
+                                 transpose(A)*Lambda;
+        const Matrix<X> equality=A*X_solution;
+        InclusionAudit audit("KKT two-right-hand-side residual");
+        for(SizeType i=0; i!=2u; ++i) {
+            for(SizeType col=0; col!=2u; ++col) {
+                audit.add(residual[i][col],F[i][col],
+                          "stationarity["+std::to_string(i)+","+std::to_string(col)+"]");
+            }
+        }
+        for(SizeType col=0; col!=2u; ++col) {
+            audit.add(equality[0u][col],G[0u][col],
+                      "equality[0,"+std::to_string(col)+"]");
+        }
+        audit.add(X_solution[0u][0u],X(1u,dp),"primal[0,0]");
+        audit.add(X_solution[1u][0u],X(1u,dp),"primal[1,0]");
+        audit.add(Lambda[0u][0u],X(-2,dp),"lambda[0,0]");
+        audit.add(X_solution[0u][1u],X(2u,dp),"primal[0,1]");
+        audit.add(X_solution[1u][1u],X(3u,dp),"primal[1,1]");
+        audit.add(Lambda[0u][1u],X(4u,dp),"lambda[0,1]");
+        const bool both_kkt_columns_enclosed=audit.valid();
+        ARIADNE_TEST_ASSERT(both_kkt_columns_enclosed);
+    }
+
+    // A zero-column right-hand side must still certify the shared
+    // KKT operator and produce correctly shaped, empty solutions.
+    Matrix<X> empty_F(2u,0u,zero);
+    Matrix<X> empty_G(1u,0u,zero);
+    const auto no_rhs=validated_kkt_solve(H,A,empty_F,empty_G);
+    ARIADNE_TEST_ASSERT(no_rhs.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(no_rhs.primal.has_value());
+    ARIADNE_TEST_ASSERT(no_rhs.multipliers.has_value());
+    if(no_rhs.primal.has_value() && no_rhs.multipliers.has_value()) {
+        ARIADNE_TEST_EQUALS(no_rhs.primal->row_size(),2u);
+        ARIADNE_TEST_EQUALS(no_rhs.primal->column_size(),0u);
+        ARIADNE_TEST_EQUALS(no_rhs.multipliers->row_size(),1u);
+        ARIADNE_TEST_EQUALS(no_rhs.multipliers->column_size(),0u);
+    }
+
+    const Matrix<X> wrong_F(1u,2u,zero);
+    const Matrix<X> wrong_G_rows(2u,2u,zero);
+    const Matrix<X> wrong_G_cols(1u,1u,zero);
+    const Matrix<X> wrong_A(1u,3u,zero);
+    ARIADNE_TEST_FAIL(validated_kkt_solve(H,wrong_A,F,G));
+    ARIADNE_TEST_FAIL(validated_kkt_solve(H,A,wrong_F,G));
+    ARIADNE_TEST_FAIL(validated_kkt_solve(H,A,F,wrong_G_rows));
+    ARIADNE_TEST_FAIL(validated_kkt_solve(H,A,F,wrong_G_cols));
+
+    // Verify failure classification for the matrix overload as well.
+    S nonspd(2u,zero);
+    nonspd[0u][0u]=X(-1,dp);
+    nonspd[1u][1u]=X(1u,dp);
+    const auto rejected_h=validated_kkt_solve(nonspd,A,F,G);
+    ARIADNE_TEST_ASSERT(rejected_h.status==ValidatedKktStatus::HESSIAN_NOT_POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(!rejected_h.primal.has_value());
+    ARIADNE_TEST_ASSERT(!rejected_h.multipliers.has_value());
+
+    S uncertain(2u,zero);
+    uncertain[0u][0u]=X(-1,1,dp);
+    uncertain[1u][1u]=X(1u,dp);
+    const auto rejected_uncertain=validated_kkt_solve(uncertain,A,F,G);
+    ARIADNE_TEST_ASSERT(rejected_uncertain.status==ValidatedKktStatus::INDETERMINATE);
+
+    Matrix<X> dependent_A(2u,2u,zero);
+    dependent_A[0u][0u]=X(1u,dp);
+    dependent_A[1u][0u]=X(1u,dp);
+    const Matrix<X> G2(2u,2u,zero);
+    const auto rejected_rank=validated_kkt_solve(H,dependent_A,F,G2);
+    ARIADNE_TEST_ASSERT(rejected_rank.status==ValidatedKktStatus::DEPENDENT_CONSTRAINTS);
+
+    Matrix<X> ambiguous_A(1u,2u,zero);
+    ambiguous_A[0u][0u]=X(-1,1,dp);
+    const auto rejected_ambiguous=validated_kkt_solve(H,ambiguous_A,F,G);
+    ARIADNE_TEST_ASSERT(rejected_ambiguous.status==ValidatedKktStatus::INDETERMINATE);
+
+    // Zero-dimensional operator with multiple columns.
+    S h0(0u,zero);
+    const Matrix<X> a0(0u,0u,zero);
+    const Matrix<X> f0(0u,2u,zero);
+    const Matrix<X> g0(0u,2u,zero);
+    const auto zero_system=validated_kkt_solve(h0,a0,f0,g0);
+    ARIADNE_TEST_ASSERT(zero_system.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(zero_system.primal.has_value());
+    ARIADNE_TEST_ASSERT(zero_system.multipliers.has_value());
+    if(zero_system.primal.has_value() && zero_system.multipliers.has_value()) {
+        ARIADNE_TEST_EQUALS(zero_system.primal->column_size(),2u);
+        ARIADNE_TEST_EQUALS(zero_system.multipliers->column_size(),2u);
+    }
+
+    // Unconstrained multi-RHS: the same SPD solve is used with m=0.
+    const Matrix<X> no_A(0u,2u,zero);
+    const Matrix<X> no_G(0u,2u,zero);
+    const auto unconstrained=validated_kkt_solve(H,no_A,F,no_G);
+    ARIADNE_TEST_ASSERT(unconstrained.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(unconstrained.primal.has_value());
+    ARIADNE_TEST_ASSERT(unconstrained.multipliers.has_value());
+    if(unconstrained.primal.has_value() && unconstrained.multipliers.has_value()) {
+        ARIADNE_TEST_EQUALS(unconstrained.primal->column_size(),2u);
+        ARIADNE_TEST_EQUALS(unconstrained.multipliers->row_size(),0u);
+    }
+
+    // Interval family with a certified unique solution for each member.
+    S interval_H(2u,zero);
+    interval_H[0u][0u]=X(4,5,dp);
+    interval_H[1u][1u]=X(4,5,dp);
+    Matrix<X> interval_A(1u,2u,zero);
+    interval_A[0u][0u]=X(1,2,dp);
+    Matrix<X> interval_F(2u,2u,zero);
+    interval_F[0u][0u]=X(4,5,dp);
+    interval_F[1u][0u]=X(8,10,dp);
+    interval_F[0u][1u]=X(8,10,dp);
+    interval_F[1u][1u]=X(4,5,dp);
+    Matrix<X> interval_G(1u,2u,zero);
+    interval_G[0u][0u]=X(1,2,dp);
+    interval_G[0u][1u]=X(1,2,dp);
+    const auto interval_system=validated_kkt_solve(
+        interval_H,interval_A,interval_F,interval_G);
+    ARIADNE_TEST_ASSERT(interval_system.status==ValidatedKktStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(interval_system.primal.has_value());
+    ARIADNE_TEST_ASSERT(interval_system.multipliers.has_value());
+    if(interval_system.primal.has_value() && interval_system.multipliers.has_value()) {
+        InclusionAudit audit("KKT interval family, two right-hand sides");
+        const Matrix<X> exact_X=static_cast<Matrix<X>>(interval_H)*(*interval_system.primal)+
+                                 transpose(interval_A)*(*interval_system.multipliers);
+        const Matrix<X> exact_G=interval_A*(*interval_system.primal);
+        for(SizeType i=0; i!=2u; ++i) {
+            for(SizeType col=0; col!=2u; ++col) {
+                audit.add(exact_X[i][col],interval_F[i][col],
+                          "stationarity["+std::to_string(i)+","+std::to_string(col)+"]");
+            }
+        }
+        for(SizeType col=0; col!=2u; ++col) {
+            audit.add(exact_G[0u][col],interval_G[0u][col],
+                      "equality[0,"+std::to_string(col)+"]");
+        }
+        const bool family_rhs_enclosed=audit.valid();
+        ARIADNE_TEST_ASSERT(family_rhs_enclosed);
+    }
+}
+
+
 Void test_empty_and_zero_rhs()
 {
     const X zero(0u,dp);
@@ -516,5 +686,6 @@ Int main()
     ARIADNE_TEST_CALL(test_three_by_three_and_interval_family());
     ARIADNE_TEST_CALL(test_failure_and_indeterminate());
     ARIADNE_TEST_CALL(test_validated_kkt_solve());
+    ARIADNE_TEST_CALL(test_validated_kkt_matrix_rhs());
     return ARIADNE_TEST_FAILURES;
 }
