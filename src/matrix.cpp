@@ -27,7 +27,6 @@
 #include "numeric/numeric.hpp"
 
 #include <utility>
-#include <iostream>
 
 #include "matrix.hpp"
 #include "symmetric_matrix.hpp"
@@ -202,7 +201,12 @@ ValidatedCholeskyResult validated_cholesky_decomposition(
         }
 
         if(definitely(pivot.lower()>0)) {
-            L[i][i]=sqrt(pivot);
+            // Directed double sqrt_rnd may cycle between adjacent values
+            // near a representable square. MPFR square roots terminate
+            // and round correctly; conversion back to FloatDPBounds is
+            // outward rounded, preserving the enclosure guarantee.
+            const FloatMPBounds pivot_mp(pivot,MultiplePrecision(64));
+            L[i][i]=FloatDPBounds(sqrt(pivot_mp),dp);
             continue;
         }
 
@@ -353,9 +357,6 @@ ValidatedKktResult validated_kkt_solve(
     ARIADNE_PRECONDITION(f.size()==n);
     ARIADNE_PRECONDITION(g.size()==m);
 
-    std::cerr << "KKT TRACE: input dimensions n=" << n
-              << ", m=" << m << " validated" << std::endl;
-
     // A single validated solve encloses H^{-1}*f and all columns of
     // H^{-1}*A^T without forming an interval inverse.
     Matrix<FloatDPBounds> rhs(n,m+1,H.zero_element());
@@ -366,10 +367,7 @@ ValidatedKktResult validated_kkt_solve(
         }
     }
 
-    std::cerr << "KKT TRACE: rhs assembled; entering validated H solve" << std::endl;
     const auto h_solve=validated_positive_definite_solve(H,rhs);
-    std::cerr << "KKT TRACE: validated H solve returned; enclosure available="
-              << h_solve.solution.has_value() << std::endl;
     if(!h_solve.solution.has_value()) {
         if(h_solve.status==PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE) {
             return {ValidatedKktStatus::HESSIAN_NOT_POSITIVE_DEFINITE,std::nullopt,std::nullopt};
@@ -379,7 +377,6 @@ ValidatedKktResult validated_kkt_solve(
 
     // The Schur complement itself can certify full row rank; an
     // independent Gram test is unnecessary on the success path.
-    std::cerr << "KKT TRACE: preparing Schur system" << std::endl;
     const Matrix<FloatDPBounds>& Y=*h_solve.solution;
     SymmetricMatrix<FloatDPBounds> schur(m,H.zero_element());
     Vector<FloatDPBounds> dual_rhs(m,H.zero_element());
@@ -402,24 +399,7 @@ ValidatedKktResult validated_kkt_solve(
         }
     }
 
-    std::cerr << "KKT TRACE: Schur coefficients assembled" << std::endl;
-    if(m!=0u) {
-        std::cerr << "KKT TRACE: S(0,0) endpoints="
-                  << schur[0u][0u].lower_raw().get_d() << ", "
-                  << schur[0u][0u].upper_raw().get_d() << std::endl;
-        std::cerr << "KKT TRACE: dual_rhs(0) endpoints="
-                  << dual_rhs[0u].lower_raw().get_d() << ", "
-                  << dual_rhs[0u].upper_raw().get_d() << std::endl;
-    }
-    std::cerr << "KKT TRACE: entering direct Cholesky probe of Schur" << std::endl;
-    const auto schur_probe=validated_cholesky_decomposition(schur);
-    std::cerr << "KKT TRACE: Schur Cholesky probe returned, status="
-              << static_cast<int>(schur_probe.status) << std::endl;
-    std::cerr << "KKT TRACE: entering validated Schur solve"
-              << std::endl;
     const auto schur_solve=validated_positive_definite_solve(schur,dual_rhs);
-    std::cerr << "KKT TRACE: validated Schur solve returned; enclosure available="
-              << schur_solve.solution.has_value() << std::endl;
     if(!schur_solve.solution.has_value()) {
         // An inconclusive interval Schur complement is not a proof of
         // rank deficiency: cancellations in A*H^{-1}*A^T are correlated.
@@ -431,7 +411,6 @@ ValidatedKktResult validated_kkt_solve(
         return {ValidatedKktStatus::INDETERMINATE,std::nullopt,std::nullopt};
     }
 
-    std::cerr << "KKT TRACE: reconstructing primal and dual solutions" << std::endl;
     const Vector<FloatDPBounds>& multipliers=*schur_solve.solution;
     Vector<FloatDPBounds> primal(n,H.zero_element());
     for(SizeType i=0; i!=n; ++i) {
@@ -442,8 +421,6 @@ ValidatedKktResult validated_kkt_solve(
         primal[i]=xi;
     }
 
-    std::cerr << "KKT TRACE: reconstruction complete; returning certified solution"
-              << std::endl;
     return {ValidatedKktStatus::SOLVED,std::move(primal),multipliers};
 }
 

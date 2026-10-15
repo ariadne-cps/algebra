@@ -80,6 +80,26 @@ Void test_empty_and_scalar_matrices()
     ARIADNE_TEST_ASSERT(irrational_result.lower.has_value());
     check_reconstruction(irrational,*irrational_result.lower);
 
+    // Regression: the directed double-precision Newton sqrt may
+    // alternate between two adjacent values instead of terminating
+    // for pivots just below or above 1. These exact dyadic inputs
+    // certify both termination and a rigorous factor enclosure.
+    // 2^52 is exactly representable at DoublePrecision.
+    const X ulp=X(1u,dp)/X(4503599627370496ULL,dp);
+    S near_one_below(1u,X(0u,dp));
+    near_one_below[0u][0u]=X(1u,dp)-ulp;
+    auto below_result=validated_cholesky_decomposition(near_one_below);
+    ARIADNE_TEST_ASSERT(below_result.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(below_result.lower.has_value());
+    check_reconstruction(near_one_below,*below_result.lower);
+
+    S near_one_above(1u,X(0u,dp));
+    near_one_above[0u][0u]=X(1u,dp)+X(2u,dp)*ulp;
+    auto above_result=validated_cholesky_decomposition(near_one_above);
+    ARIADNE_TEST_ASSERT(above_result.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(above_result.lower.has_value());
+    check_reconstruction(near_one_above,*above_result.lower);
+
     S negative(1u,X(0u,dp));
     negative[0u][0u]=X(-1,dp);
     auto negative_result=validated_cholesky_decomposition(negative);
