@@ -527,7 +527,7 @@ struct ValidatedSaddlePointResult {
 };
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Solve a symmetric block saddle-point system rigorously.
+//! \brief Solve a symmetric saddle-point system with zero lower-right block.
 //! \param H Symmetric n-by-n interval leading block.
 //! \param A Interval m-by-n coupling block.
 //! \param f Interval n-vector, right-hand side of the first block equation.
@@ -575,7 +575,7 @@ struct ValidatedSaddlePointMatrixResult {
 };
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Solve multiple right-hand sides of a symmetric saddle-point system.
+//! \brief Solve multiple right-hand sides with zero lower-right block.
 //! \param H Symmetric n-by-n interval leading block.
 //! \param A Interval m-by-n coupling block.
 //! \param F Interval n-by-p upper-block right-hand sides.
@@ -600,6 +600,56 @@ struct ValidatedSaddlePointMatrixResult {
 ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
     const SymmetricMatrix<FloatDPBounds>& H,
     const Matrix<FloatDPBounds>& A,
+    const Matrix<FloatDPBounds>& F,
+    const Matrix<FloatDPBounds>& G);
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Validated solve of the generalized symmetric saddle-point system.
+//! \param H Symmetric n-by-n interval leading block.
+//! \param A Interval m-by-n coupling block.
+//! \param C Symmetric m-by-m interval block appearing with negative sign.
+//! \param f First-block n-vector right-hand side.
+//! \param g Second-block m-vector right-hand side.
+//! \pre A.column_size()==H.size(), C.size()==A.row_size(),
+//! f.size()==H.size(), g.size()==A.row_size().
+//! \return A certified unique solution enclosure for
+//! H*x+A^T*y=f, A*x-C*y=g when the leading and Schur blocks
+//! are certified SPD; otherwise an explicit non-success status.
+//! \details The Schur complement is S=C+A*H^{-1}*A^T.
+//! C may be indefinite: only S needs certification. Dependent rows
+//! of A do not prove singularity when C is nonzero. The augmentation
+//! H+A^T*A is attempted only if C is identically zero.
+//! \par Reference
+//! M. Benzi, G. H. Golub and J. Liesen, Numerical solution of saddle
+//! point problems, \em Acta \em Numerica 14 (2005), pp. 1--137.
+ValidatedSaddlePointResult validated_saddle_point_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const SymmetricMatrix<FloatDPBounds>& C,
+    const Vector<FloatDPBounds>& f,
+    const Vector<FloatDPBounds>& g);
+
+//! \ingroup LinearAlgebraSubModule
+//! \brief Generalized symmetric saddle-point solve with multiple right-hand sides.
+//! \param H Symmetric n-by-n interval leading block.
+//! \param A Interval m-by-n coupling block.
+//! \param C Symmetric m-by-m interval block appearing with negative sign.
+//! \param F Upper-block n-by-p right-hand sides.
+//! \param G Lower-block m-by-p right-hand sides.
+//! \pre A.column_size()==H.size(), C.size()==A.row_size(),
+//! F.row_size()==H.size(), G.row_size()==A.row_size(),
+//! F.column_size()==G.column_size().
+//! \return Certified n-by-p and m-by-p interval enclosures of
+//! H*X+A^T*Y=F, A*X-C*Y=G, when sufficient SPD certificates succeed.
+//! \details Reuses one validated leading-block factorization and one
+//! Schur factorization across all p columns. Supports p=0, n=0, m=0.
+//! An inconclusive certificate is not a proof of inconsistency.
+//! For C=0, preserves the original augmented leading-block fallback.
+//! \see validated_saddle_point_solve
+ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const SymmetricMatrix<FloatDPBounds>& C,
     const Matrix<FloatDPBounds>& F,
     const Matrix<FloatDPBounds>& G);
 

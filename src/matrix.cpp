@@ -401,15 +401,30 @@ LinearIndependenceStatus validated_independent_columns(
 ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
     const SymmetricMatrix<FloatDPBounds>& H,
     const Matrix<FloatDPBounds>& A,
+    const SymmetricMatrix<FloatDPBounds>& C,
     const Matrix<FloatDPBounds>& F,
     const Matrix<FloatDPBounds>& G)
 {
     const SizeType n=H.size();
     const SizeType m=A.row_size();
     ARIADNE_PRECONDITION(A.column_size()==n);
+    ARIADNE_PRECONDITION(C.size()==m);
     ARIADNE_PRECONDITION(F.row_size()==n);
     ARIADNE_PRECONDITION(G.row_size()==m);
     ARIADNE_PRECONDITION(F.column_size()==G.column_size());
+
+    // A zero interval is detected from its exact stored endpoints.
+    // Only for structural C=0 is leading-block augmentation equivalent.
+    const FloatDPBounds zero=H.zero_element();
+    bool zero_lower_block=true;
+    for(SizeType i=0; i!=m; ++i) {
+        for(SizeType j=i; j!=m; ++j) {
+            if(C[i][j].lower_raw()!=zero.lower_raw()
+               || C[i][j].upper_raw()!=zero.upper_raw()) {
+                zero_lower_block=false;
+            }
+        }
+    }
 
     const SizeType p=F.column_size();
     Matrix<FloatDPBounds> rhs(n,p+m,H.zero_element());
@@ -424,7 +439,7 @@ ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
 
     auto leading_solve=validated_positive_definite_solve(H,rhs);
 
-    // If the leading block is not certified SPD, coupling can
+    // Only for C=0: if H is not certified SPD, coupling can
     // still allow a certificate of block-system invertibility.
     // Since A*x=g, the following two saddle-point systems are equivalent:
     //
@@ -437,7 +452,7 @@ ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
     // solution even when H is only semidefinite (or indefinite).
     // This fixed unit augmentation is a sufficient test: failure is
     // not interpreted as nonexistence of a saddle-point solution.
-    if(!leading_solve.solution.has_value() && m!=0u) {
+    if(!leading_solve.solution.has_value() && m!=0u && zero_lower_block) {
         SymmetricMatrix<FloatDPBounds> augmented_block(n,H.zero_element());
         for(SizeType i=0; i!=n; ++i) {
             for(SizeType j=i; j!=n; ++j) {
@@ -486,7 +501,7 @@ ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
             dual_rhs[i][col]=entry;
         }
         for(SizeType j=i; j!=m; ++j) {
-            FloatDPBounds entry=H.zero_element();
+            FloatDPBounds entry=C[i][j];
             for(SizeType k=0; k!=n; ++k) {
                 entry+=A[i][k]*Y[k][p+j];
             }
@@ -496,8 +511,9 @@ ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
 
     const auto schur_solve=validated_positive_definite_solve(schur,dual_rhs);
     if(!schur_solve.solution.has_value()) {
-        // Only a separate universal rank certificate proves dependence.
-        if(validated_independent_rows(A)==LinearIndependenceStatus::DEPENDENT) {
+        // Dependence of A proves block singularity only when C=0.
+        if(zero_lower_block
+           && validated_independent_rows(A)==LinearIndependenceStatus::DEPENDENT) {
             return {ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS,std::nullopt,std::nullopt};
         }
         return {ValidatedSaddlePointStatus::INDETERMINATE,std::nullopt,std::nullopt};
@@ -517,16 +533,29 @@ ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
     return {ValidatedSaddlePointStatus::SOLVED,std::move(primary),secondary};
 }
 
+// Backward-compatible zero-lower-right-block overload.
+ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const Matrix<FloatDPBounds>& F,
+    const Matrix<FloatDPBounds>& G)
+{
+    return validated_saddle_point_solve(
+        H,A,SymmetricMatrix<FloatDPBounds>(A.row_size(),H.zero_element()),F,G);
+}
+
 // Single right-hand sides use the same certification implementation.
 ValidatedSaddlePointResult validated_saddle_point_solve(
     const SymmetricMatrix<FloatDPBounds>& H,
     const Matrix<FloatDPBounds>& A,
+    const SymmetricMatrix<FloatDPBounds>& C,
     const Vector<FloatDPBounds>& f,
     const Vector<FloatDPBounds>& g)
 {
     const SizeType n=H.size();
     const SizeType m=A.row_size();
     ARIADNE_PRECONDITION(A.column_size()==n);
+    ARIADNE_PRECONDITION(C.size()==m);
     ARIADNE_PRECONDITION(f.size()==n);
     ARIADNE_PRECONDITION(g.size()==m);
 
@@ -535,7 +564,7 @@ ValidatedSaddlePointResult validated_saddle_point_solve(
     for(SizeType i=0; i!=n; ++i) { F[i][0u]=f[i]; }
     for(SizeType i=0; i!=m; ++i) { G[i][0u]=g[i]; }
 
-    const auto matrix_solution=validated_saddle_point_solve(H,A,F,G);
+    const auto matrix_solution=validated_saddle_point_solve(H,A,C,F,G);
     if(!matrix_solution.primary.has_value()) {
         return {matrix_solution.status,std::nullopt,std::nullopt};
     }
@@ -549,6 +578,17 @@ ValidatedSaddlePointResult validated_saddle_point_solve(
         secondary[i]=(*matrix_solution.secondary)[i][0u];
     }
     return {matrix_solution.status,std::move(primary),std::move(secondary)};
+}
+
+// Backward-compatible zero-lower-right-block vector overload.
+ValidatedSaddlePointResult validated_saddle_point_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const Vector<FloatDPBounds>& f,
+    const Vector<FloatDPBounds>& g)
+{
+    return validated_saddle_point_solve(
+        H,A,SymmetricMatrix<FloatDPBounds>(A.row_size(),H.zero_element()),f,g);
 }
 
 } // namespace Ariadne
