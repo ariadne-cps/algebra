@@ -853,6 +853,40 @@ Void test_generalized_saddle_point_failures()
         H,dependent,negative_C,F,Matrix<X>(2u,1u,zero));
     ARIADNE_TEST_ASSERT(schur_failure.status==ValidatedSaddlePointStatus::INDETERMINATE);
 
+    // The zero lower endpoint does NOT make C identically zero:
+    // [0,1] exercises the upper-endpoint comparison in the structural
+    // zero test. At C=1 the system (H=2,A=1,f=2,g=1) has x=1,y=0.
+    S one_sided_C(1u,zero);
+    one_sided_C[0u][0u]=X(0,1,dp);
+    const auto one_sided_solution=validated_saddle_point_solve(
+        H,A,one_sided_C,f,g);
+    ARIADNE_TEST_ASSERT(one_sided_solution.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_TEST_ASSERT(one_sided_solution.primary.has_value());
+    ARIADNE_TEST_ASSERT(one_sided_solution.secondary.has_value());
+    if(one_sided_solution.primary.has_value() && one_sided_solution.secondary.has_value()) {
+        check_known_saddle_point_solution(
+            one_sided_solution,Vector<X>({X(1u,dp)}),
+            Vector<X>({zero}),"C=[0,1], same lower endpoint as zero");
+        InclusionAudit audit("generalized saddle-point with C=[0,1]");
+        const Vector<X> upper=static_cast<Matrix<X>>(H)*(*one_sided_solution.primary)+
+                              transpose(A)*(*one_sided_solution.secondary);
+        const Vector<X> lower=A*(*one_sided_solution.primary)-
+                              static_cast<Matrix<X>>(one_sided_C)*(*one_sided_solution.secondary);
+        audit.add(upper[0u],f[0u],"upper[0]");
+        audit.add(lower[0u],g[0u],"lower[0]");
+        const bool one_sided_interval_residual_enclosed=audit.valid();
+        ARIADNE_TEST_ASSERT(one_sided_interval_residual_enclosed);
+    }
+
+    // If H cannot be certified SPD, a C=[0,1] interval still
+    // forbids the C=0 augmentation: some represented C are nonzero.
+    const auto one_sided_rejected=validated_saddle_point_solve(
+        negative,A,one_sided_C,f,g);
+    ARIADNE_TEST_ASSERT(one_sided_rejected.status==
+        ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(!one_sided_rejected.primary.has_value());
+    ARIADNE_TEST_ASSERT(!one_sided_rejected.secondary.has_value());
+
     // A zero-containing interval is not a structural zero: no fallback.
     S uncertain_C(1u,zero);
     uncertain_C[0u][0u]=X(-1,1,dp);
