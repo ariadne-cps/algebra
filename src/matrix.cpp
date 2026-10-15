@@ -402,7 +402,20 @@ ValidatedKktResult validated_kkt_solve(
         }
     }
 
-    std::cerr << "KKT TRACE: Schur coefficients assembled; entering validated Schur solve"
+    std::cerr << "KKT TRACE: Schur coefficients assembled" << std::endl;
+    if(m!=0u) {
+        std::cerr << "KKT TRACE: S(0,0) endpoints="
+                  << schur[0u][0u].lower_raw().get_d() << ", "
+                  << schur[0u][0u].upper_raw().get_d() << std::endl;
+        std::cerr << "KKT TRACE: dual_rhs(0) endpoints="
+                  << dual_rhs[0u].lower_raw().get_d() << ", "
+                  << dual_rhs[0u].upper_raw().get_d() << std::endl;
+    }
+    std::cerr << "KKT TRACE: entering direct Cholesky probe of Schur" << std::endl;
+    const auto schur_probe=validated_cholesky_decomposition(schur);
+    std::cerr << "KKT TRACE: Schur Cholesky probe returned, status="
+              << static_cast<int>(schur_probe.status) << std::endl;
+    std::cerr << "KKT TRACE: entering validated Schur solve"
               << std::endl;
     const auto schur_solve=validated_positive_definite_solve(schur,dual_rhs);
     std::cerr << "KKT TRACE: validated Schur solve returned; enclosure available="
