@@ -146,10 +146,10 @@ Void test_interval_family()
     family[0u][1u]=X(-1,1,dp);
     family[0u][2u]=X(-1,1,dp);
     family[1u][2u]=X(-1,1,dp);
-    auto result=validated_cholesky_decomposition(family);
-    ARIADNE_TEST_ASSERT(result.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TEST_ASSERT(result.lower.has_value());
-    check_reconstruction(family,*result.lower);
+    auto family_result=validated_cholesky_decomposition(family);
+    ARIADNE_TEST_ASSERT(family_result.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_TEST_ASSERT(family_result.lower.has_value());
+    check_reconstruction(family,*family_result.lower);
 
     // Zero crossing after eliminating a certified positive first pivot.
     S uncertain(2u,X(0u,dp));
