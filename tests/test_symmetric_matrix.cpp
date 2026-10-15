@@ -24,9 +24,10 @@
 
 #include <sstream>
 
+// Ensure symmetric_matrix.hpp is self-contained and works as the first include.
+#include "algebra/symmetric_matrix.hpp"
 #include "numeric/numeric.hpp"
 #include "algebra/matrix.hpp"
-#include "algebra/symmetric_matrix.hpp"
 
 #include "macro/testing.hpp"
 

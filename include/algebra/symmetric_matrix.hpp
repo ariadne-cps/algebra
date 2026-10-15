@@ -35,9 +35,10 @@
 
 #include "utility/metaprogramming.hpp"
 #include "macro/general.hpp"
+// matrix.hpp declares midpoint<Rational>, which requires Rational to be complete.
+#include "numeric/numeric.hpp"
 #include "vector.hpp"
 #include "matrix.hpp"
-#include "numeric/numeric.hpp"
 
 namespace Ariadne {
 
