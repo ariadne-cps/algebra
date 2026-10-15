@@ -11,6 +11,7 @@
 #include "algebra/positive_definiteness.hpp"
 #include "algebra/cholesky_decomposition.hpp"
 #include "algebra/positive_definite_solve.hpp"
+#include "algebra/linear_independence.hpp"
 #include "algebra/diagonal_matrix.hpp"
 #include "algebra/multi_index.hpp"
 #include "algebra/expansion.hpp"

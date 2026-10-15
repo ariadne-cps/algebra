@@ -4,6 +4,7 @@ add_library(ALGEBRA_SRC OBJECT
     positive_definiteness.cpp
     cholesky_decomposition.cpp
     positive_definite_solve.cpp
+    linear_independence.cpp
     series.cpp
     polynomial.cpp
     chebyshev_polynomial.cpp
