@@ -41,11 +41,14 @@ Void check_reconstruction(const S& A, const Matrix<X>& L)
     ARIADNE_TEST_EQUALS(L.row_size(),A.size());
     ARIADNE_TEST_EQUALS(L.column_size(),A.size());
 
+    // These are comparisons of the stored directed-rounded endpoints.
+    // Comparing LowerBound to LowerBound instead yields an approximate
+    // logical result, which cannot prove even equality at a boundary.
     Matrix<X> B=L*transpose(L);
     for(SizeType i=0; i!=A.size(); ++i) {
         for(SizeType j=0; j!=A.size(); ++j) {
-            ARIADNE_TEST_ASSERT(definitely(B[i][j].lower()<=A[i][j].lower()));
-            ARIADNE_TEST_ASSERT(definitely(B[i][j].upper()>=A[i][j].upper()));
+            ARIADNE_TEST_ASSERT(B[i][j].lower_raw()<=A[i][j].lower_raw());
+            ARIADNE_TEST_ASSERT(B[i][j].upper_raw()>=A[i][j].upper_raw());
             if(j>i) {
                 ARIADNE_TEST_EQUALS(L[i][j],X(0u,dp));
             }
