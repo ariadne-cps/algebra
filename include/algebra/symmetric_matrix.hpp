@@ -502,111 +502,102 @@ validated_positive_definite_solve(
     const Vector<FloatDPBounds>& b);
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Classification of an attempted validated equality-constrained KKT solve.
-//! \details SOLVED means that the returned enclosures contain the unique
-//! primal-dual solution for every represented real problem. The two
-//! precondition-failure states do not assert that an arbitrary KKT system
-//! is inconsistent; INDETERMINATE means no applicable certificate was found.
-enum class ValidatedKktStatus {
-    SOLVED,                          //!< All admissible KKT systems have a unique enclosed solution.
-    HESSIAN_NOT_POSITIVE_DEFINITE,  //!< No represented Hessian is strictly positive definite.
-    DEPENDENT_CONSTRAINTS,          //!< Every represented constraint matrix has dependent rows.
-    INDETERMINATE                   //!< Positive definiteness or full row rank could not be certified.
+//! \brief Certification status for an interval saddle-point linear system.
+//! \details The block coefficient matrix has form [H A^T; A 0].
+//! SOLVED proves that the unique pair (x,y) is enclosed for every
+//! real system represented by the interval data. Other statuses
+//! identify why this *sufficient* certificate did not succeed; they
+//! do not assert that the block system is inconsistent.
+enum class ValidatedSaddlePointStatus {
+    SOLVED,                              //!< A unique enclosed solution for every admissible system.
+    LEADING_BLOCK_NOT_POSITIVE_DEFINITE, //!< H is universally non-SPD and neither certified route succeeded.
+    DEPENDENT_COUPLING_ROWS,             //!< Every represented A has dependent rows.
+    INDETERMINATE                        //!< Neither solvability nor a structural obstruction certified.
 };
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Validated primal and dual enclosures for an equality-constrained KKT system.
-//! \details Both optional vectors are present iff status==SOLVED.
-//! Otherwise no validated primal-dual pair is returned.
-struct ValidatedKktResult {
-    ValidatedKktStatus status; //!< Certification outcome, not a numerical solver flag.
-    std::optional<Vector<FloatDPBounds>> primal; //!< Enclosure of the unique primal variables.
-    std::optional<Vector<FloatDPBounds>> multipliers; //!< Enclosure of the unique equality multipliers.
+//! \brief Validated solution vectors of a symmetric saddle-point system.
+//! \details Both optional vectors are present exactly when status==SOLVED.
+//! \c primary encloses the first block x; \c secondary encloses the
+//! second block y. The names convey no optimization-specific semantics.
+struct ValidatedSaddlePointResult {
+    ValidatedSaddlePointStatus status; //!< Universal certification outcome.
+    std::optional<Vector<FloatDPBounds>> primary; //!< n-vector solving the first block.
+    std::optional<Vector<FloatDPBounds>> secondary; //!< m-vector solving the second block.
 };
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Solve a certified equality-constrained KKT system rigorously.
-//! \param H Symmetric n-by-n interval Hessian.
-//! \param A Interval m-by-n matrix of equality-constraint coefficients.
-//! \param f Interval right-hand side of stationarity (n entries).
-//! \param g Interval right-hand side of equality constraints (m entries).
-//! \return SOLVED and enclosures (x,lambda) if the interval computations
-//! certify the primal-dual system has a unique solution for *every*
-//! represented real problem. The sufficient conditions are H SPD,
-//! or (when H is not certified SPD) H+A^T*A SPD, together with A
-//! having full row rank. HESSIAN_NOT_POSITIVE_DEFINITE means the original
-//! Hessian is provably not SPD and neither route returned a solution;
-//! it does not assert that the KKT system is unsolvable.
-//! DEPENDENT_CONSTRAINTS means all represented A have dependent rows;
-//! otherwise the result is INDETERMINATE.
+//! \brief Solve a symmetric block saddle-point system rigorously.
+//! \param H Symmetric n-by-n interval leading block.
+//! \param A Interval m-by-n coupling block.
+//! \param f Interval n-vector, right-hand side of the first block equation.
+//! \param g Interval m-vector, right-hand side of the second block equation.
 //! \pre A.column_size()==H.size(), f.size()==H.size(),
 //! and g.size()==A.row_size().
-//! \details The system is H*x + A^T*lambda=f, A*x=g. Compute rigorous
-//! enclosures Y=H^{-1}[f,A^T] using the existing validated SPD solver,
-//! form a symmetric interval enclosure of S=A*H^{-1}*A^T, then solve
-//! S*lambda=A*H^{-1}*f-g and x=H^{-1}*f-H^{-1}*A^T*lambda.
-//! Each inclusion is universally quantified over the input intervals.
-//! In particular, interval multiplication of dependent quantities can
-//! widen S: failure to certify its positive definiteness returns
-//! INDETERMINATE rather than a numerical-rank decision.
-//! If direct SPD certification of H fails, the implementation
-//! tries the algebraically equivalent KKT system with augmented Hessian
-//! H+A^T*A and right-hand side f+A^T*g. The unit coefficient is fixed,
-//! not an adaptive rank tolerance. If the augmented Hessian is SPD,
-//! then H is positive definite on ker(A); a certified SPD Schur matrix
-//! then proves uniqueness even when H is semidefinite or indefinite.
-//! Interval dependency can still lead to INDETERMINATE.
-//! Row dependence is checked separately only if Schur certification fails.
-//! The vector overload delegates to the multi-right-hand-side implementation.
-//! The empty constraint set (m=0) reduces to the SPD solve; n=m=0 is
-//! admissible. General indefinite cases not certified by augmentation
-//! remain outside this routine's successful contract.
+//! \return SOLVED and certified componentwise enclosures for (x,y) in
+//! H*x+A^T*y=f, A*x=g, if the interval SPD/Schur tests prove uniqueness
+//! for every admissible real block matrix and right-hand side.
+//! If H is certified non-SPD and no alternative succeeds, returns
+//! LEADING_BLOCK_NOT_POSITIVE_DEFINITE; if all represented A have
+//! dependent rows, returns DEPENDENT_COUPLING_ROWS; otherwise
+//! INDETERMINATE. Neither failure status claims inconsistency.
+//! \details First attempts a validated Cholesky solve for H, forming
+//! S=A*H^{-1}*A^T. If H cannot be certified SPD and m>0, attempts
+//! the algebraically equivalent system using the augmented block
+//! H+A^T*A and first right-hand side f+A^T*g. This fixed algebraic
+//! augmentation retains the same unknowns (x,y) and can certify
+//! systems with semidefinite or indefinite leading blocks.
+//! Positive definiteness of the chosen leading block and of its
+//! Schur complement certifies uniqueness of the block system.
+//! All interval calculations round outward. Correlation overestimation
+//! may prevent certification, in which case the routine is inconclusive.
+//! With m=0 the routine reduces to a validated SPD solve; n=m=0
+//! is admissible. No numerical tolerance or explicit inverse is used.
+//! This overload delegates to the multiple-right-hand-side version.
 //! \par Reference
-//! J. Nocedal and S. J. Wright, \em Numerical \em Optimization,
-//! 2nd ed., Springer, 2006, Chapter 16, equality-constrained quadratic
-//! programs and Schur-complement KKT systems.
-ValidatedKktResult validated_kkt_solve(
+//! M. Benzi, G. H. Golub and J. Liesen, Numerical solution of saddle
+//! point problems, \em Acta \em Numerica 14 (2005), pp. 1--137.
+ValidatedSaddlePointResult validated_saddle_point_solve(
     const SymmetricMatrix<FloatDPBounds>& H,
     const Matrix<FloatDPBounds>& A,
     const Vector<FloatDPBounds>& f,
     const Vector<FloatDPBounds>& g);
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Validated enclosures for multiple equality-constrained KKT systems.
-//! \details Both matrices are present iff status is SOLVED. Every output
-//! column encloses the primal or multiplier vector for the corresponding
-//! right-hand-side column.
-struct ValidatedKktMatrixResult {
-    ValidatedKktStatus status; //!< Universal certification outcome.
-    std::optional<Matrix<FloatDPBounds>> primal; //!< n-by-p primal solution enclosure.
-    std::optional<Matrix<FloatDPBounds>> multipliers; //!< m-by-p dual solution enclosure.
+//! \brief Validated enclosures for multiple saddle-point right-hand sides.
+//! \details Both matrices are present exactly when status==SOLVED.
+//! Their columns enclose the respective solutions of the upper and
+//! lower block equations of the same represented system family.
+struct ValidatedSaddlePointMatrixResult {
+    ValidatedSaddlePointStatus status; //!< Universal certification outcome.
+    std::optional<Matrix<FloatDPBounds>> primary; //!< n-by-p first-block solution.
+    std::optional<Matrix<FloatDPBounds>> secondary; //!< m-by-p second-block solution.
 };
 
 //! \ingroup LinearAlgebraSubModule
-//! \brief Solve multiple certified KKT systems sharing Hessian and constraints.
-//! \param H Symmetric n-by-n interval Hessian.
-//! \param A Interval m-by-n matrix of equality constraints.
-//! \param F Interval n-by-p matrix of stationarity right-hand sides.
-//! \param G Interval m-by-p matrix of equality right-hand sides.
+//! \brief Solve multiple right-hand sides of a symmetric saddle-point system.
+//! \param H Symmetric n-by-n interval leading block.
+//! \param A Interval m-by-n coupling block.
+//! \param F Interval n-by-p upper-block right-hand sides.
+//! \param G Interval m-by-p lower-block right-hand sides.
 //! \pre A.column_size()==H.size(), F.row_size()==H.size(),
 //! G.row_size()==A.row_size(), F.column_size()==G.column_size().
-//! \return SOLVED with n-by-p primal and m-by-p multiplier enclosures
-//! when the chosen Hessian (H, or the augmented H+A^T*A) and its Schur
-//! complement are certified positive definite; otherwise the same
-//! failure/indeterminate statuses as the vector solver.
-//! \details First attempts outward-rounded H^{-1}*[F,A^T]. If H is not
-//! certified SPD and m>0, attempts the equivalent system formed with
-//! augmented Hessian H+A^T*A and right-hand sides F+A^T*G.
-//! The common Schur complement of the certified Hessian is then
-//! solved for all p right-hand sides together.
-//! Each admissible real KKT solution lies in the corresponding columns.
-//! A failure of Schur certification alone does not prove dependence;
-//! an independent rank certificate is required for DEPENDENT_CONSTRAINTS.
-//! Accepts p=0, m=0 and n=m=0. Uses no tolerance or explicit inverse.
+//! \return On SOLVED, certified n-by-p and m-by-p solution matrices
+//! (X,Y) satisfying H*X+A^T*Y=F, A*X=G for each admissible real
+//! selection of H,A,F,G; otherwise the same non-success statuses
+//! as the vector overload and no solution matrices.
+//! \details Uses one validated Cholesky factorization of H (or of
+//! H+A^T*A after the equivalent augmented-system transformation)
+//! and one of its symmetric Schur complement, shared among all
+//! p right-hand sides. The augmented upper right-hand side is
+//! F+A^T*G. Positive definiteness of the two factors is sufficient
+//! for universal uniqueness; a failed Schur test alone never proves
+//! dependent coupling rows. Supports p=0, m=0 and n=m=0.
+//! No numerical rank threshold or explicit inverse is introduced.
 //! \par Reference
-//! J. Nocedal and S. J. Wright, \em Numerical \em Optimization,
-//! 2nd ed., Springer, 2006, Chapter 16, Schur-complement KKT systems.
-ValidatedKktMatrixResult validated_kkt_solve(
+//! M. Benzi, G. H. Golub and J. Liesen, Numerical solution of saddle
+//! point problems, \em Acta \em Numerica 14 (2005), pp. 1--137.
+ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
     const SymmetricMatrix<FloatDPBounds>& H,
     const Matrix<FloatDPBounds>& A,
     const Matrix<FloatDPBounds>& F,

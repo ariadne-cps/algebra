@@ -396,9 +396,9 @@ LinearIndependenceStatus validated_independent_columns(
 }
 
 
-// Validated KKT systems with a shared Hessian and equality matrix.
+// Validated saddle-point systems with a shared leading block and coupling matrix.
 // The two Cholesky factorizations are reused for all right-hand sides.
-ValidatedKktMatrixResult validated_kkt_solve(
+ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
     const SymmetricMatrix<FloatDPBounds>& H,
     const Matrix<FloatDPBounds>& A,
     const Matrix<FloatDPBounds>& F,
@@ -422,30 +422,30 @@ ValidatedKktMatrixResult validated_kkt_solve(
         }
     }
 
-    auto h_solve=validated_positive_definite_solve(H,rhs);
+    auto leading_solve=validated_positive_definite_solve(H,rhs);
 
-    // If the original Hessian is not certified SPD, constraints can
-    // still make the *reduced* quadratic form positive definite.
-    // With A*x=g, the following two KKT systems are equivalent:
+    // If the leading block is not certified SPD, coupling can
+    // still allow a certificate of block-system invertibility.
+    // Since A*x=g, the following two saddle-point systems are equivalent:
     //
     //   H*x + A^T*lambda = f          (H+A^T*A)*x + A^T*lambda = f+A^T*g
     //   A*x = g                     A*x = g.
     //
     // For every exact H and A, positive definiteness of H+A^T*A
     // implies positivity of H on ker(A). Thus a certified augmented
-    // Hessian and a certified Schur complement yield a unique KKT
+    // leading block and a certified Schur complement yield a unique saddle-point
     // solution even when H is only semidefinite (or indefinite).
     // This fixed unit augmentation is a sufficient test: failure is
-    // not interpreted as nonexistence of a KKT solution.
-    if(!h_solve.solution.has_value() && m!=0u) {
-        SymmetricMatrix<FloatDPBounds> augmented_h(n,H.zero_element());
+    // not interpreted as nonexistence of a saddle-point solution.
+    if(!leading_solve.solution.has_value() && m!=0u) {
+        SymmetricMatrix<FloatDPBounds> augmented_block(n,H.zero_element());
         for(SizeType i=0; i!=n; ++i) {
             for(SizeType j=i; j!=n; ++j) {
                 FloatDPBounds entry=H[i][j];
                 for(SizeType k=0; k!=m; ++k) {
                     entry+=(i==j) ? sqr(A[k][i]) : A[k][i]*A[k][j];
                 }
-                augmented_h[i][j]=entry;
+                augmented_block[i][j]=entry;
             }
         }
 
@@ -458,23 +458,23 @@ ValidatedKktMatrixResult validated_kkt_solve(
             }
         }
 
-        const auto augmented_solve=
-            validated_positive_definite_solve(augmented_h,augmented_rhs);
-        if(augmented_solve.solution.has_value()) {
+        const auto augmented_block_solve=
+            validated_positive_definite_solve(augmented_block,augmented_rhs);
+        if(augmented_block_solve.solution.has_value()) {
             // The existing Schur-complement code now solves the
-            // equivalent augmented KKT system. lambda is unchanged.
-            h_solve=std::move(augmented_solve);
+            // equivalent augmented saddle-point system. The second block is unchanged.
+            leading_solve=std::move(augmented_block_solve);
         }
     }
 
-    if(!h_solve.solution.has_value()) {
-        if(h_solve.status==PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE) {
-            return {ValidatedKktStatus::HESSIAN_NOT_POSITIVE_DEFINITE,std::nullopt,std::nullopt};
+    if(!leading_solve.solution.has_value()) {
+        if(leading_solve.status==PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE) {
+            return {ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE,std::nullopt,std::nullopt};
         }
-        return {ValidatedKktStatus::INDETERMINATE,std::nullopt,std::nullopt};
+        return {ValidatedSaddlePointStatus::INDETERMINATE,std::nullopt,std::nullopt};
     }
 
-    const Matrix<FloatDPBounds>& Y=*h_solve.solution;
+    const Matrix<FloatDPBounds>& Y=*leading_solve.solution;
     SymmetricMatrix<FloatDPBounds> schur(m,H.zero_element());
     Matrix<FloatDPBounds> dual_rhs(m,p,H.zero_element());
     for(SizeType i=0; i!=m; ++i) {
@@ -498,27 +498,27 @@ ValidatedKktMatrixResult validated_kkt_solve(
     if(!schur_solve.solution.has_value()) {
         // Only a separate universal rank certificate proves dependence.
         if(validated_independent_rows(A)==LinearIndependenceStatus::DEPENDENT) {
-            return {ValidatedKktStatus::DEPENDENT_CONSTRAINTS,std::nullopt,std::nullopt};
+            return {ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS,std::nullopt,std::nullopt};
         }
-        return {ValidatedKktStatus::INDETERMINATE,std::nullopt,std::nullopt};
+        return {ValidatedSaddlePointStatus::INDETERMINATE,std::nullopt,std::nullopt};
     }
 
-    Matrix<FloatDPBounds> primal(n,p,H.zero_element());
-    const Matrix<FloatDPBounds>& multipliers=*schur_solve.solution;
+    Matrix<FloatDPBounds> primary(n,p,H.zero_element());
+    const Matrix<FloatDPBounds>& secondary=*schur_solve.solution;
     for(SizeType i=0; i!=n; ++i) {
         for(SizeType col=0; col!=p; ++col) {
             FloatDPBounds entry=Y[i][col];
             for(SizeType j=0; j!=m; ++j) {
-                entry-=Y[i][p+j]*multipliers[j][col];
+                entry-=Y[i][p+j]*secondary[j][col];
             }
-            primal[i][col]=entry;
+            primary[i][col]=entry;
         }
     }
-    return {ValidatedKktStatus::SOLVED,std::move(primal),multipliers};
+    return {ValidatedSaddlePointStatus::SOLVED,std::move(primary),secondary};
 }
 
 // Single right-hand sides use the same certification implementation.
-ValidatedKktResult validated_kkt_solve(
+ValidatedSaddlePointResult validated_saddle_point_solve(
     const SymmetricMatrix<FloatDPBounds>& H,
     const Matrix<FloatDPBounds>& A,
     const Vector<FloatDPBounds>& f,
@@ -535,20 +535,20 @@ ValidatedKktResult validated_kkt_solve(
     for(SizeType i=0; i!=n; ++i) { F[i][0u]=f[i]; }
     for(SizeType i=0; i!=m; ++i) { G[i][0u]=g[i]; }
 
-    const auto matrix_solution=validated_kkt_solve(H,A,F,G);
-    if(!matrix_solution.primal.has_value()) {
+    const auto matrix_solution=validated_saddle_point_solve(H,A,F,G);
+    if(!matrix_solution.primary.has_value()) {
         return {matrix_solution.status,std::nullopt,std::nullopt};
     }
 
-    Vector<FloatDPBounds> primal(n,H.zero_element());
-    Vector<FloatDPBounds> multipliers(m,H.zero_element());
+    Vector<FloatDPBounds> primary(n,H.zero_element());
+    Vector<FloatDPBounds> secondary(m,H.zero_element());
     for(SizeType i=0; i!=n; ++i) {
-        primal[i]=(*matrix_solution.primal)[i][0u];
+        primary[i]=(*matrix_solution.primary)[i][0u];
     }
     for(SizeType i=0; i!=m; ++i) {
-        multipliers[i]=(*matrix_solution.multipliers)[i][0u];
+        secondary[i]=(*matrix_solution.secondary)[i][0u];
     }
-    return {matrix_solution.status,std::move(primal),std::move(multipliers)};
+    return {matrix_solution.status,std::move(primary),std::move(secondary)};
 }
 
 } // namespace Ariadne
