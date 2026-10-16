@@ -2,6 +2,7 @@
  *            algebra/matrix.cpp
  *
  *  Copyright  2008-20  Alberto Casagrande, Pieter Collins
+ *  Copyright  2026  Luca Geretti
  *
  ****************************************************************************/
 
@@ -23,6 +24,12 @@
  */
 
 #include "numeric/module.hpp"
+#include "numeric/numeric.hpp"
+
+#include <utility>
+#include <bit>
+#include <cstdint>
+#include <limits>
 
 #include "matrix.hpp"
 #include "symmetric_matrix.hpp"
@@ -136,6 +143,453 @@ template Vector<Rational> solve(const Matrix<Rational>&, const Vector<Rational>&
 template<> Matrix<Rational> midpoint(Matrix<Rational> const& A) { return A; }
 
 template class SymmetricMatrix<FloatDPApproximation>;
+
+// Validated matrix operations: positive definiteness, Cholesky,
+// SPD solves and interval linear independence.
+PositiveDefinitenessStatus validated_positive_definiteness(
+    const SymmetricMatrix<FloatDPBounds>& A)
+{
+    const SizeType n=A.size();
+    Matrix<FloatDPBounds> S=static_cast<Matrix<FloatDPBounds>>(A);
+
+    for(SizeType k=0; k!=n; ++k) {
+        const FloatDPBounds pivot=S[k][k];
+
+        // A positive Schur pivot permits a validated LDL^T elimination.
+        if(definitely(pivot.lower()>0)) {
+            for(SizeType i=k+1; i!=n; ++i) {
+                for(SizeType j=i; j!=n; ++j) {
+                    const FloatDPBounds entry=S[i][j]-S[i][k]*S[k][j]/pivot;
+                    S[i][j]=entry;
+                    S[j][i]=entry;
+                }
+            }
+            continue;
+        }
+
+        // With all earlier pivots positive, a nonpositive Schur pivot
+        // excludes positive definiteness for every represented matrix.
+        if(definitely(pivot.upper()<=0)) {
+            return PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE;
+        }
+
+        return PositiveDefinitenessStatus::INDETERMINATE;
+    }
+
+    return PositiveDefinitenessStatus::POSITIVE_DEFINITE;
+}
+
+
+namespace {
+
+// Compute the correctly rounded binary64 square root of a positive
+// endpoint without using sqrt_rnd(double). In particular, Newton's
+// equality-based stopping test in sqrt_rnd can oscillate forever under
+// directed rounding.
+//
+// Positive finite IEEE-754 binary64 numbers have the same ordering as
+// their unsigned 64-bit bit patterns. Every finite binary64 x satisfies
+// sqrt(x)<2^512. A bisection on these bit patterns terminates in at most
+// 63 iterations, reaching two consecutive representable floats.
+//
+// Dyadic exactly embeds a finite binary64 value, and its products of
+// two 53-bit significands fit exactly in its 65535-bit representation.
+// Thus candidate^2<=x is an *exact* test; neither binary64 rounding,
+// the quality of a library sqrt, nor a numerical tolerance is assumed.
+FloatDP validated_sqrt_endpoint(FloatDP x, bool round_up)
+{
+    static_assert(sizeof(double)==sizeof(std::uint64_t));
+    static_assert(std::numeric_limits<double>::is_iec559);
+    if(is_inf(x)) {
+        return x;
+    }
+
+    const Dyadic target{ExactDouble(x.get_d())};
+    std::uint64_t lower=0u;
+    std::uint64_t upper=std::bit_cast<std::uint64_t>(0x1p512);
+    while(upper-lower>1u) {
+        const std::uint64_t middle=lower+(upper-lower)/2u;
+        const double candidate=std::bit_cast<double>(middle);
+        const Dyadic exact_candidate{ExactDouble(candidate)};
+        if(exact_candidate*exact_candidate<=target) {
+            lower=middle;
+        } else {
+            upper=middle;
+        }
+    }
+
+    const FloatDP lower_root(ExactDouble(std::bit_cast<double>(lower)),dp);
+    const Dyadic lower_exact{ExactDouble(lower_root.get_d())};
+    if(round_up && lower_exact*lower_exact!=target) {
+        return FloatDP(ExactDouble(std::bit_cast<double>(upper)),dp);
+    }
+    return lower_root;
+}
+
+FloatDPBounds validated_sqrt_bounds(const FloatDPBounds& positive)
+{
+    return FloatDPBounds(
+        validated_sqrt_endpoint(positive.lower_raw(),false),
+        validated_sqrt_endpoint(positive.upper_raw(),true));
+}
+
+} // namespace
+
+
+ValidatedCholeskyResult validated_cholesky_decomposition(
+    const SymmetricMatrix<FloatDPBounds>& A)
+{
+    const SizeType n=A.size();
+    Matrix<FloatDPBounds> L(n,n,A.zero_element());
+
+    for(SizeType i=0; i!=n; ++i) {
+        for(SizeType j=0; j!=i; ++j) {
+            FloatDPBounds entry=A[i][j];
+            for(SizeType k=0; k!=j; ++k) {
+                entry-=L[i][k]*L[j][k];
+            }
+            // The earlier positive diagonal pivot is separated from zero.
+            L[i][j]=entry/L[j][j];
+        }
+
+        FloatDPBounds pivot=A[i][i];
+        for(SizeType k=0; k!=i; ++k) {
+            // sqr handles intervals that straddle zero without inventing
+            // a negative lower bound for the square.
+            pivot-=sqr(L[i][k]);
+        }
+
+        if(definitely(pivot.lower()>0)) {
+            L[i][i]=validated_sqrt_bounds(pivot);
+            continue;
+        }
+
+        if(definitely(pivot.upper()<=0)) {
+            return {PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE,std::nullopt};
+        }
+
+        return {PositiveDefinitenessStatus::INDETERMINATE,std::nullopt};
+    }
+
+    return {PositiveDefinitenessStatus::POSITIVE_DEFINITE,std::move(L)};
+}
+
+
+ValidatedPositiveDefiniteSolveResult<Matrix<FloatDPBounds>>
+validated_positive_definite_solve(
+    const SymmetricMatrix<FloatDPBounds>& A,
+    const Matrix<FloatDPBounds>& B)
+{
+    ARIADNE_PRECONDITION(B.row_size()==A.size());
+
+    const auto factorization=validated_cholesky_decomposition(A);
+    if(!factorization.lower.has_value()) {
+        return {factorization.status,std::nullopt};
+    }
+
+    const Matrix<FloatDPBounds>& L=*factorization.lower;
+    const SizeType n=A.size();
+    const SizeType rhs_count=B.column_size();
+    Matrix<FloatDPBounds> X=B;
+
+    // Forward substitution: LY=B. The solution matrix stores Y in place.
+    for(SizeType i=0; i!=n; ++i) {
+        for(SizeType col=0; col!=rhs_count; ++col) {
+            FloatDPBounds entry=X[i][col];
+            for(SizeType k=0; k!=i; ++k) {
+                entry-=L[i][k]*X[k][col];
+            }
+            X[i][col]=entry/L[i][i];
+        }
+    }
+
+    // Back substitution: L^T X=Y, overwriting Y from bottom to top.
+    for(SizeType i=n; i!=0;) {
+        --i;
+        for(SizeType col=0; col!=rhs_count; ++col) {
+            FloatDPBounds entry=X[i][col];
+            for(SizeType k=i+1; k!=n; ++k) {
+                entry-=L[k][i]*X[k][col];
+            }
+            X[i][col]=entry/L[i][i];
+        }
+    }
+
+    return {PositiveDefinitenessStatus::POSITIVE_DEFINITE,std::move(X)};
+}
+
+ValidatedPositiveDefiniteSolveResult<Vector<FloatDPBounds>>
+validated_positive_definite_solve(
+    const SymmetricMatrix<FloatDPBounds>& A,
+    const Vector<FloatDPBounds>& b)
+{
+    ARIADNE_PRECONDITION(b.size()==A.size());
+
+    Matrix<FloatDPBounds> B(b.size(),1u,b.zero_element());
+    for(SizeType i=0; i!=b.size(); ++i) {
+        B[i][0u]=b[i];
+    }
+
+    const auto matrix_solution=validated_positive_definite_solve(A,B);
+    if(!matrix_solution.solution.has_value()) {
+        return {matrix_solution.status,std::nullopt};
+    }
+
+    Vector<FloatDPBounds> x(b.size(),b.zero_element());
+    for(SizeType i=0; i!=b.size(); ++i) {
+        x[i]=(*matrix_solution.solution)[i][0u];
+    }
+    return {matrix_solution.status,std::move(x)};
+}
+
+
+namespace {
+
+LinearIndependenceStatus classify_linear_independence(
+    const Matrix<FloatDPBounds>& A, bool rows)
+{
+    const SizeType count=rows ? A.row_size() : A.column_size();
+    const SizeType length=rows ? A.column_size() : A.row_size();
+
+    // More vectors than coordinates always implies dependence.
+    if(count>length) {
+        return LinearIndependenceStatus::DEPENDENT;
+    }
+
+    SymmetricMatrix<FloatDPBounds> gram(count,A.zero_element());
+    for(SizeType i=0; i!=count; ++i) {
+        for(SizeType j=i; j!=count; ++j) {
+            FloatDPBounds entry=A.zero_element();
+            for(SizeType k=0; k!=length; ++k) {
+                const FloatDPBounds& ai=A.at(rows ? i : k,rows ? k : i);
+                const FloatDPBounds& aj=A.at(rows ? j : k,rows ? k : j);
+                entry+=(i==j) ? sqr(ai) : ai*aj;
+            }
+            gram[i][j]=entry;
+        }
+    }
+
+    const auto definiteness=validated_positive_definiteness(gram);
+    if(definiteness==PositiveDefinitenessStatus::POSITIVE_DEFINITE) {
+        return LinearIndependenceStatus::INDEPENDENT;
+    }
+    if(definiteness==PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE) {
+        // Since every exact Gram matrix is positive semidefinite,
+        // this result proves that every represented matrix is rank-deficient.
+        return LinearIndependenceStatus::DEPENDENT;
+    }
+    return LinearIndependenceStatus::INDETERMINATE;
+}
+
+} // namespace
+
+LinearIndependenceStatus validated_independent_rows(
+    const Matrix<FloatDPBounds>& A)
+{
+    return classify_linear_independence(A,true);
+}
+
+LinearIndependenceStatus validated_independent_columns(
+    const Matrix<FloatDPBounds>& A)
+{
+    return classify_linear_independence(A,false);
+}
+
+
+// Validated saddle-point systems with a shared leading block and coupling matrix.
+// The two Cholesky factorizations are reused for all right-hand sides.
+ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const SymmetricMatrix<FloatDPBounds>& C,
+    const Matrix<FloatDPBounds>& F,
+    const Matrix<FloatDPBounds>& G)
+{
+    const SizeType n=H.size();
+    const SizeType m=A.row_size();
+    ARIADNE_PRECONDITION(A.column_size()==n);
+    ARIADNE_PRECONDITION(C.size()==m);
+    ARIADNE_PRECONDITION(F.row_size()==n);
+    ARIADNE_PRECONDITION(G.row_size()==m);
+    ARIADNE_PRECONDITION(F.column_size()==G.column_size());
+
+    // A zero interval is detected from its exact stored endpoints.
+    // Only for structural C=0 is leading-block augmentation equivalent.
+    const FloatDPBounds zero=H.zero_element();
+    bool zero_lower_block=true;
+    for(SizeType i=0; i!=m; ++i) {
+        for(SizeType j=i; j!=m; ++j) {
+            if(C[i][j].lower_raw()!=zero.lower_raw()
+               || C[i][j].upper_raw()!=zero.upper_raw()) {
+                zero_lower_block=false;
+            }
+        }
+    }
+
+    const SizeType p=F.column_size();
+    Matrix<FloatDPBounds> rhs(n,p+m,H.zero_element());
+    for(SizeType i=0; i!=n; ++i) {
+        for(SizeType col=0; col!=p; ++col) {
+            rhs[i][col]=F[i][col];
+        }
+        for(SizeType j=0; j!=m; ++j) {
+            rhs[i][p+j]=A[j][i];
+        }
+    }
+
+    auto leading_solve=validated_positive_definite_solve(H,rhs);
+
+    // Only for C=0: if H is not certified SPD, coupling can
+    // still allow a certificate of block-system invertibility.
+    // Since A*x=g, the following two saddle-point systems are equivalent:
+    //
+    //   H*x + A^T*lambda = f          (H+A^T*A)*x + A^T*lambda = f+A^T*g
+    //   A*x = g                     A*x = g.
+    //
+    // For every exact H and A, positive definiteness of H+A^T*A
+    // implies positivity of H on ker(A). Thus a certified augmented
+    // leading block and a certified Schur complement yield a unique saddle-point
+    // solution even when H is only semidefinite (or indefinite).
+    // This fixed unit augmentation is a sufficient test: failure is
+    // not interpreted as nonexistence of a saddle-point solution.
+    if(!leading_solve.solution.has_value() && m!=0u && zero_lower_block) {
+        SymmetricMatrix<FloatDPBounds> augmented_block(n,H.zero_element());
+        for(SizeType i=0; i!=n; ++i) {
+            for(SizeType j=i; j!=n; ++j) {
+                FloatDPBounds entry=H[i][j];
+                for(SizeType k=0; k!=m; ++k) {
+                    entry+=(i==j) ? sqr(A[k][i]) : A[k][i]*A[k][j];
+                }
+                augmented_block[i][j]=entry;
+            }
+        }
+
+        Matrix<FloatDPBounds> augmented_rhs=rhs;
+        for(SizeType i=0; i!=n; ++i) {
+            for(SizeType col=0; col!=p; ++col) {
+                for(SizeType k=0; k!=m; ++k) {
+                    augmented_rhs[i][col]+=A[k][i]*G[k][col];
+                }
+            }
+        }
+
+        const auto augmented_block_solve=
+            validated_positive_definite_solve(augmented_block,augmented_rhs);
+        if(augmented_block_solve.solution.has_value()) {
+            // The existing Schur-complement code now solves the
+            // equivalent augmented saddle-point system. The second block is unchanged.
+            leading_solve=std::move(augmented_block_solve);
+        }
+    }
+
+    if(!leading_solve.solution.has_value()) {
+        if(leading_solve.status==PositiveDefinitenessStatus::NOT_POSITIVE_DEFINITE) {
+            return {ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE,std::nullopt,std::nullopt};
+        }
+        return {ValidatedSaddlePointStatus::INDETERMINATE,std::nullopt,std::nullopt};
+    }
+
+    const Matrix<FloatDPBounds>& Y=*leading_solve.solution;
+    SymmetricMatrix<FloatDPBounds> schur(m,H.zero_element());
+    Matrix<FloatDPBounds> dual_rhs(m,p,H.zero_element());
+    for(SizeType i=0; i!=m; ++i) {
+        for(SizeType col=0; col!=p; ++col) {
+            FloatDPBounds entry=-G[i][col];
+            for(SizeType k=0; k!=n; ++k) {
+                entry+=A[i][k]*Y[k][col];
+            }
+            dual_rhs[i][col]=entry;
+        }
+        for(SizeType j=i; j!=m; ++j) {
+            FloatDPBounds entry=C[i][j];
+            for(SizeType k=0; k!=n; ++k) {
+                entry+=A[i][k]*Y[k][p+j];
+            }
+            schur[i][j]=entry;
+        }
+    }
+
+    const auto schur_solve=validated_positive_definite_solve(schur,dual_rhs);
+    if(!schur_solve.solution.has_value()) {
+        // Dependence of A proves block singularity only when C=0.
+        if(zero_lower_block
+           && validated_independent_rows(A)==LinearIndependenceStatus::DEPENDENT) {
+            return {ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS,std::nullopt,std::nullopt};
+        }
+        return {ValidatedSaddlePointStatus::INDETERMINATE,std::nullopt,std::nullopt};
+    }
+
+    Matrix<FloatDPBounds> primary(n,p,H.zero_element());
+    const Matrix<FloatDPBounds>& secondary=*schur_solve.solution;
+    for(SizeType i=0; i!=n; ++i) {
+        for(SizeType col=0; col!=p; ++col) {
+            FloatDPBounds entry=Y[i][col];
+            for(SizeType j=0; j!=m; ++j) {
+                entry-=Y[i][p+j]*secondary[j][col];
+            }
+            primary[i][col]=entry;
+        }
+    }
+    return {ValidatedSaddlePointStatus::SOLVED,std::move(primary),secondary};
+}
+
+// Backward-compatible zero-lower-right-block overload.
+ValidatedSaddlePointMatrixResult validated_saddle_point_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const Matrix<FloatDPBounds>& F,
+    const Matrix<FloatDPBounds>& G)
+{
+    return validated_saddle_point_solve(
+        H,A,SymmetricMatrix<FloatDPBounds>(A.row_size(),H.zero_element()),F,G);
+}
+
+// Single right-hand sides use the same certification implementation.
+ValidatedSaddlePointResult validated_saddle_point_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const SymmetricMatrix<FloatDPBounds>& C,
+    const Vector<FloatDPBounds>& f,
+    const Vector<FloatDPBounds>& g)
+{
+    const SizeType n=H.size();
+    const SizeType m=A.row_size();
+    ARIADNE_PRECONDITION(A.column_size()==n);
+    ARIADNE_PRECONDITION(C.size()==m);
+    ARIADNE_PRECONDITION(f.size()==n);
+    ARIADNE_PRECONDITION(g.size()==m);
+
+    Matrix<FloatDPBounds> F(n,1u,H.zero_element());
+    Matrix<FloatDPBounds> G(m,1u,H.zero_element());
+    for(SizeType i=0; i!=n; ++i) { F[i][0u]=f[i]; }
+    for(SizeType i=0; i!=m; ++i) { G[i][0u]=g[i]; }
+
+    const auto matrix_solution=validated_saddle_point_solve(H,A,C,F,G);
+    if(!matrix_solution.primary.has_value()) {
+        return {matrix_solution.status,std::nullopt,std::nullopt};
+    }
+
+    Vector<FloatDPBounds> primary(n,H.zero_element());
+    Vector<FloatDPBounds> secondary(m,H.zero_element());
+    for(SizeType i=0; i!=n; ++i) {
+        primary[i]=(*matrix_solution.primary)[i][0u];
+    }
+    for(SizeType i=0; i!=m; ++i) {
+        secondary[i]=(*matrix_solution.secondary)[i][0u];
+    }
+    return {matrix_solution.status,std::move(primary),std::move(secondary)};
+}
+
+// Backward-compatible zero-lower-right-block vector overload.
+ValidatedSaddlePointResult validated_saddle_point_solve(
+    const SymmetricMatrix<FloatDPBounds>& H,
+    const Matrix<FloatDPBounds>& A,
+    const Vector<FloatDPBounds>& f,
+    const Vector<FloatDPBounds>& g)
+{
+    return validated_saddle_point_solve(
+        H,A,SymmetricMatrix<FloatDPBounds>(A.row_size(),H.zero_element()),f,g);
+}
 
 } // namespace Ariadne
 

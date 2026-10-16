@@ -9,6 +9,10 @@ set(UNIT_TESTS
     test_multi_index
     test_polynomial
     test_chebyshev_polynomial
+    test_positive_definiteness
+    test_cholesky_decomposition
+    test_positive_definite_solve
+    test_linear_independence
     test_sweeper
     test_symmetric_matrix
     test_univariate_differential

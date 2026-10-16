@@ -7,6 +7,7 @@
 #include "algebra/vector.hpp"
 #include "algebra/covector.hpp"
 #include "algebra/matrix.hpp"
+#include "algebra/symmetric_matrix.hpp"
 #include "algebra/diagonal_matrix.hpp"
 #include "algebra/multi_index.hpp"
 #include "algebra/expansion.hpp"
