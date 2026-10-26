@@ -317,6 +317,19 @@ MultivariateChebyshevPolynomial<X>::apply(Sub, ChebyshevPolynomial<X> const& cm1
 
 template<class X> auto
 MultivariateChebyshevPolynomial<X>::apply(Mul, ChebyshevPolynomial<X> const& cm1, ChebyshevPolynomial<X> const& cm2) -> ChebyshevPolynomial<X> {
+    ARIADNE_PRECONDITION(cm1.argument_size()==cm2.argument_size());
+    PR pr=min(cm1.precision(),cm2.precision());
+    ChebyshevPolynomial<X> zero(cm1.argument_size(),pr);
+
+    auto is_zero = [](ChebyshevPolynomial<X> const& cm) {
+        X const& z=cm.zero_coefficient();
+        for(auto term : cm._terms) {
+            if(not same(term.coefficient(),z)) { return false; }
+        }
+        return true;
+    };
+    if(is_zero(cm1) || is_zero(cm2)) { return zero; }
+
     ConstIterator iter1=cm1._terms.begin(); ConstIterator iter2=cm2._terms.begin();
     ConstIterator end1=cm1._terms.end(); ConstIterator end2=cm2._terms.end();
     return _mul_from(iter1,end1,iter2,end2,0u);
@@ -405,8 +418,10 @@ MultivariateChebyshevPolynomial<X>::_mul_from(ConstIterator& from1, ConstIterato
                 curr1=from1;
                 DegreeType a1k=curr1->index()[k]; DegreeType a2k=curr2->index()[k];
                 ChebyshevPolynomial<X> product = _mul_from(curr1,end1,curr2,end2,k+1u);
-                buf[static_cast<SizeType>(a1k>=a2k ? a1k-a2k : a2k-a1k)]+=product;
-                buf[static_cast<DegreeType>(a1k+a2k)]+=product;
+                if(not product._terms.empty()) {
+                    buf[static_cast<SizeType>(a1k>=a2k ? a1k-a2k : a2k-a1k)]+=product;
+                    buf[static_cast<DegreeType>(a1k+a2k)]+=product;
+                }
             }
             from1=curr1;
         }

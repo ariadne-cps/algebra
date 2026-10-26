@@ -22,9 +22,6 @@
  */
 
 #include <iostream>
-#ifdef _MSC_VER
-#include <crtdbg.h>
-#endif
 #include <iomanip>
 
 #include "utility/metaprogramming.hpp"
@@ -45,18 +42,6 @@
 using std::cout; using std::cerr; using std::endl;
 using namespace Ariadne;
 
-#ifdef _MSC_VER
-static void configure_msvc_debug_reports() {
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-}
-#else
-static void configure_msvc_debug_reports() { }
-#endif
 
 extern template Ariadne::Nat Ariadne::Error<Ariadne::FloatMP>::output_places;
 extern template Ariadne::Nat Ariadne::Approximation<Ariadne::FloatDP>::output_places;
@@ -190,28 +175,21 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     ARIADNE_TEST_PRINT(-x);
     ARIADNE_TEST_EXECUTE(multivariate_constant.sup_norm());
 
-    std::cout << "DIAG: before multivariate_empty construction" << std::endl;
     MultivariateChebyshevPolynomial<X> multivariate_empty(2u,pr);
-    std::cout << "DIAG: after multivariate_empty construction" << std::endl;
-    std::cout << "DIAG: before multivariate_empty_plus" << std::endl;
     auto multivariate_empty_plus=MultivariateChebyshevPolynomial<X>::apply(Add(),multivariate_empty,X(2u,pr));
-    std::cout << "DIAG: after multivariate_empty_plus" << std::endl;
     auto multivariate_one_plus=MultivariateChebyshevPolynomial<X>::apply(Add(),one,X(2u,pr));
-    std::cout << "DIAG: after multivariate_one_plus" << std::endl;
     auto multivariate_x_plus=MultivariateChebyshevPolynomial<X>::apply(Add(),x,X(2u,pr));
-    std::cout << "DIAG: after multivariate_x_plus" << std::endl;
     auto multivariate_scaled=MultivariateChebyshevPolynomial<X>::apply(Mul(),x,X(2u,pr));
-    std::cout << "DIAG: after multivariate_scaled" << std::endl;
     auto multivariate_empty_scaled=MultivariateChebyshevPolynomial<X>::apply(Mul(),multivariate_empty,X(2u,pr));
-    std::cout << "DIAG: after multivariate_empty_scaled" << std::endl;
+    auto multivariate_empty_product=MultivariateChebyshevPolynomial<X>::apply(Mul(),multivariate_empty,x);
     auto multivariate_zero=MultivariateChebyshevPolynomial<X>::constant(2u,X(0u,pr));
-    std::cout << "DIAG: after multivariate_zero" << std::endl;
     auto multivariate_zero_product=MultivariateChebyshevPolynomial<X>::apply(Mul(),multivariate_zero,x);
-    std::cout << "DIAG: after multivariate_zero_product" << std::endl;
     ARIADNE_TEST_PRINT(multivariate_empty_plus);
     ARIADNE_TEST_PRINT(multivariate_one_plus);
     ARIADNE_TEST_PRINT(multivariate_empty_scaled);
     ARIADNE_TEST_PRINT(multivariate_zero_product);
+    ARIADNE_TEST_EQUALS(multivariate_empty_product.sup_norm(),mag(X(0u,pr)));
+    ARIADNE_TEST_EQUALS(multivariate_zero_product.sup_norm(),mag(X(0u,pr)));
     ARIADNE_TEST_FAIL(MultivariateChebyshevPolynomial<X>::apply(Add(),x,MultivariateChebyshevPolynomial<X>::coordinate(3u,0u,pr)));
     auto xy=MultivariateChebyshevPolynomial<X>::apply(Add(),x,y);
     auto yx=MultivariateChebyshevPolynomial<X>::apply(Add(),y,x);
@@ -245,7 +223,6 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
 
 
 Int main() {
-    configure_msvc_debug_reports();
     MultiplePrecision mp(128);
     TestChebyshevPolynomial<FloatDPApproximation>(dp).test();
     TestChebyshevPolynomial<FloatMPApproximation>(mp).test();
