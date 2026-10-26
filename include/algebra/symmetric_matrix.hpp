@@ -428,7 +428,7 @@ struct ValidatedCholeskyResult {
 //! interval matrix L. The upper triangular portion of L is exactly zero.
 //! Directed square roots are computed in binary64 using bounded bisection
 //! of IEEE-754 floating-point values, with exact Dyadic square comparisons.
-//! They require neither MPFR nor a potentially nonterminating Newton
+//! They use bounded bisection rather than a potentially nonterminating Newton
 //! iteration; both returned endpoints rigorously enclose the exact root.
 //!
 //! The algorithm computes successive Schur pivots

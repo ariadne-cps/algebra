@@ -104,7 +104,7 @@ Void test_empty_and_scalar_matrices()
 
     // Binary64 extremes: the exact comparisons must not overflow
     // (largest finite input) or underflow (smallest subnormal input).
-    // These exercise different exponents without invoking MPFR.
+    // These exercise distinct exponent extremes.
     S subnormal(1u,X(0u,dp));
     const FloatDP subnormal_raw(
         ExactDouble(std::numeric_limits<double>::denorm_min()),dp);
