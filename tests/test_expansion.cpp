@@ -743,6 +743,10 @@ Void test_boolean_sorted_equality_short_circuit() {
     };
 
     E empty_expansion=build_sorted({});
+    E different_dimension(3u,std::tuple<>());
+    ARIADNE_TEST_ASSERT(not (empty_expansion==different_dimension));
+    ARIADNE_TEST_ASSERT(not (different_dimension==empty_expansion));
+
     E matched=build_sorted({make_degree_entry(0u,0u,1.0),
                             make_degree_entry(2u,0u,4.0)});
     check_both_orders(matched,matched,true);
