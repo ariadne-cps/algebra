@@ -623,6 +623,7 @@ inline OutputStream& operator<<(OutputStream& os, GradedIndexLess) { return os <
 inline OutputStream& operator<<(OutputStream& os, ReverseLexicographicIndexLess) { return os << "ReverseLexicographicIndexLess"; }
 
 template<class I, class X, class CMP> void SortedExpansion<I,X,CMP>::check() const {
+    if(this->size()<2u) { return; }
     CMP cmp;
     for(auto iter=this->begin(), next=iter+1; next<this->end(); ++iter, ++next) {
         if(!cmp(*iter,*next)) {
