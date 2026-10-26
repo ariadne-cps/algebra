@@ -211,8 +211,8 @@ template<class I, class X> class ExpansionIterator
     template<class XX> PointerDifferenceType distance_to(const ExpansionIterator<I,XX>& other) const { return other._cp - this->_cp; }
     ExpansionReference<I,X> dereference() const { return ExpansionReference<I,X>(*_ap,*_cp); }
     ExpansionPointer<I,X> operator->() { return ExpansionPointer<I,X>(_ap.operator->(),_cp.operator->()); }
-    friend OutputStream& operator<<(OutputStream& os, const ExpansionIterator<I,X>& e) {
-        return os << "{" << e._ap.operator->() << "," << e._cp.operator->() << "}"; }
+    friend OutputStream& operator<<(OutputStream& os, const ExpansionIterator<I,X>&) {
+        return os << "{ExpansionIterator}"; }
 };
 
 template<class I, class X> class ExpansionConstIterator
@@ -233,8 +233,8 @@ template<class I, class X> class ExpansionConstIterator
     template<class XX> PointerDifferenceType distance_to(const ExpansionConstIterator<I,XX>& other) const { return other._cp - this->_cp; }
     ExpansionConstReference<I,X> dereference() const { return ExpansionConstReference<I,X>(*_ap,*_cp); }
     ExpansionConstPointer<I,X> operator->() { return ExpansionConstPointer<I,X>(_ap.operator->(),_cp.operator->()); }
-    friend OutputStream& operator<<(OutputStream& os, const ExpansionConstIterator<I,X>& e) {
-        return os << "{" << e._ap.operator->() << "," << e._cp.operator->() << "}"; }
+    friend OutputStream& operator<<(OutputStream& os, const ExpansionConstIterator<I,X>&) {
+        return os << "{ExpansionConstIterator}"; }
 };
 
 template<class I, class X> class ExpansionValueReference {

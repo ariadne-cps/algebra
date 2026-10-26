@@ -502,10 +502,10 @@ template<class I, class X> Expansion<MultiIndex,X> Expansion<I,X>::_embed(SizeTy
     return r;
 }
 
-template<class X> inline OutputStream& operator<<(OutputStream& os, typename UniformList<X>::Iterator const& iter) {
-    return os << iter.operator->(); }
-template<class X> inline OutputStream& operator<<(OutputStream& os, typename UniformList<X>::ConstIterator const& iter) {
-    return os << iter.operator->(); }
+template<class X> inline OutputStream& operator<<(OutputStream& os, typename UniformList<X>::Iterator const&) {
+    return os << "{UniformList::Iterator}"; }
+template<class X> inline OutputStream& operator<<(OutputStream& os, typename UniformList<X>::ConstIterator const&) {
+    return os << "{UniformList::ConstIterator}"; }
 
 template<class I, class X> OutputStream& Expansion<I,X>::_write(OutputStream& os) const {
     os << "Expansion<I," << class_name<X>() <<">";

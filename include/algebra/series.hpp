@@ -47,7 +47,7 @@ template<class X> class SeriesGeneratorInterface {
 
 template<class OP, class X> class SeriesGenerator : public SeriesGeneratorInterface<X> {
     virtual X _next(DegreeType d, X const& c, List<X>& y) const final {
-        OP op; const X* yp=y.begin().operator->(); return next_series_coefficient(op, d, c, yp); }
+        OP op; const X* yp=y.data(); return next_series_coefficient(op, d, c, yp); }
 };
 
 template<class X> inline X next_series_coefficient(Pow, DegreeType d, X const& c, DegreeType n, X const* y) {
