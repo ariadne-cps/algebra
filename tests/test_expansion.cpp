@@ -811,7 +811,7 @@ Void test_univariate_sorted_equality_ordering(PR const& pr)
     // A sparse comparison must visit unmatched terms in both directions,
     // and then resume at a matching term without losing a previous result.
     using E=SortedExpansion<UniIndex,X,IndexLess>;
-    X zero(0u,pr), one(1u,pr), two(2u,pr);
+    X zero(0u,pr), one(1u,pr), coefficient_two(2u,pr);
 
     auto check_symmetric = [](E const& lhs, E const& rhs) {
         ARIADNE_TEST_ASSERT(AriadneTesting::truth(lhs==rhs)==AriadneTesting::truth(rhs==lhs));
@@ -836,14 +836,14 @@ Void test_univariate_sorted_equality_ordering(PR const& pr)
     ARIADNE_TEST_EQUALS(left.back().index(),UniIndex(2u));
     ARIADNE_TEST_EQUALS(right.back().index(),UniIndex(2u));
 
-    right.back().coefficient()=two;
+    right.back().coefficient()=coefficient_two;
     check_symmetric(left,right);
 
     E equal_left(SizeOne(),pr), equal_right(SizeOne(),pr);
     equal_left.append(UniIndex(1u),one);
     equal_right.append(UniIndex(1u),one);
     check_symmetric(equal_left,equal_right);
-    equal_right.front().coefficient()=two;
+    equal_right.front().coefficient()=coefficient_two;
     check_symmetric(equal_left,equal_right);
 }
 
