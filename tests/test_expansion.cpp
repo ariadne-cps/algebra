@@ -24,6 +24,8 @@
 
 #include <iostream>
 #include <vector>
+#include <utility>
+#include <initializer_list>
 #include <sstream>
 #include "numeric/numeric.hpp"
 #include "algebra/expansion.hpp"
@@ -722,6 +724,81 @@ Void test_sorted_equality_edge_cases() {
     }
 }
 
+Void test_boolean_sorted_equality_short_circuit() {
+    // Built-in double equality is Boolean: unlike multi-valued equality,
+    // each conjunction must preserve the short-circuit behavior.
+    using E=SortedExpansion<MultiIndex,double,DegreeIndexLess>;
+    using Term=std::pair<MultiIndex,double>;
+    auto make_degree_entry=[](DegreeType first, DegreeType second, double coefficient) -> Term {
+        return {MultiIndex({first,second}),coefficient};
+    };
+    auto build_sorted=[](std::initializer_list<Term> entries) {
+        E expansion(2u,std::tuple<>());
+        for(auto const& entry : entries) { expansion.append(entry.first,entry.second); }
+        return expansion;
+    };
+    auto check_both_orders=[](E const& lhs, E const& rhs, bool expected) {
+        ARIADNE_TEST_EQUALS(lhs==rhs,expected);
+        ARIADNE_TEST_EQUALS(rhs==lhs,expected);
+    };
+
+    E empty_expansion=build_sorted({});
+    E matched=build_sorted({make_degree_entry(0u,0u,1.0),
+                            make_degree_entry(2u,0u,4.0)});
+    check_both_orders(matched,matched,true);
+    E different_coefficient=build_sorted({make_degree_entry(0u,0u,2.0),
+                                          make_degree_entry(2u,0u,4.0)});
+    check_both_orders(matched,different_coefficient,false);
+
+    // Both unmatched-term branches: zero preserves equality, nonzero rejects it.
+    E left_unmatched=build_sorted({make_degree_entry(1u,0u,0.0),
+                                   make_degree_entry(3u,0u,5.0)});
+    E right_unmatched=build_sorted({make_degree_entry(2u,0u,0.0),
+                                    make_degree_entry(3u,0u,5.0)});
+    check_both_orders(left_unmatched,right_unmatched,true);
+    left_unmatched.front().coefficient()=1.0;
+    check_both_orders(left_unmatched,right_unmatched,false);
+    left_unmatched.front().coefficient()=0.0;
+    right_unmatched.front().coefficient()=1.0;
+    check_both_orders(left_unmatched,right_unmatched,false);
+
+    // Once equality is false, later comparisons must not restore it.
+    E prior_mismatch_left=build_sorted({make_degree_entry(0u,0u,1.0),
+                                        make_degree_entry(1u,0u,0.0),
+                                        make_degree_entry(3u,0u,1.0)});
+    E prior_mismatch_right=build_sorted({make_degree_entry(0u,0u,2.0),
+                                         make_degree_entry(2u,0u,0.0),
+                                         make_degree_entry(3u,0u,1.0)});
+    check_both_orders(prior_mismatch_left,prior_mismatch_right,false);
+
+    // DegreeIndexLess considers distinct indices of equal total degree
+    // equivalent under the ordering, but not necessarily as monomials.
+    for(double lhs_coefficient : {0.0,1.0}) {
+        for(double rhs_coefficient : {0.0,1.0}) {
+            E lhs=build_sorted({make_degree_entry(1u,0u,lhs_coefficient)});
+            E rhs=build_sorted({make_degree_entry(0u,1u,rhs_coefficient)});
+            check_both_orders(lhs,rhs,lhs_coefficient==0.0 && rhs_coefficient==0.0);
+        }
+    }
+    E prior_mismatch_grouped_left=build_sorted({make_degree_entry(0u,0u,1.0),
+                                                 make_degree_entry(1u,0u,0.0)});
+    E prior_mismatch_grouped_right=build_sorted({make_degree_entry(0u,0u,2.0),
+                                                  make_degree_entry(0u,1u,0.0)});
+    check_both_orders(prior_mismatch_grouped_left,prior_mismatch_grouped_right,false);
+
+    // Both tail loops: compare a zero/nonzero tail against an empty operand.
+    E zero_tail=build_sorted({make_degree_entry(1u,0u,0.0)});
+    E nonzero_tail=build_sorted({make_degree_entry(1u,0u,1.0)});
+    check_both_orders(empty_expansion,zero_tail,true);
+    check_both_orders(empty_expansion,nonzero_tail,false);
+
+    // The tail must also be visited after a preceding mismatching term.
+    E prior_mismatch_tail_left=build_sorted({make_degree_entry(0u,0u,1.0),
+                                              make_degree_entry(1u,0u,0.0)});
+    E prior_mismatch_tail_right=build_sorted({make_degree_entry(0u,0u,2.0)});
+    check_both_orders(prior_mismatch_tail_left,prior_mismatch_tail_right,false);
+}
+
 Void test_exact_coefficient_helpers() {
     Expansion<MultiIndex,double> plain(2u,std::tuple<>());
     ARIADNE_TEST_ASSERT(plain.coefficient_characteristics()==std::tuple<>());
@@ -893,6 +970,7 @@ Void test_bounds_coefficient_output() {
 
 Int main() {
     ARIADNE_TEST_CALL(test_sorted_equality_edge_cases());
+    ARIADNE_TEST_CALL(test_boolean_sorted_equality_short_circuit());
     ARIADNE_TEST_CALL(test_exact_coefficient_helpers());
     ARIADNE_TEST_CALL(test_unit_coefficient_output());
     ARIADNE_TEST_CALL(test_bounds_coefficient_output());
