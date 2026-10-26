@@ -805,6 +805,48 @@ Void test_graded_check_instantiation(PR const& pr)
     ARIADNE_TEST_THROWS(unsorted.check(),std::runtime_error);
 }
 
+template<class X, class PR>
+Void test_univariate_sorted_equality_ordering(PR const& pr)
+{
+    // A sparse comparison must visit unmatched terms in both directions,
+    // and then resume at a matching term without losing a previous result.
+    using E=SortedExpansion<UniIndex,X,IndexLess>;
+    X zero(0u,pr), one(1u,pr), two(2u,pr);
+
+    auto check_symmetric = [](E const& lhs, E const& rhs) {
+        ARIADNE_TEST_ASSERT(AriadneTesting::truth(lhs==rhs)==AriadneTesting::truth(rhs==lhs));
+    };
+
+    E empty(SizeOne(),pr);
+    E left_only(SizeOne(),pr), right_only(SizeOne(),pr);
+    left_only.append(UniIndex(0u),zero);
+    right_only.append(UniIndex(2u),zero);
+    check_symmetric(left_only,empty);
+    check_symmetric(empty,right_only);
+    check_symmetric(left_only,right_only);
+
+    E left(SizeOne(),pr), right(SizeOne(),pr);
+    left.append(UniIndex(0u),zero);
+    left.append(UniIndex(2u),one);
+    right.append(UniIndex(1u),zero);
+    right.append(UniIndex(2u),one);
+    check_symmetric(left,right);
+    ARIADNE_TEST_EQUALS(left.size(),2u);
+    ARIADNE_TEST_EQUALS(right.size(),2u);
+    ARIADNE_TEST_EQUALS(left.back().index(),UniIndex(2u));
+    ARIADNE_TEST_EQUALS(right.back().index(),UniIndex(2u));
+
+    right.back().coefficient()=two;
+    check_symmetric(left,right);
+
+    E equal_left(SizeOne(),pr), equal_right(SizeOne(),pr);
+    equal_left.append(UniIndex(1u),one);
+    equal_right.append(UniIndex(1u),one);
+    check_symmetric(equal_left,equal_right);
+    equal_right.front().coefficient()=two;
+    check_symmetric(equal_left,equal_right);
+}
+
 Void test_unit_coefficient_output() {
     // Built-in doubles have decidable equality, so unit coefficients can be
     // omitted while unit constants must still be printed.
@@ -921,6 +963,9 @@ Int main() {
 
     test_univariate_expansion_assignment_instantiation<FloatMPApproximation>(multiple_precision);
     test_univariate_expansion_assignment_instantiation<FloatMPBounds>(multiple_precision);
+
+    test_univariate_sorted_equality_ordering<FloatDPApproximation>(double_precision);
+    test_univariate_sorted_equality_ordering<FloatMPApproximation>(multiple_precision);
 
     test_graded_check_instantiation<FloatDPApproximation>(double_precision);
     test_graded_check_instantiation<FloatDPBounds>(double_precision);
