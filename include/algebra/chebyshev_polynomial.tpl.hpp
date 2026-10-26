@@ -318,21 +318,48 @@ MultivariateChebyshevPolynomial<X>::apply(Sub, ChebyshevPolynomial<X> const& cm1
 template<class X> auto
 MultivariateChebyshevPolynomial<X>::apply(Mul, ChebyshevPolynomial<X> const& cm1, ChebyshevPolynomial<X> const& cm2) -> ChebyshevPolynomial<X> {
     ARIADNE_PRECONDITION(cm1.argument_size()==cm2.argument_size());
+    SizeType const n=cm1.argument_size();
     PR pr=min(cm1.precision(),cm2.precision());
-    ChebyshevPolynomial<X> zero(cm1.argument_size(),pr);
+    ChebyshevPolynomial<X> result(n,pr);
+    X const& z=result.zero_coefficient();
 
-    auto is_zero = [](ChebyshevPolynomial<X> const& cm) {
-        X const& z=cm.zero_coefficient();
-        for(auto term : cm._terms) {
-            if(not same(term.coefficient(),z)) { return false; }
+    // T_i(t) T_j(t) = (T_{i+j}(t) + T_{|i-j|}(t))/2.
+    // If either degree is zero, the two contributions coincide.
+    std::map<MultiIndex,X,ReverseLexicographicLess> coefficients;
+    for(auto term1 : cm1._terms) {
+        for(auto term2 : cm2._terms) {
+            X product=term1.coefficient()*term2.coefficient();
+            if(same(product,z)) { continue; }
+            auto a=term1.index();
+            auto b=term2.index();
+            MultiIndex index(n);
+            auto accumulate = [&](auto&& self, SizeType k, X const& c) -> Void {
+                if(k==n) {
+                    auto [iter,inserted]=coefficients.try_emplace(index,c);
+                    if(not inserted) { iter->second+=c; }
+                    return;
+                }
+                DegreeType i=a[k];
+                DegreeType j=b[k];
+                if(i==0u || j==0u) {
+                    index[k]=static_cast<DegreeType>(i+j);
+                    self(self,k+1u,c);
+                } else {
+                    X half=c/2;
+                    index[k]=static_cast<DegreeType>(i+j);
+                    self(self,k+1u,half);
+                    index[k]=static_cast<DegreeType>(i>=j ? i-j : j-i);
+                    self(self,k+1u,half);
+                }
+            };
+            accumulate(accumulate,0u,product);
         }
-        return true;
-    };
-    if(is_zero(cm1) || is_zero(cm2)) { return zero; }
+    }
 
-    ConstIterator iter1=cm1._terms.begin(); ConstIterator iter2=cm2._terms.begin();
-    ConstIterator end1=cm1._terms.end(); ConstIterator end2=cm2._terms.end();
-    return _mul_from(iter1,end1,iter2,end2,0u);
+    for(auto const& [index,coefficient] : coefficients) {
+        if(not same(coefficient,z)) { result._terms.append(index,coefficient); }
+    }
+    return result;
 }
 
 
@@ -382,59 +409,6 @@ MultivariateChebyshevPolynomial<X>::operator() (Vector<Scalar<X>> const& x) cons
         r+=term;
     }
     return r;
-}
-
-
-
-template<class X> auto
-MultivariateChebyshevPolynomial<X>::_mul_from(ConstIterator& from1, ConstIterator end1, ConstIterator& from2, ConstIterator end2, SizeType k) -> ChebyshevPolynomial<X> {
-    MultiIndexConstReference a1=from1->index();
-    MultiIndexConstReference a2=from2->index();
-    SizeType n=a1.size();
-    PR pr=max(from1->coefficient().precision(),from2->coefficient().precision());
-    X z(pr);
-    if (k==n) {
-        ConstIterator& curr1=from1;
-        ConstIterator& curr2=from2;
-        MultiIndex a(n);
-        X c=curr1->coefficient()*curr2->coefficient();
-        ChebyshevPolynomial<X> r(n,pr);
-        if (not same(c,z)) { r._terms.append(a,c); }
-        ++curr1; ++curr2;
-        return r;
-    } else {
-        ChebyshevPolynomial<X> zm(n,pr);
-        DegreeType i1max=0u; for (auto curr1=from1; curr1!=end1 && equal_up_to(curr1->index(),a1,k); ++curr1) { i1max=curr1->index()[k]; }
-        DegreeType i2max=0u; for (auto curr2=from2; curr2!=end2 && equal_up_to(curr2->index(),a2,k); ++curr2) { i2max=curr2->index()[k]; }
-        DegreeType imax=i1max+i2max;
-        List<ChebyshevPolynomial<X>> buf(imax+1u,zm);
-        ConstIterator curr1=from1;
-        ConstIterator curr2=from2;
-        while (from1!=end1 && equal_up_to(from1->index(),a1,k)) {
-            curr2=from2;
-            while (curr2!=end2 && equal_up_to(curr2->index(),a2,k)) {
-                curr1=from1;
-                DegreeType a1k=curr1->index()[k]; DegreeType a2k=curr2->index()[k];
-                ChebyshevPolynomial<X> product = _mul_from(curr1,end1,curr2,end2,k+1u);
-                if(not product._terms.empty()) {
-                    buf[static_cast<SizeType>(a1k>=a2k ? a1k-a2k : a2k-a1k)]+=product;
-                    buf[static_cast<DegreeType>(a1k+a2k)]+=product;
-                }
-            }
-            from1=curr1;
-        }
-        from2=curr2;
-        ChebyshevPolynomial<X> r(n,pr);
-        MultiIndex a(n);
-        for(DegreeType i=0; i<=imax; ++i) {
-            for(auto term : buf[i]._terms) {
-                a=term.index();
-                a[k]=i;
-                r._terms.append(a,term.coefficient()/2);
-            }
-        }
-        return r;
-    }
 }
 
 

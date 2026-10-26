@@ -200,7 +200,6 @@ template<class X> class MultivariateChebyshevPolynomial
     static ChebyshevPolynomial<X> apply(Mul, ChebyshevPolynomial<X> cm1, Scalar<X> const& s2);
     OutputStream& _write(OutputStream& os) const;
 
-    static ChebyshevPolynomial<X> _mul_from(ConstIterator& from1, ConstIterator end1, ConstIterator& from2, ConstIterator end2, SizeType k);
 };
 
 template<class X> struct AlgebraOperations<MultivariateChebyshevPolynomial<X>,X> : public MultivariateChebyshevPolynomial<X> { };

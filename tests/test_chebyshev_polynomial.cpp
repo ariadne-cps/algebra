@@ -223,7 +223,9 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     ARIADNE_TEST_EQUALS(multivariate_scaled(v),X(2u,pr)*v[0]);
     std::cout << "DIAG: after multivariate_scaled(v)" << std::endl;
     ARIADNE_TEST_EQUALS((+x)(v),x(v));
-    ARIADNE_TEST_EQUALS((x*x)(v),v[0]*v[0]);
+    auto xx=MultivariateChebyshevPolynomial<X>::apply(Mul(),x,x);
+    ARIADNE_TEST_EQUALS(xx.sup_norm(),mag(X(1u,pr)));
+    ARIADNE_TEST_EQUALS(xx(v),v[0]*v[0]);
     ARIADNE_TEST_EQUALS((x*x*x)(v),v[0]*v[0]*v[0]);
     ARIADNE_TEST_EQUALS((x*x*x*x)(v),v[0]*v[0]*v[0]*v[0]);
     ARIADNE_TEST_EQUALS(pow(x,3)(v),pow(v[0],3));
@@ -237,6 +239,7 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     ARIADNE_TEST_EQUALS((y*y*y*y)(v),v[1]*v[1]*v[1]*v[1]);
 
     assert(v.size()==2);
+    ARIADNE_TEST_EQUALS(((x+y)*(x-y))(v),v[0]*v[0]-v[1]*v[1]);
     ARIADNE_TEST_EQUALS((x*y)(v),v[0]*v[1]);
     ARIADNE_TEST_EQUALS((x*x*y)(v),v[0]*v[0]*v[1]);
     ARIADNE_TEST_EQUALS((x*y*y)(v),v[0]*v[1]*v[1]);
