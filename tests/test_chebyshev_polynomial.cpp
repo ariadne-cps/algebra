@@ -191,12 +191,15 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     ARIADNE_TEST_EQUALS(multivariate_empty_product.sup_norm(),mag(X(0u,pr)));
     ARIADNE_TEST_EQUALS(multivariate_zero_product.sup_norm(),mag(X(0u,pr)));
     ARIADNE_TEST_FAIL(MultivariateChebyshevPolynomial<X>::apply(Add(),x,MultivariateChebyshevPolynomial<X>::coordinate(3u,0u,pr)));
+    ARIADNE_TEST_FAIL(MultivariateChebyshevPolynomial<X>::apply(Mul(),x,MultivariateChebyshevPolynomial<X>::coordinate(3u,0u,pr)));
     auto xy=MultivariateChebyshevPolynomial<X>::apply(Add(),x,y);
     auto yx=MultivariateChebyshevPolynomial<X>::apply(Add(),y,x);
     ARIADNE_TEST_PRINT(xy);
     ARIADNE_TEST_PRINT(yx);
 
     Vector<X> v({0.5,-0.75},pr);
+    Vector<X> wrong_dimension(1u,X(0u,pr));
+    ARIADNE_TEST_FAIL(x(wrong_dimension));
     ARIADNE_TEST_EQUALS(multivariate_empty(v),X(0u,pr));
     ARIADNE_TEST_EQUALS(multivariate_empty_product(v),X(0u,pr));
     ARIADNE_TEST_EQUALS(x(v),v[0]);
