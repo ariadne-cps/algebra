@@ -38,7 +38,7 @@ using namespace Ariadne;
 
 namespace Ariadne {
 DP characteristics(FloatDP flt);
-MP characteristics(FloatMP flt);
+MultiplePrecision characteristics(FloatMP flt);
 }
 
 template<class K, class V> struct MapValue {
