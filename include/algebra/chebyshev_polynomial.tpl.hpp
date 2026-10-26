@@ -368,13 +368,6 @@ MultivariateChebyshevPolynomial<X>::apply(Sqr, ChebyshevPolynomial<X> cm) -> Che
     return cm*cm;
 }
 
-template<class X> struct PartialChebyshevPolynomial {
-    typedef typename MultivariateChebyshevPolynomial<X>::ConstIterator ConstIterator;
-    ConstIterator _from, _to; SizeType _k;
-    PartialChebyshevPolynomial(ConstIterator from, SizeType k, ConstIterator end)
-        : _from(from), _to(from), _k(k) { while(_to!=end && equal_up_to(_from->index(),_to->index(),k)) { ++_to; } }
-};
-
 template<class X> class ChebyshevValues {
     mutable List<X> _lst;
   public:
@@ -382,10 +375,6 @@ template<class X> class ChebyshevValues {
     X const& operator[] (SizeType i) const {
         for(SizeType j=_lst.size(); j<=i; ++j) { _lst.append(2*_lst[1]*_lst[j-1]-_lst[j-2]); } return _lst[i]; }
 };
-
-inline Boolean equal_up_to(MultiIndex const& a1, MultiIndex const& a2, SizeType k) {
-    for (SizeType i=0; i!=k; ++i) { if (a1[i]!=a2[i]) { return false; } } return true;
-}
 
 template<class X> auto
 MultivariateChebyshevPolynomial<X>::operator() (Vector<Scalar<X>> const& x) const -> Scalar<X> {

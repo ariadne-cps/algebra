@@ -197,6 +197,8 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     ARIADNE_TEST_PRINT(yx);
 
     Vector<X> v({0.5,-0.75},pr);
+    ARIADNE_TEST_EQUALS(multivariate_empty(v),X(0u,pr));
+    ARIADNE_TEST_EQUALS(multivariate_empty_product(v),X(0u,pr));
     ARIADNE_TEST_EQUALS(x(v),v[0]);
     ARIADNE_TEST_EQUALS(multivariate_x_plus(v),v[0]+X(2u,pr));
     ARIADNE_TEST_EQUALS(multivariate_scaled(v),X(2u,pr)*v[0]);
