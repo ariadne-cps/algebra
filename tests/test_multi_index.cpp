@@ -24,6 +24,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include "algebra/multi_index.hpp"
 
@@ -112,6 +113,19 @@ class TestMultiIndex
         ARIADNE_TEST_ASSERT(graded_less_object(DegreeType(1u),DegreeType(2u)));
         ARIADNE_TEST_ASSERT(lexicographic_less_object(DegreeType(1u),DegreeType(2u)));
         ARIADNE_TEST_ASSERT(lexicographic_less_object(a,b));
+
+        // Pointer proxy streams expose the address of the referenced index storage.
+        MultiIndexReference mutable_reference(a);
+        MultiIndexConstReference const_reference(mutable_reference);
+        MultiIndexPointer mutable_pointer(&mutable_reference);
+        MultiIndexConstPointer const_pointer(&const_reference);
+        std::ostringstream mutable_stream, const_stream, expected_mutable, expected_const;
+        mutable_stream << mutable_pointer;
+        const_stream << const_pointer;
+        expected_mutable << a.begin();
+        expected_const << static_cast<MultiIndex const&>(a).begin();
+        ARIADNE_TEST_EQUALS(mutable_stream.str(),expected_mutable.str());
+        ARIADNE_TEST_EQUALS(const_stream.str(),expected_const.str());
     }
 
     Void test_preconditions() {
