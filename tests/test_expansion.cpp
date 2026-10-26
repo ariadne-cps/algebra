@@ -879,7 +879,7 @@ Int main() {
     }
 
     FloatDP raw_dp(0,double_precision);
-    FloatMP raw_mp(0,precision(128_bits));
+    FloatMP raw_mp(0,MultiplePrecision(128_bits));
     ARIADNE_TEST_EXECUTE(characteristics(raw_dp));
     ARIADNE_TEST_EXECUTE(characteristics(raw_mp));
 
@@ -894,7 +894,7 @@ Int main() {
     }
 
     {
-        auto mp=precision(128_bits);
+        auto mp=MultiplePrecision(128_bits);
         Expansion<MultiIndex,FloatMPBounds> source(2u,mp);
         source.append({0u,0u},FloatMPBounds(1,mp));
         source.append({1u,0u},FloatMPBounds(0,mp));
@@ -913,7 +913,7 @@ Int main() {
     test_univariate_expansion_assignment_instantiation<FloatDPApproximation>(double_precision);
     test_univariate_expansion_assignment_instantiation<FloatDPBounds>(double_precision);
 
-    auto multiple_precision=precision(128_bits);
+    auto multiple_precision=MultiplePrecision(128_bits);
     test_additional_expansion_instantiation<RoundedFloatMP>(multiple_precision);
     test_additional_expansion_instantiation<FloatMPApproximation>(multiple_precision);
     test_additional_expansion_instantiation<FloatMPBounds>(multiple_precision);
