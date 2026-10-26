@@ -170,7 +170,7 @@ Void TestPolynomial::test_constructors()
     // Empty polynomial
     ARIADNE_TEST_CONSTRUCT(UnivariatePolynomial<RoundedFloatDP>,q1,(SizeOne(),dp))
     // Dense polynomial
-    ARIADNE_TEST_CONSTRUCT(UnivariatePolynomial<RoundedFloatDP>,q2,({ {0,0.0_x}, {1,0.0_x},{2,5.0_x},{3,2.0_x} },dp))
+    ARIADNE_TEST_CONSTRUCT(UnivariatePolynomial<RoundedFloatDP>,q2,({ {DegreeType(0u),0.0_x}, {DegreeType(1u),0.0_x},{DegreeType(2u),5.0_x},{DegreeType(3u),2.0_x} },dp))
     ARIADNE_TEST_EQUAL(q2[1],0.0_x)
     ARIADNE_TEST_EQUAL(q2[2],5.0_x)
     ARIADNE_TEST_EQUAL(q2[3],2.0_x)
@@ -561,8 +561,8 @@ Void TestPolynomial::test_evaluate_univariate_without_constant()
     using X=RoundedFloatDP;
     using U=UnivariatePolynomial<X>;
     auto u=U::coordinate(dp);
-    U cubic({{3u,3.0_x}},dp);
-    U sparse({{5u,2.0_x},{2u,-3.0_x}},dp);
+    U cubic({{DegreeType(3u),3.0_x}},dp);
+    U sparse({{DegreeType(5u),2.0_x},{DegreeType(2u),-3.0_x}},dp);
     auto constant=U::constant(X(7u,dp));
     U explicit_zero=sparse;
     explicit_zero.expansion().append(UniIndex(0u),X(0u,dp));
