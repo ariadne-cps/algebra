@@ -362,26 +362,24 @@ inline Boolean equal_up_to(MultiIndex const& a1, MultiIndex const& a2, SizeType 
 
 template<class X> auto
 MultivariateChebyshevPolynomial<X>::operator() (Vector<Scalar<X>> const& x) const -> Scalar<X> {
-    ConstIterator from=this->_terms.begin();
-    return _eval(from,this->_terms.end(),x,0u);
-}
+    ARIADNE_PRECONDITION(x.size()==this->argument_size());
 
-template<class X> auto
-MultivariateChebyshevPolynomial<X>::_eval(ConstIterator& from, ConstIterator end, Vector<Scalar<X>> const& x, SizeType k) -> Scalar<X> {
-    ChebyshevValues<X> v(x[k]);
-    MultiIndex a_front=from->index();
     X r(x.zero_element());
-    if(k+1u==x.size()) {
-        while (from!=end && equal_up_to(a_front,from->index(),k)) {
-            r+=from->coefficient()*v[from->index()[k]];
-            ++from;
+    if(this->_terms.empty()) { return r; }
+
+    List<ChebyshevValues<X>> values;
+    values.reserve(x.size());
+    for(SizeType i=0u; i!=x.size(); ++i) {
+        values.append(ChebyshevValues<X>(x[i]));
+    }
+
+    for(SizeType j=0u; j!=this->_terms.size(); ++j) {
+        auto const a=this->_terms._indices[j];
+        X term=this->_terms._coefficients[j];
+        for(SizeType i=0u; i!=x.size(); ++i) {
+            term*=values[i][a[i]];
         }
-    } else {
-        while (from!=end && equal_up_to(a_front,from->index(),k)) {
-            auto a=from->index();
-            auto c=_eval(from,end,x,k+1);
-            r+=c*v[a[k]];
-        }
+        r+=term;
     }
     return r;
 }
