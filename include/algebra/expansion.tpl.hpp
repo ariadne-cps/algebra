@@ -358,9 +358,10 @@ template<class I, class X> auto Expansion<I,X>::insert(Iterator pos, const I& a,
 }
 
 template<class I, class X> auto Expansion<I,X>::erase(Iterator pos) -> Iterator {
+    SizeType where=static_cast<SizeType>(pos-this->begin());
     this->_indices.erase(pos._ap);
     this->_coefficients.erase(pos._cp);
-    return pos;
+    return this->begin()+static_cast<PointerDifferenceType>(where);
 }
 
 template<class I, class X> Void Expansion<I,X>::prepend(const I& a, const X& c) {
