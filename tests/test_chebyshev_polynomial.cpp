@@ -22,9 +22,6 @@
  */
 
 #include <iostream>
-#ifdef _MSC_VER
-#include <crtdbg.h>
-#endif
 #include <iomanip>
 
 #include "utility/metaprogramming.hpp"
@@ -44,19 +41,6 @@
 
 using std::cout; using std::cerr; using std::endl;
 using namespace Ariadne;
-
-#ifdef _MSC_VER
-static void configure_msvc_debug_reports() {
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-}
-#else
-static void configure_msvc_debug_reports() { }
-#endif
 
 
 extern template Ariadne::Nat Ariadne::Error<Ariadne::FloatMP>::output_places;
@@ -212,16 +196,10 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
     ARIADNE_TEST_PRINT(xy);
     ARIADNE_TEST_PRINT(yx);
 
-    std::cout << "DIAG: before multivariate evaluation vector" << std::endl;
     Vector<X> v({0.5,-0.75},pr);
-    std::cout << "DIAG: after multivariate evaluation vector" << std::endl;
-    std::cout << "DIAG: before x(v)" << std::endl;
     ARIADNE_TEST_EQUALS(x(v),v[0]);
-    std::cout << "DIAG: after x(v)" << std::endl;
     ARIADNE_TEST_EQUALS(multivariate_x_plus(v),v[0]+X(2u,pr));
-    std::cout << "DIAG: after multivariate_x_plus(v)" << std::endl;
     ARIADNE_TEST_EQUALS(multivariate_scaled(v),X(2u,pr)*v[0]);
-    std::cout << "DIAG: after multivariate_scaled(v)" << std::endl;
     ARIADNE_TEST_EQUALS((+x)(v),x(v));
     auto xx=MultivariateChebyshevPolynomial<X>::apply(Mul(),x,x);
     ARIADNE_TEST_EQUALS(xx.sup_norm(),mag(X(1u,pr)));
@@ -248,7 +226,6 @@ template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
 
 
 Int main() {
-    configure_msvc_debug_reports();
     MultiplePrecision mp(128);
     TestChebyshevPolynomial<FloatDPApproximation>(dp).test();
     TestChebyshevPolynomial<FloatMPApproximation>(mp).test();

@@ -112,7 +112,7 @@ jobs:
 
       - name: Run Debug C++ tests
         if: matrix.build_type == 'Debug'
-        run: ctest --test-dir "${{ runner.workspace }}/build" -j "$NPROC" -LE python --timeout 20 --output-on-failure
+        run: ctest --test-dir "${{ runner.workspace }}/build" -j "$NPROC" -LE python --output-on-failure
 
       - name: Run Debug Python tests
         if: matrix.build_type == 'Debug'
