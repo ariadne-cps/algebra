@@ -24,6 +24,9 @@
 
 #include <cassert>
 #include <iostream>
+#ifdef _MSC_VER
+#include <crtdbg.h>
+#endif
 #include <iomanip>
 #include <fstream>
 #include <sstream>
@@ -42,6 +45,19 @@
 
 
 using namespace Ariadne;
+
+#ifdef _MSC_VER
+static void configure_msvc_debug_reports() {
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+}
+#else
+static void configure_msvc_debug_reports() { }
+#endif
 using namespace std;
 
 template<class R, class A, class P>
@@ -663,7 +679,9 @@ Void test_differential_tpl_instantiation_branches(PR const& pr) {
 
     D valid_check=D::constant(1u,1u,coefficient_one);
     ARIADNE_TEST_EXECUTE(valid_check.check());
+    std::cout << "DIAG: before empty_check construction" << std::endl;
     D empty_check(1u,1u,coefficient_zero);
+    std::cout << "DIAG: after empty_check construction" << std::endl;
     ARIADNE_TEST_EXECUTE(empty_check.check());
     D invalid_check(1u,1u,coefficient_zero);
     invalid_check.expansion().append(MultiIndex({2u}),coefficient_one);
@@ -692,6 +710,7 @@ Void test_differential_tpl_compose_branch(PR const& pr) {
 }
 
 Int main() {
+    configure_msvc_debug_reports();
     MultiplePrecision mp(128);
     test_differential_tpl_instantiation_branches<RoundedFloatDP>(dp);
     test_differential_tpl_instantiation_branches<FloatDPApproximation>(dp);
