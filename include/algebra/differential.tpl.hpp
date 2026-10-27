@@ -558,7 +558,9 @@ Differential<X> Differential<X>::_compose(const UnivariateDifferential<X>& x, co
     DegreeType d=min(x.degree(),y.degree());
 
     Differential<X> w=y;
-    if(w.begin()->index().degree()==0) { w.begin()->coefficient()=0; }
+    // A zero differential can have no stored coefficients.  In that case
+    // there is no constant term to clear before Horner composition.
+    if(not w.expansion().empty() && w.begin()->index().degree()==0) { w.begin()->coefficient()=0; }
     Differential<X> r(as,d,y.zero_coefficient());
     r[MultiIndex(as)]=x[d];
     for(SizeType n=1; n<=d; ++n) {
