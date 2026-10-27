@@ -626,9 +626,6 @@ Void test_differential_tpl_instantiation_branches(PR const& pr) {
     ARIADNE_TEST_EXECUTE((void)D(expansion,1u));
 
     D empty(1u,2u,coefficient_zero);
-    // Regression: constructing the algebraic zero must not dereference
-    // an iterator on an empty differential expansion.
-    ARIADNE_TEST_EXECUTE((void)nul(empty));
     D constant=D::constant(1u,2u,coefficient_one);
     D high(1u,2u,coefficient_zero);
     high[MultiIndex({2u})]=coefficient_one;
@@ -693,8 +690,11 @@ Void test_differential_tpl_compose_branch(PR const& pr) {
     series[0u]=coefficient_one;
     series[1u]=coefficient_one;
     ARIADNE_TEST_EXECUTE(compose(series,linear_only));
-    // Nonzero outer constant composed with an empty inner polynomial.
+    // Regression: nul() composes through an empty expansion, so exercise
+    // it only for the numerical types with a supported univariate differential.
     Differential<X> empty(1u,2u,X(0u,pr));
+    ARIADNE_TEST_EQUALS(nul(empty).value(),X(0u,pr));
+    // Nonzero outer constant composed with an empty inner polynomial.
     ARIADNE_TEST_EXECUTE(compose(series,empty));
 }
 
