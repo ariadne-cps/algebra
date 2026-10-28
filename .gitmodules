@@ -1,6 +1,6 @@
-[submodule "ss/configuration"]
-	path = ss/configuration
+[submodule "cfg"]
+	path = ss/cfg
 	url = https://github.com/ariadne-cps/configuration
-[submodule "ss/interval"]
-	path = ss/interval
+[submodule "int"]
+	path = ss/int
 	url = https://github.com/ariadne-cps/interval

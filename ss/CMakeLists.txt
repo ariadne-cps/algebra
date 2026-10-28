@@ -1,4 +1,3 @@
 if(NOT TARGET interval)
-    ensure_submodule_initialized(interval)
-    add_subdirectory(interval)
+    ariadne_add_submodule(interval)
 endif()
