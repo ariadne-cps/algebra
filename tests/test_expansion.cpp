@@ -33,7 +33,7 @@
 #include "interval/interval.hpp"
 #include "algebra/expansion.tpl.hpp"
 
-#include "macro/testing.hpp"
+#include "algebra_testing_context.hpp"
 
 using namespace std;
 using namespace Ariadne;
@@ -99,16 +99,16 @@ template<class F> TestExpansion<F>::TestExpansion(F const& z)
 
 template<class F> Void TestExpansion<F>::test()
 {
-    ARIADNE_TEST_CALL(test_working());
-    ARIADNE_TEST_CALL(test_helpers());
-    ARIADNE_TEST_CALL(test_data_access());
-    ARIADNE_TEST_CALL(test_equality());
-    ARIADNE_TEST_CALL(test_sort());
-    ARIADNE_TEST_CALL(test_cleanup());
-    ARIADNE_TEST_CALL(test_constructors());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_working());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_helpers());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_data_access());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_equality());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_sort());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_cleanup());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_constructors());
     //ARIADNE_TEST_CALL(test_indexing());
-    ARIADNE_TEST_CALL(test_find());
-    ARIADNE_TEST_CALL(test_embed());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_find());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_embed());
 }
 
 
@@ -116,31 +116,31 @@ template<class F> Void TestExpansion<F>::test_working()
 {
     MultiIndex helper_multi({1u,2u});
     UniIndex helper_uni(3u);
-    ARIADNE_TEST_EQUAL(degree_of(helper_multi),3u);
-    ARIADNE_TEST_EQUAL(degree_of(helper_uni),3u);
-    ARIADNE_TEST_EQUAL(size_of(helper_multi),2u);
-    ARIADNE_TEST_EQUAL(static_cast<SizeType>(size_of(helper_uni)),1u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), degree_of(helper_multi), 3u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), degree_of(helper_uni), 3u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), size_of(helper_multi), 2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), static_cast<SizeType>(size_of(helper_uni)), 1u);
 
-    ARIADNE_TEST_PRINT(zero);
-    ARIADNE_TEST_CONSTRUCT(MultiIndexList,as,(3u));
-    ARIADNE_TEST_CONSTRUCT(ExpansionType,e,(3u,prec));
-    ARIADNE_TEST_EQUALS(e.size(),0u);
-    ARIADNE_TEST_EQUALS(e.argument_size(),3u);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "zero", zero);
+    MultiIndexList as(3u);
+    ExpansionType e(3u,prec);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.size(), 0u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.argument_size(), 3u);
     // Append values
-    ARIADNE_TEST_EXECUTE(e.append({0,0,0},2.0_x));
-    ARIADNE_TEST_EQUALS(e.begin()->index().number_of_variables(),3);
-    ARIADNE_TEST_EXECUTE(e.append({1,0,0},3.0_x));
-    ARIADNE_TEST_EXECUTE(e.append({0,1,0},5.0_x));
-    ARIADNE_TEST_EXECUTE(e.append({1,0,1},7.0_x));
-    ARIADNE_TEST_PRINT(e);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.append({0,0,0},2.0_x));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.begin()->index().number_of_variables(), 3);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.append({1,0,0},3.0_x));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.append({0,1,0},5.0_x));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.append({1,0,1},7.0_x));
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
 
-    ARIADNE_TEST_EQUAL(e.find({0,0,0}),e.begin());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.find({0,0,0}), e.begin());
     //assert(false);
 
     // Regression test to ensure that indices and coefficients always have same capacity
-    ARIADNE_TEST_ASSERT(e._indices.capacity()==e._coefficients.capacity());
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), e._indices.capacity()==e._coefficients.capacity());
     ExpansionType ce=e;
-    ARIADNE_TEST_ASSERT(ce._indices.capacity()==ce._coefficients.capacity());
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), ce._indices.capacity()==ce._coefficients.capacity());
 
 }
 
@@ -155,130 +155,130 @@ template<class F> Void TestExpansion<F>::test_helpers()
     F coefficient_three(3,prec);
 
     ExpansionType checked(2u,prec);
-    ARIADNE_TEST_EXECUTE(checked.check());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), checked.check());
 
     ExpansionType self_copy(2u,prec);
     self_copy.append(zero_index,coefficient_one);
     ExpansionType& self_copy_alias=self_copy;
-    ARIADNE_TEST_EXECUTE(self_copy=self_copy_alias);
-    ARIADNE_TEST_EQUALS(self_copy.size(),1u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), self_copy=self_copy_alias);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), self_copy.size(), 1u);
 
     ExpansionType self_move(2u,prec);
     self_move.append(first_index,coefficient_two);
     ExpansionType* self_move_alias=&self_move;
-    ARIADNE_TEST_EXECUTE(self_move=std::move(*self_move_alias));
-    ARIADNE_TEST_EQUALS(self_move.size(),1u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), self_move=std::move(*self_move_alias));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), self_move.size(), 1u);
     auto checked_characteristics=checked.characteristics();
-    ARIADNE_TEST_EQUALS(checked_characteristics.first,2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), checked_characteristics.first, 2u);
 
     ExpansionType broken(2u,prec);
     broken._indices.append(zero_index);
-    ARIADNE_TEST_FAIL(broken.check());
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), broken.check());
 
     ExpansionType left(2u,prec);
     ExpansionType right(2u,prec);
     left.append(zero_index,coefficient_one);
     right.append(first_index,coefficient_two);
-    ARIADNE_TEST_EXECUTE(left.swap(right));
-    ARIADNE_TEST_EQUALS(left.front().index(),first_index);
-    ARIADNE_TEST_EQUALS(left.front().coefficient(),coefficient_two);
-    ARIADNE_TEST_EQUALS(left.back().index(),first_index);
-    ARIADNE_TEST_EQUALS(left.back().coefficient(),coefficient_two);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), left.swap(right));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), left.front().index(), first_index);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), left.front().coefficient(), coefficient_two);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), left.back().index(), first_index);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), left.back().coefficient(), coefficient_two);
     ExpansionType const& const_left=left;
-    ARIADNE_TEST_EQUALS(const_left.front().index(),first_index);
-    ARIADNE_TEST_EQUALS(const_left.back().coefficient(),coefficient_two);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), const_left.front().index(), first_index);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), const_left.back().coefficient(), coefficient_two);
 
     ExpansionType resized(2u,prec);
     SizeType initial_capacity=resized.capacity();
-    ARIADNE_TEST_EXECUTE(resized.reserve(initial_capacity));
-    ARIADNE_TEST_EXECUTE(resized.reserve(initial_capacity+1u));
-    ARIADNE_TEST_ASSERT(resized.capacity()>=initial_capacity+1u);
-    ARIADNE_TEST_EXECUTE(resized.resize(2u));
-    ARIADNE_TEST_EQUALS(resized.size(),2u);
-    ARIADNE_TEST_EXECUTE(resized.resize(1u));
-    ARIADNE_TEST_EQUALS(resized.size(),1u);
-    ARIADNE_TEST_EXECUTE(resized.resize(3u));
-    ARIADNE_TEST_EQUALS(resized.size(),3u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), resized.reserve(initial_capacity));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), resized.reserve(initial_capacity+1u));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), resized.capacity()>=initial_capacity+1u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), resized.resize(2u));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), resized.size(), 2u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), resized.resize(1u));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), resized.size(), 1u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), resized.resize(3u));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), resized.size(), 3u);
 
     ExpansionType different_argument_size(3u,prec);
     different_argument_size.append(MultiIndex({0u,0u,0u}),coefficient_one);
     ExpansionType one_term_two_variables(2u,prec);
     one_term_two_variables.append(zero_index,coefficient_one);
-    ARIADNE_TEST_ASSERT(!same(one_term_two_variables,different_argument_size));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !same(one_term_two_variables,different_argument_size));
 
     ExpansionType values(2u,prec);
-    ARIADNE_TEST_EXECUTE(values.set(zero_index,coefficient_one));
-    ARIADNE_TEST_EXECUTE(values.set(zero_index,coefficient_two));
-    ARIADNE_TEST_EQUALS(values.get(zero_index),coefficient_two);
-    ARIADNE_TEST_EQUALS(values.get(first_index),zero);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), values.set(zero_index,coefficient_one));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), values.set(zero_index,coefficient_two));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), values.get(zero_index), coefficient_two);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), values.get(first_index), zero);
 
     ExpansionType spare(2u,prec);
     spare.reserve(4u);
     spare.append(zero_index,coefficient_one);
     spare.append(second_index,coefficient_three);
-    ARIADNE_TEST_EXECUTE(spare.append_sum(zero_index,first_index,coefficient_two));
-    ARIADNE_TEST_EQUALS(spare.back().index(),first_index);
-    ARIADNE_TEST_EQUALS(spare.back().coefficient(),coefficient_two);
-    ARIADNE_TEST_EXECUTE(spare.erase(spare.end()-1));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), spare.append_sum(zero_index,first_index,coefficient_two));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), spare.back().index(), first_index);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), spare.back().coefficient(), coefficient_two);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), spare.erase(spare.end()-1));
     auto inserted=spare.insert(spare.begin()+1,first_index,coefficient_two);
-    ARIADNE_TEST_EQUALS(inserted->index(),first_index);
-    ARIADNE_TEST_EXECUTE(spare.erase(inserted));
-    ARIADNE_TEST_EQUALS(spare.size(),2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), inserted->index(), first_index);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), spare.erase(inserted));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), spare.size(), 2u);
 
     ExpansionType tight(2u,characteristics(coefficient_one),1u);
     tight.append(zero_index,coefficient_one);
     auto tight_inserted=tight.insert(tight.begin(),first_index,coefficient_two);
-    ARIADNE_TEST_EQUALS(tight_inserted->index(),first_index);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), tight_inserted->index(), first_index);
 
     ExpansionType tight_sum(2u,characteristics(coefficient_one),1u);
     tight_sum.append(zero_index,coefficient_one);
-    ARIADNE_TEST_EXECUTE(tight_sum.append_sum(zero_index,first_index,coefficient_two));
-    ARIADNE_TEST_EQUALS(tight_sum.size(),2u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), tight_sum.append_sum(zero_index,first_index,coefficient_two));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), tight_sum.size(), 2u);
 
     ExpansionType write_cases(2u,prec);
     write_cases.append(MultiIndex({1u,1u}),coefficient_one);
     write_cases.append(zero_index,coefficient_one);
     std::ostringstream write_stream;
     Array<String> write_names({"x","y"});
-    ARIADNE_TEST_EXECUTE(write_cases._write(write_stream,write_names));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), write_cases._write(write_stream,write_names));
 
     ExpansionType reverse_sortable(2u,prec);
     reverse_sortable.append(zero_index,coefficient_one);
     reverse_sortable.append(first_index,coefficient_two);
     reverse_sortable.append(second_index,coefficient_three);
-    ARIADNE_TEST_EXECUTE(reverse_sortable.sort(ReverseLexicographicIndexLess()));
-    ARIADNE_TEST_ASSERT(reverse_sortable.is_sorted(ReverseLexicographicIndexLess()));
-    ARIADNE_TEST_EXECUTE(reverse_sortable.reverse_lexicographic_sort());
-    ARIADNE_TEST_ASSERT(reverse_sortable.is_sorted(ReverseLexicographicIndexLess()));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), reverse_sortable.sort(ReverseLexicographicIndexLess()));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), reverse_sortable.is_sorted(ReverseLexicographicIndexLess()));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), reverse_sortable.reverse_lexicographic_sort());
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), reverse_sortable.is_sorted(ReverseLexicographicIndexLess()));
 
     if constexpr (Same<F,RoundedFloatDP>) {
         SortedExpansion<MI,F,ReverseLexicographicIndexLess> bad_reverse(2u,prec);
         bad_reverse.append(zero_index,coefficient_one);
         bad_reverse.append(first_index,coefficient_two);
-        ARIADNE_TEST_FAIL(bad_reverse.check());
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), bad_reverse.check());
 
         ExpansionType sortable(2u,prec);
         sortable.append(first_index,coefficient_two);
         sortable.append(zero_index,coefficient_one);
         SortedExpansion<MI,F,GradedIndexLess> sorted(std::move(sortable));
-        ARIADNE_TEST_EXECUTE(sorted.check());
-        ARIADNE_TEST_EXECUTE(sorted.insert(second_index,coefficient_three));
-        ARIADNE_TEST_FAIL(sorted.insert(second_index,coefficient_three));
-        ARIADNE_TEST_EXECUTE(sorted.set(first_index,coefficient_three));
-        ARIADNE_TEST_EQUALS(sorted.get(first_index),coefficient_three);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), sorted.check());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), sorted.insert(second_index,coefficient_three));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), sorted.insert(second_index,coefficient_three));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), sorted.set(first_index,coefficient_three));
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sorted.get(first_index), coefficient_three);
         MultiIndex missing_index({2u,0u});
-        ARIADNE_TEST_EQUALS(sorted.get(missing_index),zero);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sorted.get(missing_index), zero);
 
         SortedExpansion<MI,F,GradedIndexLess> bad_sorted(2u,prec);
         bad_sorted.append(first_index,coefficient_two);
         bad_sorted.append(zero_index,coefficient_one);
-        ARIADNE_TEST_FAIL(bad_sorted.check());
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), bad_sorted.check());
 
         ExpansionType first_only_base(2u,prec);
         first_only_base.append(first_index,zero);
         SortedExpansion<MI,F,GradedIndexLess> first_only(std::move(first_only_base));
-        ARIADNE_TEST_EQUALS(first_only.get(zero_index),zero);
-        ARIADNE_TEST_EXECUTE(first_only.insert(zero_index,coefficient_one));
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), first_only.get(zero_index), zero);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), first_only.insert(zero_index,coefficient_one));
 
         ExpansionType zero_only_base(2u,prec);
         zero_only_base.append(zero_index,zero);
@@ -293,25 +293,25 @@ template<class F> Void TestExpansion<F>::test_helpers()
         zero_first_base.append(first_index,zero);
         SortedExpansion<MI,F,GradedIndexLess> zero_first(std::move(zero_first_base));
 
-        ARIADNE_TEST_EXECUTE((void)(zero_only==first_zero));
-        ARIADNE_TEST_EXECUTE((void)(first_zero==zero_only));
-        ARIADNE_TEST_EXECUTE((void)(zero_first==zero_only));
-        ARIADNE_TEST_EXECUTE((void)(zero_only==zero_first));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(zero_only==first_zero));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(first_zero==zero_only));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(zero_first==zero_only));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(zero_only==zero_first));
 
         Expansion<UniIndex,F> univariate_embed(SizeOne(),prec);
         univariate_embed.append(UniIndex(0u),coefficient_one);
         univariate_embed.append(UniIndex(2u),coefficient_two);
         auto embedded=embed(1u,univariate_embed,1u);
-        ARIADNE_TEST_EQUALS(embedded.argument_size(),3u);
-        ARIADNE_TEST_EQUALS(embedded[MultiIndex({0u,0u,0u})],coefficient_one);
-        ARIADNE_TEST_EQUALS(embedded[MultiIndex({0u,2u,0u})],coefficient_two);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), embedded.argument_size(), 3u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), embedded[MultiIndex({0u,0u,0u})], coefficient_one);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), embedded[MultiIndex({0u,2u,0u})], coefficient_two);
     }
 
     std::ostringstream os;
     Array<String> names({"x","y"});
-    ARIADNE_TEST_EXECUTE(values._write(os,names));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), values._write(os,names));
     Array<String> wrong_names({"x"});
-    ARIADNE_TEST_FAIL((void)values._write(os,wrong_names));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)values._write(os,wrong_names));
 }
 
 
@@ -376,45 +376,45 @@ template<class F> Void TestExpansion<F>::test_data_access()
     ExpansionType e(3,prec);
     ExpansionType const& ce=e;
     MultiIndex a(3);
-    ARIADNE_TEST_EXECUTE(e[a]=11);
-    ARIADNE_TEST_EQUALS(e[a],11);
-    ARIADNE_TEST_EQUALS(ce[a],11);
-    ARIADNE_TEST_EQUALS(e.at(a),11);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e[a]=11);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e[a], 11);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), ce[a], 11);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.at(a), 11);
     e.clear();
 
-    ARIADNE_TEST_EXECUTE(e.at(a)=17);
-    ARIADNE_TEST_EQUALS(e[a],17);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.at(a)=17);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e[a], 17);
     e.clear();
 
     SortedExpansion<MultiIndex,F,GradedIndexLess> se(3,prec);
-    ARIADNE_TEST_EXECUTE(se[a]=11);
-    ARIADNE_TEST_EQUALS(se[a],11);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), se[a]=11);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), se[a], 11);
     se.clear();
 
 
     // Append values
-    ARIADNE_TEST_EXECUTE(e.append({0,0,0},F(2.0_x,prec)));
-    ARIADNE_TEST_EXECUTE(e.append({1,0,0},F(3.0_x,prec)));
-    ARIADNE_TEST_EXECUTE(e.append({0,1,0},F(5.0_x,prec)));
-    ARIADNE_TEST_EXECUTE(e.append({1,0,1},F(7.0_x,prec)));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.append({0,0,0},F(2.0_x,prec)));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.append({1,0,0},F(3.0_x,prec)));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.append({0,1,0},F(5.0_x,prec)));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.append({1,0,1},F(7.0_x,prec)));
 
     // Test ExpansionIterator difference
-    ARIADNE_TEST_PRINT(e.begin());
-    ARIADNE_TEST_PRINT(e.end());
-    ARIADNE_TEST_EQUAL(e.begin()+static_cast<PointerDifferenceType>(e.number_of_terms()),e.end());
-    ARIADNE_TEST_EQUAL(e.end()-static_cast<PointerDifferenceType>(e.number_of_terms()),e.begin());
-    ARIADNE_TEST_EQUAL(e.end()-e.begin(),static_cast<PointerDifferenceType>(e.number_of_terms()));
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e.begin()", e.begin());
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e.end()", e.end());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.begin()+static_cast<PointerDifferenceType>(e.number_of_terms()), e.end());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.end()-static_cast<PointerDifferenceType>(e.number_of_terms()), e.begin());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.end()-e.begin(), static_cast<PointerDifferenceType>(e.number_of_terms()));
 
     // Test derefencing of iterators
-    ARIADNE_TEST_PRINT(e.begin());
-    ARIADNE_TEST_PRINT(*e.begin());
-    ARIADNE_TEST_EQUAL(e.begin()->index(),MultiIndex({0,0,0}));
-    ARIADNE_TEST_EQUAL(e.begin()->coefficient(),2.0_x);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e.begin()", e.begin());
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "*e.begin()", *e.begin());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.begin()->index(), MultiIndex({0,0,0}));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.begin()->coefficient(), 2.0_x);
 
-    ARIADNE_TEST_PRINT(ce.begin());
-    ARIADNE_TEST_PRINT(*ce.begin());
-    ARIADNE_TEST_EQUAL(ce.begin()->index(),MultiIndex({0,0,0}));
-    ARIADNE_TEST_EQUAL(ce.begin()->coefficient(),2.0_x);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "ce.begin()", ce.begin());
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "*ce.begin()", *ce.begin());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), ce.begin()->index(), MultiIndex({0,0,0}));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), ce.begin()->coefficient(), 2.0_x);
 
 
     // The behaviour of iterators is rather odd and not what might be expected
@@ -431,10 +431,10 @@ template<class F> Void TestExpansion<F>::test_data_access()
         ++iter;
         MultiIndex a2=iter->index();
         F x2=iter->coefficient();
-        ARIADNE_TEST_ASSERT(a1==aref);
-        ARIADNE_TEST_ASSERT(x1==xref);
-        ARIADNE_TEST_ASSERT(a2!=aref);
-        ARIADNE_TEST_ASSERT(x2!=xref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), a1==aref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), x1==xref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), a2!=aref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), x2!=xref);
     }
 
     {
@@ -446,10 +446,10 @@ template<class F> Void TestExpansion<F>::test_data_access()
         ++citer;
         MultiIndex ca2=citer->index();
         F cx2=citer->coefficient();
-        ARIADNE_TEST_ASSERT(ca1==caref);
-        ARIADNE_TEST_ASSERT(cx1==cxref);
-        ARIADNE_TEST_ASSERT(ca2!=caref);
-        ARIADNE_TEST_ASSERT(cx2!=cxref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), ca1==caref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), cx1==cxref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), ca2!=caref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), cx2!=cxref);
     }
 
     {
@@ -459,10 +459,10 @@ template<class F> Void TestExpansion<F>::test_data_access()
         ExpansionValueType m1val=*iter;
         ++iter;
         ExpansionValueType m2val=*iter;
-        ARIADNE_TEST_ASSERT(m1val==mref);
-        ARIADNE_TEST_ASSERT(m1val==*mptr);
-        ARIADNE_TEST_ASSERT(m2val!=mref);
-        ARIADNE_TEST_ASSERT(m2val!=*mptr);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), m1val==mref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), m1val==*mptr);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), m2val!=mref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), m2val!=*mptr);
     }
 
     {
@@ -471,41 +471,41 @@ template<class F> Void TestExpansion<F>::test_data_access()
         ExpansionConstReference mref=iter.operator*();
         ExpansionValueType m1val=*iter;
         ++iter;
-        ARIADNE_TEST_ASSERT(m1val==mref);
-        ARIADNE_TEST_ASSERT(m1val==*mptr);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), m1val==mref);
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), m1val==*mptr);
     }
 
     {
         ExpansionConstIterator src=ce.begin()+1;
         ExpansionIterator dst=e.begin();
-        ARIADNE_TEST_EXECUTE(*dst=*src);
-        ARIADNE_TEST_EQUAL(dst->index(),src->index());
-        ARIADNE_TEST_EQUAL(dst->coefficient(),src->coefficient());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), *dst=*src);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), dst->index(), src->index());
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), dst->coefficient(), src->coefficient());
     }
 
     // Test finding of values of iterators
     ExpansionIterator iter=e.begin();
-    ARIADNE_TEST_PRINT(e);
-    ARIADNE_TEST_EXECUTE(iter=e.find(MultiIndex({1,0,0})));
-    ARIADNE_TEST_EQUAL(iter->index(),MultiIndex({1,0,0}));
-    ARIADNE_TEST_EQUAL(iter->coefficient(),3.0_x);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), iter=e.find(MultiIndex({1,0,0})));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), iter->index(), MultiIndex({1,0,0}));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), iter->coefficient(), 3.0_x);
 
 
 
     // Test hand-coded swap of values
-    ARIADNE_TEST_CONSTRUCT(ExpansionIterator,iter1,(e.begin()+1));
-    ARIADNE_TEST_CONSTRUCT(ExpansionIterator,iter2,(e.begin()+3));
+    ExpansionIterator iter1(e.begin()+1);
+    ExpansionIterator iter2(e.begin()+3);
 
     // Perform swap
-    ARIADNE_TEST_CONSTRUCT(ExpansionValueType,tmp,(*iter2));
-    ARIADNE_TEST_ASSERT(tmp.index()==MultiIndex({1,0,1}));
-    ARIADNE_TEST_ASSERT(tmp.coefficient()==7.0_x);
-    ARIADNE_TEST_EXECUTE(*iter2=*iter1);
-    ARIADNE_TEST_ASSERT(iter2->index()==MultiIndex({1,0,0}));
-    ARIADNE_TEST_ASSERT(iter2->coefficient()==3.0_x);
-    ARIADNE_TEST_EXECUTE(*iter1=tmp);
-    ARIADNE_TEST_ASSERT(iter1->index()==MultiIndex({1,0,1}));
-    ARIADNE_TEST_ASSERT(iter1->coefficient()==7.0_x);
+    ExpansionValueType tmp(*iter2);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), tmp.index()==MultiIndex({1,0,1}));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), tmp.coefficient()==7.0_x);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), *iter2=*iter1);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), iter2->index()==MultiIndex({1,0,0}));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), iter2->coefficient()==3.0_x);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), *iter1=tmp);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), iter1->index()==MultiIndex({1,0,1}));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), iter1->coefficient()==7.0_x);
 
 
 }
@@ -517,41 +517,41 @@ template<class F> Void TestExpansion<F>::test_equality()
     Expansion<MI,F> e1(2,prec),e2(2,prec);
     e1.append(a,1.0_x); e1.append(b,2.0_x);
     e2.append(a,1.0_x); e2.append(b,3.0_x);
-    ARIADNE_TEST_BINARY_PREDICATE(!same, e1,e2);
+    ARIADNE_TESTING_EXPECT_NOT_BINARY_PREDICATE_CTX(AlgebraTesting::context(), same, e1, e2);
     e2.clear(); e2.append(a,1.0_x); e2.append(b,2.0_x);
-    ARIADNE_TEST_BINARY_PREDICATE(same, e1,e2);
+    ARIADNE_TESTING_EXPECT_BINARY_PREDICATE_CTX(AlgebraTesting::context(), same, e1, e2);
     e1.clear(); e1.append(b,2.0_x);
     e2.clear(); e2.append(a,0.0_x); e2.append(b,2.0_x);
-    if(!same(e1,e2)) { ARIADNE_TEST_NOTIFY("Expansion<MI,F> objects differing by explicit zeros are considered not same."); }
+    if(!same(e1,e2)) { ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), "Expansion<MI,F> objects differing by explicit zeros are considered not same."); }
     e1.clear(); e1.append(a,-0.0_x);
     e1.clear(); e1.append(a,+0.0_x);
-    if(!same(e1,e2)) { ARIADNE_TEST_NOTIFY("Expansion<MI,F> objects differing by +0 versus -0 coefficients are considered not same."); }
+    if(!same(e1,e2)) { ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), "Expansion<MI,F> objects differing by +0 versus -0 coefficients are considered not same."); }
     e1.clear(); e1.append(a,1.0_x); e1.append(b,2.0_x);
     e2.clear(); e2.append(b,2.0_x); e2.append(a,1.0_x);
-    if(!same(e1,e2)) { ARIADNE_TEST_NOTIFY("Expansion<MI,F> objects differing by order of set operators are considered not same."); }
+    if(!same(e1,e2)) { ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), "Expansion<MI,F> objects differing by order of set operators are considered not same."); }
 }
 
 template<class F> Void TestExpansion<F>::test_sort()
 {
     MultiIndexList as1({{0,0},{1,0},{2,0}});
-    ARIADNE_TEST_PRINT(as1);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "as1", as1);
     MultiIndexList as2({{2,0},{0,0},{1,0}});
-    ARIADNE_TEST_PRINT(as1);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "as1", as1);
 
     GradedIndexLess graded_index_less;
     Expansion<MI,F> e2s({{{0,0},5.0_x},{{1,0},11.0_x}},prec);
-    ARIADNE_TEST_PRINT(e2s)
-    ARIADNE_TEST_ASSERT(e2s.is_sorted(graded_index_less));
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e2s", e2s)
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), e2s.is_sorted(graded_index_less));
     Expansion<MI,F> e2u({{{1,0},2.0_x},{{0,0},5.0_x}},prec);
-    ARIADNE_TEST_PRINT(e2u)
-    ARIADNE_TEST_ASSERT(not e2u.is_sorted(graded_index_less));
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e2u", e2u)
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), not e2u.is_sorted(graded_index_less));
 
 //    ARIADNE_TEST_CONSTRUCT( Expansion<MI,F>, e1, ({{{0,1},1.0_x},{{1,1},1.0_x},{{2,1},1.0_x},{{0,1},11.0_x},{{0,1},11.0_x},{{1,1},11.0_x}},prec) );
     Expansion<MI,F> e1({{{0,1},1.0_x},{{1,1},1.0_x},{{2,1},1.0_x},{{0,1},11.0_x},{{0,1},11.0_x},{{1,1},11.0_x}},prec);
-    ARIADNE_TEST_PRINT(e1);
-    ARIADNE_TEST_ASSERT(not e1.is_sorted(graded_index_less));
-    ARIADNE_TEST_EXECUTE(e1.sort(graded_index_less));
-    ARIADNE_TEST_ASSERT(e1.is_sorted(graded_index_less));
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e1", e1);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), not e1.is_sorted(graded_index_less));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e1.sort(graded_index_less));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), e1.is_sorted(graded_index_less));
 }
 
 template<class F> Void TestExpansion<F>::test_cleanup()
@@ -560,66 +560,66 @@ template<class F> Void TestExpansion<F>::test_cleanup()
     // Since these are used in the constructors, we can't use the main constructors to test this
     MultiIndex a(3);
     MultiIndex b(3); ++b;
-    ARIADNE_TEST_PRINT(a);
-    ARIADNE_TEST_PRINT(b);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "a", a);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "b", b);
 
     Expansion<MI,F> e(3,prec);
     F c(1,prec);
-    ARIADNE_TEST_PRINT(e);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
     for(Nat i=0; i!=2; ++i) {
         c=hlf(c);
         if(i%2) { e.append(a,c); ++b; ++b; a=b; ++b; } else { e.append(b,c);}
-        ARIADNE_TEST_PRINT(e);
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
     }
 
-    ARIADNE_TEST_PRINT(e);
-    ARIADNE_TEST_EXECUTE(e.index_sort(graded_less));
-    ARIADNE_TEST_PRINT(e);
-    ARIADNE_TEST_EXECUTE(e.combine_terms());
-    ARIADNE_TEST_PRINT(e);
-    ARIADNE_TEST_EXECUTE(e.remove_zeros());
-    ARIADNE_TEST_PRINT(e);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.index_sort(graded_less));
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.combine_terms());
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), e.remove_zeros());
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
 
 }
 
 template<class F> Void TestExpansion<F>::test_constructors()
 {
     // Empty initialiser list causes failure
-    ARIADNE_TEST_FAIL(ExpansionType e0({}));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), ExpansionType e0({}));
 
     InitializerList<Pair<typename ExpansionType::IndexInitializerType,ExactDouble>> empty_exact;
-    ARIADNE_TEST_FAIL(ExpansionType(empty_exact,prec));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), ExpansionType(empty_exact,prec));
 
     // Empty expansion
-    ARIADNE_TEST_CONSTRUCT(ExpansionType,e1,(3,prec));
+    ExpansionType e1(3,prec);
     // Expansion with all entries; useful for checking ordering of indices
     //ARIADNE_TEST_CONSTRUCT(Expansion<MI,F>,e2,(3,4, {1., 2.,3.,4., 5.,6.,7.,8.,9.,10.,
     //    11.,12.,13.,14.,15.,16.,17.,18.,19.,20., 21.,22.,23.,24.,25.,26.,27.,28.,29.,30.,31.,32.,33.,34.,35}));
 
     // Dense expansion
-    ARIADNE_TEST_CONSTRUCT(ExpansionType,e3,({{{2,0,0},5.0_x},{{1,1,0},2.0_x},{{1,0,1},0.0_x},{{0,2,0},0.0_x},{{0,1,1},3.0_x},{{0,2,0},0.0_x}}, prec));
+    ExpansionType e3({{{2,0,0},5.0_x},{{1,1,0},2.0_x},{{1,0,1},0.0_x},{{0,2,0},0.0_x},{{0,1,1},3.0_x},{{0,2,0},0.0_x}}, prec);
     //ARIADNE_TEST_CONSTRUCT(Expansion<MI,F>,e3,(3,2, {0., 0.,0.,0., 5.,2.,0.,0.,3.,0.}));
-    ARIADNE_TEST_PRINT(e3);
-    ARIADNE_TEST_COMPARE(e3.find(MultiIndex({2,0,0})),!=,e3.end());
-    ARIADNE_TEST_EQUAL(e3[MultiIndex({2,0,0})],5.0_x);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e3", e3);
+    ARIADNE_TESTING_EXPECT_NOT_EQUAL_CTX(AlgebraTesting::context(), e3.find(MultiIndex({2,0,0})), e3.end());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e3[MultiIndex({2,0,0})], 5.0_x);
 
     // Sparse expansion with unordered indiced
     Expansion<MI,F> pp3({{{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{3,0},7.0_x}, {{0,1},11.0_x}}, prec);
-    ARIADNE_TEST_CONSTRUCT(ExpansionType,p3,({{{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{3,0},7.0_x}, {{0,1},11.0_x}}, prec));
-    ARIADNE_TEST_EQUAL(p3[MultiIndex({1,2})],5.0_x);
-    ARIADNE_TEST_EQUAL(p3[MultiIndex({0,0})],2.0_x);
+    ExpansionType p3({{{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{3,0},7.0_x}, {{0,1},11.0_x}}, prec);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), p3[MultiIndex({1,2})], 5.0_x);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), p3[MultiIndex({0,0})], 2.0_x);
 
     // Unordered indices
-    ARIADNE_TEST_BINARY_PREDICATE(!same,ExpansionType({{{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{3,0},7.0_x}, {{0,1},11.0_x}}, prec),ExpansionType({{{0,0},2.0_x}, {{1,0},3.0_x}, {{0,1},11.0_x}, {{3,0},7.0_x}, {{1,2},5.0_x}}, prec));
+    ARIADNE_TESTING_EXPECT_NOT_BINARY_PREDICATE_CTX(AlgebraTesting::context(), same, ExpansionType({{{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{3,0},7.0_x}, {{0,1},11.0_x}}, prec), ExpansionType({{{0,0},2.0_x}, {{1,0},3.0_x}, {{0,1},11.0_x}, {{3,0},7.0_x}, {{1,2},5.0_x}}, prec));
     // Repeated indices; do not sum in expansion class
-    ARIADNE_TEST_BINARY_PREDICATE(!same,ExpansionType({{{1,0},2.0_x}, {{1,0},3.0_x}, {{0,2},7.0_x}}, prec),ExpansionType({{{1,0},5.0_x}, {{0,2},7.0_x}}, prec));
+    ARIADNE_TESTING_EXPECT_NOT_BINARY_PREDICATE_CTX(AlgebraTesting::context(), same, ExpansionType({{{1,0},2.0_x}, {{1,0},3.0_x}, {{0,2},7.0_x}}, prec), ExpansionType({{{1,0},5.0_x}, {{0,2},7.0_x}}, prec));
 
     // Regression tests for expansions with only preces
-    ARIADNE_TEST_CONSTRUCT(ExpansionType,pr2,({{{},0.0_x}},prec));
-    ARIADNE_TEST_CONSTRUCT(ExpansionType,pr1,({{{3,0,0},0.0_x}},prec));
+    ExpansionType pr2({{{},0.0_x}},prec);
+    ExpansionType pr1({{{3,0,0},0.0_x}},prec);
 
     // Regression tests for higher-order expansions
-    ARIADNE_TEST_CONSTRUCT(ExpansionType,ho1,({{{0,1,0,0,0},2.0_x}, {{0,1,0,0,1},3.0_x}, {{2,0,1,0,0},5.0_x}, {{0,0,0,0,0},7.0_x}},prec));
+    ExpansionType ho1({{{0,1,0,0,0},2.0_x}, {{0,1,0,0,1},3.0_x}, {{2,0,1,0,0},5.0_x}, {{0,0,0,0,0},7.0_x}},prec);
 }
 
 
@@ -628,22 +628,22 @@ template<class F> Void TestExpansion<F>::test_find()
     ExpansionType e({ {{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{3,0},7.0_x}, {{0,1},11.0_x} }, prec);
     MultiIndex a(2);
     a[0]=1; a[1]=2;
-    ARIADNE_TEST_PRINT(e);
-    ARIADNE_TEST_PRINT(e.find(a)-e.begin());
-    ARIADNE_TEST_COMPARE(e.find(a),!=,e.end());
-    ARIADNE_TEST_EQUAL(e.find(a)->index(),a);
-    ARIADNE_TEST_EQUAL(e.find(a)->coefficient(),5.0_x);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e", e);
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e.find(a)-e.begin()", e.find(a)-e.begin());
+    ARIADNE_TESTING_EXPECT_NOT_EQUAL_CTX(AlgebraTesting::context(), e.find(a), e.end());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.find(a)->index(), a);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.find(a)->coefficient(), 5.0_x);
     a[1]=1;
-    ARIADNE_TEST_EQUAL(e.find(a),e.end());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), e.find(a), e.end());
 
 }
 
 template<class F> Void TestExpansion<F>::test_embed()
 {
-    ARIADNE_TEST_CONSTRUCT(ExpansionType,e,({ {{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{3,0},7.0_x}, {{0,1},11.0_x} },prec));
-    ARIADNE_TEST_SAME_AS(embed(0,e,2),ExpansionType({ {{1,2,0,0},5.0_x}, {{0,0,0,0},2.0_x}, {{1,0,0,0},3.0_x}, {{3,0,0,0},7.0_x}, {{0,1,0,0},11.0_x} },prec));
-    ARIADNE_TEST_SAME_AS(embed(1,e,0),ExpansionType({ {{0,1,2},5.0_x}, {{0,0,0},2.0_x}, {{0,1,0},3.0_x}, {{0,3,0},7.0_x}, {{0,0,1},11.0_x} },prec));
-    ARIADNE_TEST_SAME_AS(embed(1,e,2),ExpansionType({ {{0,1,2,0,0},5.0_x}, {{0,0,0,0,0},2.0_x}, {{0,1,0,0,0},3.0_x}, {{0,3,0,0,0},7.0_x}, {{0,0,1,0,0},11.0_x} },prec));
+    ExpansionType e({ {{1,2},5.0_x}, {{0,0},2.0_x}, {{1,0},3.0_x}, {{3,0},7.0_x}, {{0,1},11.0_x} },prec);
+    ARIADNE_TESTING_EXPECT_SAME_CTX(AlgebraTesting::context(), embed(0,e,2), ExpansionType({ {{1,2,0,0},5.0_x}, {{0,0,0,0},2.0_x}, {{1,0,0,0},3.0_x}, {{3,0,0,0},7.0_x}, {{0,1,0,0},11.0_x} },prec));
+    ARIADNE_TESTING_EXPECT_SAME_CTX(AlgebraTesting::context(), embed(1,e,0), ExpansionType({ {{0,1,2},5.0_x}, {{0,0,0},2.0_x}, {{0,1,0},3.0_x}, {{0,3,0},7.0_x}, {{0,0,1},11.0_x} },prec));
+    ARIADNE_TESTING_EXPECT_SAME_CTX(AlgebraTesting::context(), embed(1,e,2), ExpansionType({ {{0,1,2,0,0},5.0_x}, {{0,0,0,0,0},2.0_x}, {{0,1,0,0,0},3.0_x}, {{0,3,0,0,0},7.0_x}, {{0,0,1,0,0},11.0_x} },prec));
 
 }
 
@@ -660,51 +660,51 @@ Void test_sorted_equality_edge_cases() {
     using E=SortedExpansion<MultiIndex,RoundedFloatDP,GradedIndexLess>;
     E two_variables(2u,dp);
     E three_variables(3u,dp);
-    ARIADNE_TEST_ASSERT(!(two_variables==three_variables));
-    ARIADNE_TEST_ASSERT(!(three_variables==two_variables));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(two_variables==three_variables));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(three_variables==two_variables));
 
     two_variables.insert(MultiIndex({1u,0u}),RoundedFloatDP(2,dp));
     E original=two_variables;
-    ARIADNE_TEST_THROWS(two_variables.insert(MultiIndex({1u,0u}),RoundedFloatDP(3,dp)),std::runtime_error);
-    ARIADNE_TEST_ASSERT(same(two_variables,original));
+    ARIADNE_TESTING_EXPECT_THROWS_CTX(AlgebraTesting::context(), std::runtime_error, two_variables.insert(MultiIndex({1u,0u}),RoundedFloatDP(3,dp)));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), same(two_variables,original));
 
     using Reverse=SortedExpansion<MultiIndex,RoundedFloatDP,ReverseLexicographicIndexLess>;
 
     Reverse reverse_two_variables(2u,dp);
     Reverse reverse_three_variables(3u,dp);
-    ARIADNE_TEST_EXECUTE((void)(reverse_two_variables==reverse_three_variables));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(reverse_two_variables==reverse_three_variables));
 
     Reverse reverse_left_only(2u,dp);
     reverse_left_only.insert(MultiIndex({1u,0u}),RoundedFloatDP(0,dp));
     Reverse reverse_empty(2u,dp);
-    ARIADNE_TEST_EXECUTE((void)(reverse_left_only==reverse_empty));
-    ARIADNE_TEST_EXECUTE((void)(reverse_empty==reverse_left_only));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(reverse_left_only==reverse_empty));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(reverse_empty==reverse_left_only));
 
     Reverse reverse_first(2u,dp);
     Reverse reverse_second(2u,dp);
     reverse_first.insert(MultiIndex({1u,0u}),RoundedFloatDP(0,dp));
     reverse_second.insert(MultiIndex({0u,1u}),RoundedFloatDP(0,dp));
-    ARIADNE_TEST_EXECUTE((void)(reverse_first==reverse_second));
-    ARIADNE_TEST_EXECUTE((void)(reverse_second==reverse_first));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(reverse_first==reverse_second));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(reverse_second==reverse_first));
 
     using Grouped=SortedExpansion<MultiIndex,RoundedFloatDP,DegreeIndexLess>;
     Grouped grouped_empty(2u,dp), grouped_three_variables(3u,dp);
-    ARIADNE_TEST_ASSERT(!(grouped_empty==grouped_three_variables));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(grouped_empty==grouped_three_variables));
 
     // Unequal degrees must also compare correctly with this ordering,
     // including unmatched zero and nonzero terms on either side.
     Grouped lower_degree(2u,dp), higher_degree(2u,dp);
     lower_degree.append(MultiIndex({1u,0u}),RoundedFloatDP(0,dp));
     higher_degree.append(MultiIndex({2u,0u}),RoundedFloatDP(0,dp));
-    ARIADNE_TEST_ASSERT(lower_degree==higher_degree);
-    ARIADNE_TEST_ASSERT(higher_degree==lower_degree);
-    ARIADNE_TEST_ASSERT(lower_degree==grouped_empty);
-    ARIADNE_TEST_ASSERT(grouped_empty==lower_degree);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), lower_degree==higher_degree);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), higher_degree==lower_degree);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), lower_degree==grouped_empty);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), grouped_empty==lower_degree);
     lower_degree.front().coefficient()=1;
-    ARIADNE_TEST_ASSERT(!(lower_degree==higher_degree));
-    ARIADNE_TEST_ASSERT(!(higher_degree==lower_degree));
-    ARIADNE_TEST_ASSERT(!(lower_degree==grouped_empty));
-    ARIADNE_TEST_ASSERT(!(grouped_empty==lower_degree));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(lower_degree==higher_degree));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(higher_degree==lower_degree));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(lower_degree==grouped_empty));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(grouped_empty==lower_degree));
 
     for(Int left_value=0; left_value!=2; ++left_value) {
         for(Int right_value=0; right_value!=2; ++right_value) {
@@ -716,10 +716,10 @@ Void test_sorted_equality_edge_cases() {
             left.append(MultiIndex({2u,0u}),RoundedFloatDP(3,dp));
             right.append(MultiIndex({2u,0u}),RoundedFloatDP(3,dp));
             Bool expected=(left_value==0 && right_value==0);
-            ARIADNE_TEST_EQUALS(decide(left==right),expected);
-            ARIADNE_TEST_EQUALS(decide(right==left),expected);
+            ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), decide(left==right), expected);
+            ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), decide(right==left), expected);
             right.back().coefficient()=4;
-            ARIADNE_TEST_ASSERT(!(left==right));
+            ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(left==right));
         }
     }
 }
@@ -738,14 +738,14 @@ Void test_boolean_sorted_equality_short_circuit() {
         return expansion;
     };
     auto check_both_orders=[](E const& lhs, E const& rhs, bool expected) {
-        ARIADNE_TEST_EQUALS(lhs==rhs,expected);
-        ARIADNE_TEST_EQUALS(rhs==lhs,expected);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), lhs==rhs, expected);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), rhs==lhs, expected);
     };
 
     E empty_expansion=build_sorted({});
     E different_dimension(3u,std::tuple<>());
-    ARIADNE_TEST_ASSERT(not (empty_expansion==different_dimension));
-    ARIADNE_TEST_ASSERT(not (different_dimension==empty_expansion));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), not (empty_expansion==different_dimension));
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), not (different_dimension==empty_expansion));
 
     E matched=build_sorted({make_degree_entry(0u,0u,1.0),
                             make_degree_entry(2u,0u,4.0)});
@@ -805,8 +805,8 @@ Void test_boolean_sorted_equality_short_circuit() {
 
 Void test_exact_coefficient_helpers() {
     Expansion<MultiIndex,double> plain(2u,std::tuple<>());
-    ARIADNE_TEST_ASSERT(plain.coefficient_characteristics()==std::tuple<>());
-    ARIADNE_TEST_EQUALS(plain.characteristics().first,2u);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), plain.coefficient_characteristics()==std::tuple<>());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), plain.characteristics().first, 2u);
 
     // Raw floats do not have inplace addition: combining them must fail
     // without losing either of the duplicate terms.
@@ -814,10 +814,10 @@ Void test_exact_coefficient_helpers() {
     Expansion<MultiIndex,FloatDP> raw(2u,dp);
     raw.append(MultiIndex({1u,0u}),FloatDP(2,dp));
     raw.append(MultiIndex({1u,0u}),FloatDP(3,dp));
-    ARIADNE_TEST_THROWS(raw.combine_terms(),std::runtime_error);
-    ARIADNE_TEST_EQUALS(raw.size(),2u);
-    ARIADNE_TEST_EQUALS(raw.front().coefficient(),FloatDP(2,dp));
-    ARIADNE_TEST_EQUALS(raw.back().coefficient(),FloatDP(3,dp));
+    ARIADNE_TESTING_EXPECT_THROWS_CTX(AlgebraTesting::context(), std::runtime_error, raw.combine_terms());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), raw.size(), 2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), raw.front().coefficient(), FloatDP(2,dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), raw.back().coefficient(), FloatDP(3,dp));
 }
 
 template<class X, class PR>
@@ -830,21 +830,21 @@ Void test_additional_expansion_instantiation(PR const& pr)
         {{0u,0u},coefficient_zero},
         {{1u,0u},coefficient_one}
     });
-    ARIADNE_TEST_EQUALS(init_case.size(),1u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), init_case.size(), 1u);
 
     Expansion<MultiIndex,X> source(2u,pr);
     source.append(MultiIndex({1u,0u}),coefficient_one);
 
     Expansion<MultiIndex,X> copy_target(2u,pr);
-    ARIADNE_TEST_EXECUTE(copy_target=source);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), copy_target=source);
     Expansion<MultiIndex,X>& copy_alias=copy_target;
-    ARIADNE_TEST_EXECUTE(copy_target=copy_alias);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), copy_target=copy_alias);
 
     Expansion<MultiIndex,X> move_target(2u,pr);
     Expansion<MultiIndex,X> move_source(source);
-    ARIADNE_TEST_EXECUTE(move_target=std::move(move_source));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), move_target=std::move(move_source));
     Expansion<MultiIndex,X>* move_alias=&move_target;
-    ARIADNE_TEST_EXECUTE(move_target=std::move(*move_alias));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), move_target=std::move(*move_alias));
 }
 
 template<class X, class PR>
@@ -856,17 +856,17 @@ Void test_univariate_expansion_assignment_instantiation(PR const& pr)
     source.append(UniIndex(1u),coefficient_one);
 
     Expansion<UniIndex,X> copy_target(SizeOne(),pr);
-    ARIADNE_TEST_EXECUTE(copy_target=source);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), copy_target=source);
     Expansion<UniIndex,X>& copy_alias=copy_target;
-    ARIADNE_TEST_EXECUTE(copy_target=copy_alias);
-    ARIADNE_TEST_EQUALS(copy_target.size(),1u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), copy_target=copy_alias);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), copy_target.size(), 1u);
 
     Expansion<UniIndex,X> move_target(SizeOne(),pr);
     Expansion<UniIndex,X> move_source(source);
-    ARIADNE_TEST_EXECUTE(move_target=std::move(move_source));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), move_target=std::move(move_source));
     Expansion<UniIndex,X>* move_alias=&move_target;
-    ARIADNE_TEST_EXECUTE(move_target=std::move(*move_alias));
-    ARIADNE_TEST_EQUALS(move_target.size(),1u);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), move_target=std::move(*move_alias));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), move_target.size(), 1u);
 }
 
 template<class X, class PR>
@@ -878,12 +878,12 @@ Void test_graded_check_instantiation(PR const& pr)
     E sorted(2u,pr);
     sorted.append(MultiIndex({0u,0u}),one);
     sorted.append(MultiIndex({1u,0u}),one);
-    ARIADNE_TEST_EXECUTE(sorted.check());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), sorted.check());
 
     E unsorted(2u,pr);
     unsorted.append(MultiIndex({1u,0u}),one);
     unsorted.append(MultiIndex({0u,0u}),one);
-    ARIADNE_TEST_THROWS(unsorted.check(),std::runtime_error);
+    ARIADNE_TESTING_EXPECT_THROWS_CTX(AlgebraTesting::context(), std::runtime_error, unsorted.check());
 }
 
 template<class X, class PR>
@@ -895,7 +895,7 @@ Void test_univariate_sorted_equality_ordering(PR const& pr)
     X zero(0u,pr), one(1u,pr), coefficient_two(2u,pr);
 
     auto check_symmetric = [](E const& lhs, E const& rhs) {
-        ARIADNE_TEST_ASSERT(AriadneTesting::truth(lhs==rhs)==AriadneTesting::truth(rhs==lhs));
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), AriadneTesting::truth(lhs==rhs)==AriadneTesting::truth(rhs==lhs));
     };
 
     E empty(SizeOne(),pr);
@@ -912,10 +912,10 @@ Void test_univariate_sorted_equality_ordering(PR const& pr)
     right.append(UniIndex(1u),zero);
     right.append(UniIndex(2u),one);
     check_symmetric(left,right);
-    ARIADNE_TEST_EQUALS(left.size(),2u);
-    ARIADNE_TEST_EQUALS(right.size(),2u);
-    ARIADNE_TEST_EQUALS(left.back().index(),UniIndex(2u));
-    ARIADNE_TEST_EQUALS(right.back().index(),UniIndex(2u));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), left.size(), 2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), right.size(), 2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), left.back().index(), UniIndex(2u));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), right.back().index(), UniIndex(2u));
 
     right.back().coefficient()=coefficient_two;
     check_symmetric(left,right);
@@ -938,7 +938,7 @@ Void test_unit_coefficient_output() {
     multi.append(MultiIndex({1u,0u}),2.0);
     std::ostringstream multi_stream;
     multi._write(multi_stream,Array<String>({"x","y"}));
-    ARIADNE_TEST_EQUALS(multi_stream.str(),String(" x*y -y^2 +1 +2*x"));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), multi_stream.str(), String(" x*y -y^2 +1 +2*x"));
 
     Expansion<UniIndex,double> uni(SizeOne{},std::tuple<>{});
     uni.append(UniIndex(1u),1.0);
@@ -947,7 +947,7 @@ Void test_unit_coefficient_output() {
     uni.append(UniIndex(3u),2.0);
     std::ostringstream uni_stream;
     uni._write(uni_stream,String("t"));
-    ARIADNE_TEST_EQUALS(uni_stream.str(),String(" t -t^2 +1 +2*t^3"));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), uni_stream.str(), String(" t -t^2 +1 +2*t^3"));
 }
 
 Void test_bounds_coefficient_output() {
@@ -957,7 +957,7 @@ Void test_bounds_coefficient_output() {
     Array<String> names({"x","y"});
     std::ostringstream empty_stream;
     expansion._write(empty_stream,names);
-    ARIADNE_TEST_EQUALS(empty_stream.str(),String("0"));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), empty_stream.str(), String("0"));
 
     FloatDPBounds one(1,dp), coefficient_two(2,dp);
     expansion.append(MultiIndex({1u,1u}),one);
@@ -967,27 +967,31 @@ Void test_bounds_coefficient_output() {
     std::ostringstream stream, expected;
     expansion._write(stream,names);
     expected << " x*y -y^2 +" << one << " +" << coefficient_two << "*x";
-    ARIADNE_TEST_EQUALS(stream.str(),expected.str());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), stream.str(), expected.str());
 }
 
 } // namespace
 
-Int main() {
-    ARIADNE_TEST_CALL(test_sorted_equality_edge_cases());
-    ARIADNE_TEST_CALL(test_boolean_sorted_equality_short_circuit());
-    ARIADNE_TEST_CALL(test_exact_coefficient_helpers());
-    ARIADNE_TEST_CALL(test_unit_coefficient_output());
-    ARIADNE_TEST_CALL(test_bounds_coefficient_output());
+int main(int argc, char** argv) {
+    Ariadne::Testing::Suite suite("expansion");
+    suite.add("legacy tests", [](Ariadne::Testing::Context& ctx) {
+        AlgebraTesting::CaseScope capture(ctx);
+
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_sorted_equality_edge_cases());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_boolean_sorted_equality_short_circuit());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_exact_coefficient_helpers());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_unit_coefficient_output());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_bounds_coefficient_output());
     {
         Expansion<MultiIndex,ExactDouble> exact_expansion({{{0u,0u},ExactDouble(1.0)},{{0u,0u},ExactDouble(2.0)}});
-        ARIADNE_TEST_EXECUTE(exact_expansion.coefficient_characteristics());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), exact_expansion.coefficient_characteristics());
     }
 
     {
         Expansion<MultiIndex,double> double_expansion({{{1u,0u},-2.0},{{0u,0u},1.0}});
         std::ostringstream double_stream;
         Array<String> double_names({"x","y"});
-        ARIADNE_TEST_EXECUTE(double_expansion._write(double_stream,double_names));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), double_expansion._write(double_stream,double_names));
     }
 
     {
@@ -995,17 +999,17 @@ Int main() {
         RoundedFloatDP coefficient_one(1,double_precision);
         RoundedFloatDP coefficient_two(2,double_precision);
         Expansion<UniIndex,RoundedFloatDP> univariate({{DegreeType(0u),coefficient_one},{DegreeType(1u),coefficient_zero},{DegreeType(2u),coefficient_two}});
-        ARIADNE_TEST_EQUALS(univariate.size(),2u);
-        ARIADNE_TEST_EQUALS(univariate[UniIndex(2u)],coefficient_two);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), univariate.size(), 2u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), univariate[UniIndex(2u)], coefficient_two);
         univariate.append(UniIndex(1u),coefficient_one);
         std::ostringstream univariate_stream;
-        ARIADNE_TEST_EXECUTE(univariate._write(univariate_stream,String("x")));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), univariate._write(univariate_stream,String("x")));
     }
 
     FloatDP raw_dp(0,double_precision);
     FloatMP raw_mp(0,MultiplePrecision(128_bits));
-    ARIADNE_TEST_EXECUTE(characteristics(raw_dp));
-    ARIADNE_TEST_EXECUTE(characteristics(raw_mp));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), characteristics(raw_dp));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), characteristics(raw_mp));
 
     {
         Expansion<MultiIndex,FloatDPBounds> source(2u,double_precision);
@@ -1013,8 +1017,8 @@ Int main() {
         source.append({1u,0u},FloatDPBounds(0,double_precision));
         Expansion<MultiIndex,FloatDPApproximation> approximation(source);
         Expansion<MultiIndex,FloatDPUpperInterval> upper(source);
-        ARIADNE_TEST_EQUALS(approximation.size(),1u);
-        ARIADNE_TEST_EQUALS(upper.size(),1u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), approximation.size(), 1u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), upper.size(), 1u);
     }
 
     {
@@ -1024,8 +1028,8 @@ Int main() {
         source.append({1u,0u},FloatMPBounds(0,mp));
         Expansion<MultiIndex,FloatMPApproximation> approximation(source);
         Expansion<MultiIndex,FloatMPUpperInterval> upper(source);
-        ARIADNE_TEST_EQUALS(approximation.size(),1u);
-        ARIADNE_TEST_EQUALS(upper.size(),1u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), approximation.size(), 1u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), upper.size(), 1u);
     }
 
     test_additional_expansion_instantiation<RoundedFloatDP>(double_precision);
@@ -1059,20 +1063,23 @@ Int main() {
     {
         Expansion<MultiIndex,FloatDPUpperInterval> dp_upper_reserve(2u,double_precision);
         SizeType dp_upper_capacity=dp_upper_reserve.capacity();
-        ARIADNE_TEST_EXECUTE(dp_upper_reserve.reserve(dp_upper_capacity+1u));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), dp_upper_reserve.reserve(dp_upper_capacity+1u));
 
         Expansion<MultiIndex,FloatMPBounds> mp_bounds_reserve(2u,multiple_precision);
         SizeType mp_bounds_capacity=mp_bounds_reserve.capacity();
-        ARIADNE_TEST_EXECUTE(mp_bounds_reserve.reserve(mp_bounds_capacity+1u));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), mp_bounds_reserve.reserve(mp_bounds_capacity+1u));
 
         Expansion<UniIndex,FloatMPApproximation> uni_mp_reserve(SizeOne(),multiple_precision);
         SizeType uni_mp_capacity=uni_mp_reserve.capacity();
-        ARIADNE_TEST_EXECUTE(uni_mp_reserve.reserve(uni_mp_capacity));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), uni_mp_reserve.reserve(uni_mp_capacity));
     }
 
     RoundedFloatDP zero_dp{0,double_precision};
     RoundedFloatMP zero_mp{0,multiple_precision};
     TestExpansion<RoundedFloatDP>(zero_dp).test();
     TestExpansion<Rounded<FloatMP>>(zero_mp).test();
-    return ARIADNE_TEST_FAILURES;
+    
+
+    });
+    return Ariadne::Testing::run_suite(suite, argc, argv);
 }

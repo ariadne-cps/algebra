@@ -32,7 +32,7 @@
 #include "algebra/covector.hpp"
 #include "interval/interval.hpp"
 
-#include "macro/testing.hpp"
+#include "algebra_testing_context.hpp"
 
 using namespace std;
 using namespace Ariadne;
@@ -52,12 +52,12 @@ class TestVector {
 Void
 TestVector::test()
 {
-    ARIADNE_TEST_CALL(test_range());
-    ARIADNE_TEST_CALL(test_slice());
-    ARIADNE_TEST_CALL(test_constructors());
-    ARIADNE_TEST_CALL(test_comparisons());
-    ARIADNE_TEST_CALL(test_arithmetic());
-    ARIADNE_TEST_CALL(test_misc());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_range());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_slice());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_constructors());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_comparisons());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_arithmetic());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_misc());
 }
 
 namespace {
@@ -88,62 +88,62 @@ Void
 TestVector::test_range()
 {
     Range prefix_range=range(4u);
-    ARIADNE_TEST_EQUALS(prefix_range.start(),0u);
-    ARIADNE_TEST_EQUALS(prefix_range.stop(),4u);
-    ARIADNE_TEST_EQUALS(prefix_range.size(),4u);
-    ARIADNE_TEST_EQUALS(prefix_range.stride(),1u);
-    ARIADNE_TEST_EQUALS(prefix_range[2u],2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), prefix_range.start(), 0u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), prefix_range.stop(), 4u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), prefix_range.size(), 4u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), prefix_range.stride(), 1u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), prefix_range[2u], 2u);
 
     Range offset_range=range(2u,5u);
-    ARIADNE_TEST_EQUALS(offset_range.start(),2u);
-    ARIADNE_TEST_EQUALS(offset_range.stop(),5u);
-    ARIADNE_TEST_EQUALS(offset_range.size(),3u);
-    ARIADNE_TEST_EQUALS(offset_range[1u],3u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), offset_range.start(), 2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), offset_range.stop(), 5u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), offset_range.size(), 3u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), offset_range[1u], 3u);
 
     RangeIterator range_iterator(2u);
-    ARIADNE_TEST_EQUALS(*range_iterator,2u);
-    ARIADNE_TEST_ASSERT(range_iterator!=RangeIterator(3u));
-    ARIADNE_TEST_EXECUTE(++range_iterator);
-    ARIADNE_TEST_EQUALS(*range_iterator,3u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), *range_iterator, 2u);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), range_iterator!=RangeIterator(3u));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), ++range_iterator);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), *range_iterator, 3u);
 
     auto first=begin(offset_range);
     auto last=end(offset_range);
-    ARIADNE_TEST_EQUALS(*first,2u);
-    ARIADNE_TEST_ASSERT(first!=last);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), *first, 2u);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), first!=last);
 }
 
 Void
 TestVector::test_slice()
 {
     Slice sample_slice=Ariadne::slice(3u,2u,4u);
-    ARIADNE_TEST_EQUALS(sample_slice.size(),3u);
-    ARIADNE_TEST_EQUALS(sample_slice.start(),2u);
-    ARIADNE_TEST_EQUALS(sample_slice.stride(),4u);
-    ARIADNE_TEST_EQUALS(sample_slice.stop(),14u);
-    ARIADNE_TEST_EQUALS(sample_slice[0u],2u);
-    ARIADNE_TEST_EQUALS(sample_slice[1u],6u);
-    ARIADNE_TEST_EQUALS(sample_slice[2u],10u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sample_slice.size(), 3u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sample_slice.start(), 2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sample_slice.stride(), 4u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sample_slice.stop(), 14u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sample_slice[0u], 2u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sample_slice[1u], 6u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sample_slice[2u], 10u);
 }
 
 Void
 TestVector::test_constructors()
 {
-    ARIADNE_TEST_CONSTRUCT( Vector<RoundedFloatDP>, v0, (3,dp) );
-    ARIADNE_TEST_ASSERT( v0.size()==3 );
-    ARIADNE_TEST_ASSERT( v0[0]==0.0_x );
-    ARIADNE_TEST_ASSERT( v0[1]==0.0_x );
-    ARIADNE_TEST_ASSERT( v0[2]==0.0_x );
+    Vector<RoundedFloatDP> v0(3,dp);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v0.size()==3);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v0[0]==0.0_x);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v0[1]==0.0_x);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v0[2]==0.0_x);
 
-    ARIADNE_TEST_CONSTRUCT( Vector<RoundedFloatDP>, v1, ({3.25_x,-0.75_x,0.0_x,1.375_x},dp) );
-    ARIADNE_TEST_ASSERT( v1.size()==4 );
-    ARIADNE_TEST_ASSERT( v1[0]==3.25_x );
-    ARIADNE_TEST_ASSERT( v1[1]==-0.75_x );
-    ARIADNE_TEST_ASSERT( v1[2]==0.0_x );
-    ARIADNE_TEST_ASSERT( v1[3]==1.375_x );
+    Vector<RoundedFloatDP> v1({3.25_x,-0.75_x,0.0_x,1.375_x},dp);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v1.size()==4);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v1[0]==3.25_x);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v1[1]==-0.75_x);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v1[2]==0.0_x);
+    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), v1[3]==1.375_x);
 
-    ARIADNE_TEST_CONSTRUCT( Vector<FloatDPApproximation>, va, ({3.25,-0.75,0.0,1.375},dp) );
-    ARIADNE_TEST_CONSTRUCT( Vector<FloatDPBounds>, vb, ({3.25_x,-0.75_x,0.0_x,1.375_x},dp) );
-    ARIADNE_TEST_CONSTRUCT( Vector<FloatDP>, vx, ({3.25_x,-0.75_x,0.0_x,1.375_x},dp) );
+    Vector<FloatDPApproximation> va({3.25,-0.75,0.0,1.375},dp);
+    Vector<FloatDPBounds> vb({3.25_x,-0.75_x,0.0_x,1.375_x},dp);
+    Vector<FloatDP> vx({3.25_x,-0.75_x,0.0_x,1.375_x},dp);
 }
 
 
@@ -151,24 +151,24 @@ Void
 TestVector::test_comparisons()
 {
     Vector<RoundedFloatDP> v(2,dp); v[0]=1.25_x; v[1]=-1.375_x;
-    ARIADNE_TEST_PRINT( v );
-    ARIADNE_TEST_COMPARE( v , ==, Vector<RoundedFloatDP>({1.25_x,-1.375_x},dp) );
-    ARIADNE_TEST_COMPARE( v , !=, Vector<RoundedFloatDP>({1.25_x,-1.625_x},dp) );
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "v", v);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), v, Vector<RoundedFloatDP>({1.25_x,-1.375_x},dp));
+    ARIADNE_TESTING_EXPECT_NOT_EQUAL_CTX(AlgebraTesting::context(), v, Vector<RoundedFloatDP>({1.25_x,-1.625_x},dp));
 }
 
 
 Void
 TestVector::test_arithmetic()
 {
-    ARIADNE_TEST_EQUAL( + Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) , Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) );
-    ARIADNE_TEST_EQUAL( - Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) , Vector<RoundedFloatDP>({-2.0_x,+3.0_x,-5.0_x},dp) );
-    ARIADNE_TEST_EQUAL( Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) + Vector<RoundedFloatDP>({1.25_x,2.75_x,-3.5_x},dp), Vector<RoundedFloatDP>({3.25_x,-0.25_x,1.5_x},dp) );
-    ARIADNE_TEST_EQUAL( Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) - Vector<RoundedFloatDP>({1.25_x,2.75_x,-3.5_x},dp), Vector<RoundedFloatDP>({0.75_x,-5.75_x,8.5_x},dp) );
-    ARIADNE_TEST_EQUAL( RoundedFloatDP(4.0_x,dp) * Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp), Vector<RoundedFloatDP>({8.0_x,-12.0_x,20.0_x},dp) );
-    ARIADNE_TEST_EQUAL( Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) * RoundedFloatDP(4.0_x,dp), Vector<RoundedFloatDP>({8.0_x,-12.0_x,20.0_x},dp) );
-    ARIADNE_TEST_EQUAL( Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) / RoundedFloatDP(4.0_x,dp), Vector<RoundedFloatDP>({0.5_x,-0.75_x,1.25_x},dp) );
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), + Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp), Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), - Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp), Vector<RoundedFloatDP>({-2.0_x,+3.0_x,-5.0_x},dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) + Vector<RoundedFloatDP>({1.25_x,2.75_x,-3.5_x},dp), Vector<RoundedFloatDP>({3.25_x,-0.25_x,1.5_x},dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) - Vector<RoundedFloatDP>({1.25_x,2.75_x,-3.5_x},dp), Vector<RoundedFloatDP>({0.75_x,-5.75_x,8.5_x},dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), RoundedFloatDP(4.0_x,dp) * Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp), Vector<RoundedFloatDP>({8.0_x,-12.0_x,20.0_x},dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) * RoundedFloatDP(4.0_x,dp), Vector<RoundedFloatDP>({8.0_x,-12.0_x,20.0_x},dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) / RoundedFloatDP(4.0_x,dp), Vector<RoundedFloatDP>({0.5_x,-0.75_x,1.25_x},dp));
 
-    ARIADNE_TEST_EQUAL( sup_norm(Vector<RoundedFloatDP>({2.0_x,-3.0_x,1.0_x},dp)), RoundedFloatDP(3.0_x,dp) )
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sup_norm(Vector<RoundedFloatDP>({2.0_x,-3.0_x,1.0_x},dp)), RoundedFloatDP(3.0_x,dp))
 }
 
 
@@ -177,38 +177,38 @@ TestVector::test_misc()
 {
     DoublePrecision pr;
 
-    ARIADNE_TEST_FAIL(Vector<RoundedFloatDP>::unit(2u,2u,dp));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), Vector<RoundedFloatDP>::unit(2u,2u,dp));
 
     Vector<RoundedFloatDP> invalid_at({1.0_x,2.0_x},dp);
-    ARIADNE_TEST_EXECUTE(invalid_at.at(0u));
-    ARIADNE_TEST_FAIL(invalid_at.at(2u));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), invalid_at.at(0u));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), invalid_at.at(2u));
     Vector<RoundedFloatDP> const& cinvalid_at=invalid_at;
-    ARIADNE_TEST_EXECUTE(cinvalid_at.at(0u));
-    ARIADNE_TEST_FAIL(cinvalid_at.at(2u));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), cinvalid_at.at(0u));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), cinvalid_at.at(2u));
 
     Vector<RoundedFloatDP> short_v({1.0_x},dp);
     Vector<RoundedFloatDP> long_v({1.0_x,2.0_x},dp);
-    ARIADNE_TEST_FAIL(short_v+long_v);
-    ARIADNE_TEST_FAIL(short_v-long_v);
-    ARIADNE_TEST_FAIL(dot(short_v,long_v));
-    ARIADNE_TEST_EXECUTE(dot(long_v,long_v));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), short_v+long_v);
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), short_v-long_v);
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), dot(short_v,long_v));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), dot(long_v,long_v));
     Array<FloatDPApproximation> vary(InitializerList<ExactDouble>{-4.0_x,3.0_x,1.0_x},pr);
     FloatDPApproximation x={1.5_x,pr};
 
     Vector<FloatDPApproximation> v0;
-    ARIADNE_TEST_EXECUTE(cout << Vector<RoundedFloatDP>());
-    ARIADNE_TEST_EXECUTE(cout << Vector<FloatDP>());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), cout << Vector<RoundedFloatDP>());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), cout << Vector<FloatDP>());
     cout << "v0.size()=" << v0.size() << endl;
     cout << "v0=" << flush; cout << v0 << endl;
-    ARIADNE_TEST_NOTIFY("Constructor Vector<X>(SizeType, const X*) is unsafe and has been removed.");
+    ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), "Constructor Vector<X>(SizeType, const X*) is unsafe and has been removed.");
     Array<FloatDPApproximation> a1(vary.begin(),vary.end());
     Vector<FloatDPApproximation> v1(a1);
     cout << "v1=" << v1 << endl;
     Vector<FloatDPApproximation> v2=Vector<FloatDPApproximation>({2.375_x,4.25_x,-1.25_x},pr);
     cout << "v2=" << v2 << endl;
     cout << "norm(v1)=" << norm(v1) << "  norm(v2)=" << norm(v2) << endl;
-    ARIADNE_TEST_EQUAL(norm(v1).raw(),4);
-    ARIADNE_TEST_EQUAL(norm(v2).raw(),4.25_x);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), norm(v1).raw(), 4);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), norm(v2).raw(), 4.25_x);
 
     Vector<FloatDPApproximation> v3(1,pr);
     cout << "v3=" << v3 << endl;
@@ -216,7 +216,7 @@ TestVector::test_misc()
     cout << "v4=" << v4 << endl;
     Vector<FloatDPApproximation> v5({-4.0_x,3.0_x,1.0_x},pr);
     cout << "v5=" << v5 << endl;
-    ARIADNE_TEST_EQUAL(v1,v5);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), v1, v5);
     cout << endl;
 
     Vector<FloatDPApproximation> vf0;
@@ -277,9 +277,9 @@ TestVector::test_misc()
     cout << endl;
 
     Vector<FloatDP> ev1=cast_exact(v1);
-    ARIADNE_TEST_EQUALS(ev1.size(),v1.size());
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), ev1.size(), v1.size());
     for(SizeType i=0; i!=v1.size(); ++i) {
-        ARIADNE_TEST_EQUAL(ev1[i],v1[i].raw());
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), ev1[i], v1[i].raw());
     }
     FloatDP ex(x.raw());
     iv0=iv1+ev1;
@@ -317,57 +317,57 @@ TestVector::test_misc()
     {
         RoundedFloatDP s(1,dp);
         Vector<RoundedFloatDP> v({2.0_x},dp);
-        ARIADNE_TEST_EQUALS(join(s,v),Vector<RoundedFloatDP>({1.0_x,2.0_x},dp));
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), join(s,v), Vector<RoundedFloatDP>({1.0_x,2.0_x},dp));
     }
     {
         FloatDPBounds s(1,dp);
         Vector<FloatDPBounds> v({2.0_x},dp);
-        ARIADNE_TEST_EQUALS(join(s,v),Vector<FloatDPBounds>({1.0_x,2.0_x},dp));
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), join(s,v), Vector<FloatDPBounds>({1.0_x,2.0_x},dp));
     }
     {
         FloatDPApproximation s(1,dp);
         Vector<FloatDPApproximation> v({2.0_x},dp);
-        ARIADNE_TEST_EQUALS(join(s,v),Vector<FloatDPApproximation>({1.0_x,2.0_x},dp));
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), join(s,v), Vector<FloatDPApproximation>({1.0_x,2.0_x},dp));
     }
     {
         FloatDPUpperInterval s({1.0_x,1.0_x});
         Vector<FloatDPUpperInterval> v({FloatDPUpperInterval({2.0_x,2.0_x})});
-        ARIADNE_TEST_EQUALS(join(s,v).size(),2u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), join(s,v).size(), 2u);
     }
     {
         MultiplePrecision mp(128);
         FloatMPBounds s(1,mp);
         Vector<FloatMPBounds> v({2.0_x},mp);
-        ARIADNE_TEST_EQUALS(join(s,v).size(),2u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), join(s,v).size(), 2u);
     }
     {
         MultiplePrecision mp(128);
         FloatMPApproximation s(1,mp);
         Vector<FloatMPApproximation> v({2.0_x},mp);
-        ARIADNE_TEST_EQUALS(join(s,v).size(),2u);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), join(s,v).size(), 2u);
     }
 
     Covector<int> ci({1,2});
-    ARIADNE_TEST_EXECUTE(characteristics(ci));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), characteristics(ci));
     Covector<FloatDPApproximation> ca(1u,dp);
-    ARIADNE_TEST_EXECUTE(characteristics(ca));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), characteristics(ca));
 
     {
         Vector<FloatDPBounds> v({1.0_x,2.0_x},dp);
-        ARIADNE_TEST_EXECUTE(dot(v,v));
-        ARIADNE_TEST_EXECUTE(two_norm(v));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), dot(v,v));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), two_norm(v));
     }
     {
         MultiplePrecision mp(128);
         Vector<FloatMPApproximation> v({1.0_x,2.0_x},mp);
-        ARIADNE_TEST_EXECUTE(dot(v,v));
-        ARIADNE_TEST_EXECUTE(two_norm(v));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), dot(v,v));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), two_norm(v));
     }
     {
         MultiplePrecision mp(128);
         Vector<FloatMPBounds> v({1.0_x,2.0_x},mp);
-        ARIADNE_TEST_EXECUTE(dot(v,v));
-        ARIADNE_TEST_EXECUTE(two_norm(v));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), dot(v,v));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), two_norm(v));
     }
 
     /*
@@ -394,8 +394,15 @@ TestVector::test_misc()
 }
 
 
-Int main() {
+int main(int argc, char** argv) {
+    Ariadne::Testing::Suite suite("vector");
+    suite.add("legacy tests", [](Ariadne::Testing::Context& ctx) {
+        AlgebraTesting::CaseScope capture(ctx);
+
     TestVector().test();
 
-    return ARIADNE_TEST_FAILURES;
+    
+
+    });
+    return Ariadne::Testing::run_suite(suite, argc, argv);
 }

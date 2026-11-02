@@ -26,7 +26,7 @@
 #include "algebra/algebra.hpp"
 #include "algebra/differential.hpp"
 
-#include "macro/testing.hpp"
+#include "algebra_testing_context.hpp"
 
 using namespace Ariadne;
 
@@ -86,13 +86,13 @@ class TestAlgebra {
         SizeType as=3;
         SizeType ind=1;
         DegreeType deg=4;
-        ARIADNE_TEST_CONSTRUCT(X,cx,(3.0_x,pr));
-        ARIADNE_TEST_NAMED_CONSTRUCT(DX,dx,variable(as,deg,cx,ind));
-        ARIADNE_TEST_CONSTRUCT(AX,ax,(dx));
+        X cx(3.0_x,pr);
+        DX dx = variable(as,deg,cx,ind);
+        AX ax(dx);
         AX rx=ax;
-        ARIADNE_TEST_ASSIGN(ax,cx);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), ax = cx);
         ax=cx;
-        ARIADNE_TEST_EXECUTE(ax+ax);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), ax+ax);
         ax+ax;
         ax-ax;
         ax+=ax;
@@ -107,37 +107,37 @@ class TestAlgebra {
         ax=ax+cx;
         ax=ax-cx;
         ax=ax*cx;
-        ARIADNE_TEST_EXECUTE(ax=ax/cx);
-        ARIADNE_TEST_ASSIGN(dx,ax.extract<DX>());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), ax=ax/cx);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), dx = ax.extract<DX>());
         auto algebra_wrapper=ax.extract<AlgebraWrapper<DX,X>>();
-        ARIADNE_TEST_PRINT(algebra_wrapper);
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "algebra_wrapper", algebra_wrapper);
         auto algebra_wrapper_copy=algebra_wrapper._copy();
         delete algebra_wrapper_copy;
         auto algebra_wrapper_zero=algebra_wrapper._create_zero();
         delete algebra_wrapper_zero;
-        ARIADNE_TEST_EXECUTE(algebra_wrapper._iadd(cx));
-        ARIADNE_TEST_EXECUTE(algebra_wrapper._imul(cx));
-        ARIADNE_TEST_EXECUTE(algebra_wrapper._isma(cx,algebra_wrapper));
-        ARIADNE_TEST_EXECUTE(algebra_wrapper._ifma(algebra_wrapper,algebra_wrapper));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), algebra_wrapper._iadd(cx));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), algebra_wrapper._imul(cx));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), algebra_wrapper._isma(cx,algebra_wrapper));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), algebra_wrapper._ifma(algebra_wrapper,algebra_wrapper));
         auto algebra_wrapper_radd=algebra_wrapper._rapply(BinaryRingOperator(Add()),cx);
         delete algebra_wrapper_radd;
         auto algebra_wrapper_power=algebra_wrapper._apply(GradedRingOperator(Pow()),2u);
         delete algebra_wrapper_power;
         Algebra<X> interface_algebra(new AlgebraInterfaceStub<X>());
-        ARIADNE_TEST_EXECUTE(interface_algebra.extract<AlgebraInterfaceStub<X>>());
-        ARIADNE_TEST_FAIL(ax.extract<AlgebraInterfaceStub<X>>());
-        ARIADNE_TEST_FAIL(interface_algebra.extract<DX>());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), interface_algebra.extract<AlgebraInterfaceStub<X>>());
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), ax.extract<AlgebraInterfaceStub<X>>());
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), interface_algebra.extract<DX>());
 
         Algebra<ValidatedNumber> validated_algebra(new ValidatedAlgebraInterfaceStub());
         AlgebraInterface<ValidatedNumber> const& validated_interface=validated_algebra;
         (void)validated_interface;
-        ARIADNE_TEST_EXECUTE(validated_algebra.create());
-        ARIADNE_TEST_EXECUTE(validated_algebra.clone());
-        ARIADNE_TEST_EXECUTE(validated_algebra.create_zero());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), validated_algebra.create());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), validated_algebra.clone());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), validated_algebra.create_zero());
         auto validated_body=validated_algebra.extract<ValidatedAlgebraInterfaceStub>();
-        ARIADNE_TEST_PRINT(validated_body);
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "validated_body", validated_body);
 
-        ARIADNE_TEST_CONSTRUCT(TAX,tax,(dx));
+        TAX tax(dx);
         auto transcendental_zero=tax.reference()._create_zero();
         delete transcendental_zero;
         auto transcendental_constant=tax.reference()._create_constant(cx);
@@ -146,47 +146,54 @@ class TestAlgebra {
         delete transcendental_copy;
         auto transcendental_rdiv=tax.reference()._rapply(BinaryFieldOperator(Div()),cx);
         delete transcendental_rdiv;
-        ARIADNE_TEST_ASSIGN(tax,div(tax,tax+cx));
-        ARIADNE_TEST_ASSIGN(tax,rec(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), tax = div(tax,tax+cx));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), tax = rec(tax));
 
-        ARIADNE_TEST_EXECUTE(hlf(tax));
-        ARIADNE_TEST_EXECUTE(div(cx,tax));
-        ARIADNE_TEST_EXECUTE(pow(tax,Int(2)));
-        ARIADNE_TEST_EXECUTE(pow(tax,Int(-1)));
-        ARIADNE_TEST_EXECUTE(sqrt(tax));
-        ARIADNE_TEST_EXECUTE(log(tax));
-        ARIADNE_TEST_EXECUTE(sin(tax));
-        ARIADNE_TEST_EXECUTE(cos(tax));
-        ARIADNE_TEST_EXECUTE(tan(tax));
-        ARIADNE_TEST_EXECUTE(tanh(tax));
-        ARIADNE_TEST_EXECUTE(atan(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), hlf(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), div(cx,tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), pow(tax,Int(2)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), pow(tax,Int(-1)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), sqrt(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), log(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), sin(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), cos(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), tan(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), tanh(tax));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), atan(tax));
 
-        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Hlf(),dx));
-        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Sqr(),dx));
-        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Div(),dx,dx));
-        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Pow(),dx,Int(2)));
-        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Pow(),dx,Int(-1)));
-        ARIADNE_TEST_EXECUTE(GradedAlgebraOperations<DX>::apply(Exp(),dx));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), GradedAlgebraOperations<DX>::apply(Hlf(),dx));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), GradedAlgebraOperations<DX>::apply(Sqr(),dx));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), GradedAlgebraOperations<DX>::apply(Div(),dx,dx));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), GradedAlgebraOperations<DX>::apply(Pow(),dx,Int(2)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), GradedAlgebraOperations<DX>::apply(Pow(),dx,Int(-1)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), GradedAlgebraOperations<DX>::apply(Exp(),dx));
 
         Factorial factorial(3u);
         FloatDPBounds factorial_value=factorial;
-        ARIADNE_TEST_PRINT(factorial_value);
-        ARIADNE_TEST_EXECUTE(rec(factorial));
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "factorial_value", factorial_value);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), rec(factorial));
 
-        ARIADNE_TEST_ASSIGN(dx,tax.extract<DX>());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), dx = tax.extract<DX>());
         auto transcendental_wrapper=tax.extract<TranscendentalAlgebraWrapper<DX,X>>();
-        ARIADNE_TEST_PRINT(transcendental_wrapper);
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "transcendental_wrapper", transcendental_wrapper);
         TranscendentalAlgebra<X> interface_tax(new TranscendentalAlgebraInterfaceStub<X>());
         auto copied_transcendental_interface=interface_tax.reference()._copy();
         delete copied_transcendental_interface;
-        ARIADNE_TEST_EXECUTE(interface_tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
-        ARIADNE_TEST_FAIL(tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
-        ARIADNE_TEST_FAIL(interface_tax.extract<DX>());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), interface_tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), tax.extract<TranscendentalAlgebraInterfaceStub<X>>());
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), interface_tax.extract<DX>());
 
     }
 };
 
-Int main() {
+int main(int argc, char** argv) {
+    Ariadne::Testing::Suite suite("algebra");
+    suite.add("legacy tests", [](Ariadne::Testing::Context& ctx) {
+        AlgebraTesting::CaseScope capture(ctx);
+
     TestAlgebra().test();
-    return ARIADNE_TEST_FAILURES;
+    
+
+    });
+    return Ariadne::Testing::run_suite(suite, argc, argv);
 }

@@ -26,7 +26,7 @@
 #include "algebra/differential.hpp"
 #include "algebra/univariate_differential.tpl.hpp"
 
-#include "macro/testing.hpp"
+#include "algebra_testing_context.hpp"
 
 using namespace Ariadne;
 
@@ -44,32 +44,32 @@ Void test_data_access()
     Array<X> coefficients(InitializerList<ExactDouble>{1.0_x,2.0_x,3.0_x},dp);
     D differential(coefficients);
 
-    ARIADNE_TEST_EQUALS(differential.value(),one);
-    ARIADNE_TEST_EQUALS(differential.gradient(),coefficient_two);
-    ARIADNE_TEST_EQUALS(differential.half_hessian(),three);
-    ARIADNE_TEST_EQUALS(differential.hessian(),X(6u,dp));
-    ARIADNE_TEST_EQUALS(differential.argument_size(),1u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential.value(), one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential.gradient(), coefficient_two);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential.half_hessian(), three);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential.hessian(), X(6u,dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential.argument_size(), 1u);
 
-    ARIADNE_TEST_EQUALS(differential.array()[1u],coefficient_two);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential.array()[1u], coefficient_two);
     D const& const_differential=differential;
-    ARIADNE_TEST_EQUALS(const_differential.array()[2u],three);
-    ARIADNE_TEST_EXECUTE(differential.array()[2u]=X(4u,dp));
-    ARIADNE_TEST_EQUALS(differential[2u],X(4u,dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), const_differential.array()[2u], three);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), differential.array()[2u]=X(4u,dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential[2u], X(4u,dp));
 
     D from_list(2u,InitializerList<X>{one,coefficient_two,three});
-    ARIADNE_TEST_EQUALS(from_list[0u],one);
-    ARIADNE_TEST_EQUALS(from_list[1u],coefficient_two);
-    ARIADNE_TEST_EQUALS(from_list[2u],three);
-    ARIADNE_TEST_FAIL((void)D(2u,InitializerList<X>{one,coefficient_two}));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), from_list[0u], one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), from_list[1u], coefficient_two);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), from_list[2u], three);
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)D(2u,InitializerList<X>{one,coefficient_two}));
 
     D degree_zero(0u,one);
-    ARIADNE_TEST_FAIL((void)degree_zero.gradient());
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)degree_zero.gradient());
     auto degree_zero_variable=D::variable(0u,one);
-    ARIADNE_TEST_EQUALS(degree_zero_variable[0u],one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), degree_zero_variable[0u], one);
 
     D degree_one(1u,one);
-    ARIADNE_TEST_FAIL((void)degree_one.half_hessian());
-    ARIADNE_TEST_FAIL((void)degree_one.hessian());
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)degree_one.half_hessian());
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)degree_one.hessian());
 }
 
 Void test_inplace_and_calculus()
@@ -79,33 +79,33 @@ Void test_inplace_and_calculus()
     X three(3u,dp);
 
     D differential(2u,InitializerList<X>{one,coefficient_two,three});
-    ARIADNE_TEST_EXECUTE(differential+=one);
-    ARIADNE_TEST_EQUALS(differential[0u],coefficient_two);
-    ARIADNE_TEST_EXECUTE(differential*=coefficient_two);
-    ARIADNE_TEST_EQUALS(differential[0u],X(4u,dp));
-    ARIADNE_TEST_EQUALS(differential[1u],X(4u,dp));
-    ARIADNE_TEST_EQUALS(differential[2u],X(6u,dp));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), differential+=one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential[0u], coefficient_two);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), differential*=coefficient_two);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential[0u], X(4u,dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential[1u], X(4u,dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), differential[2u], X(6u,dp));
 
     D source(2u,InitializerList<X>{one,coefficient_two,three});
     auto primitive=antiderivative(source);
-    ARIADNE_TEST_EQUAL(primitive.degree(),3u);
-    ARIADNE_TEST_EQUALS(primitive[0u],X(0u,dp));
-    ARIADNE_TEST_EQUALS(primitive[1u],one);
-    ARIADNE_TEST_EQUALS(primitive[2u],one);
-    ARIADNE_TEST_EQUALS(primitive[3u],one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), primitive.degree(), 3u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), primitive[0u], X(0u,dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), primitive[1u], one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), primitive[2u], one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), primitive[3u], one);
 
     auto shifted_primitive=antiderivative(source,X(4u,dp));
-    ARIADNE_TEST_EQUALS(shifted_primitive[0u],X(4u,dp));
-    ARIADNE_TEST_EQUALS(shifted_primitive[1u],one);
-    ARIADNE_TEST_EQUALS(shifted_primitive[2u],one);
-    ARIADNE_TEST_EQUALS(shifted_primitive[3u],one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), shifted_primitive[0u], X(4u,dp));
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), shifted_primitive[1u], one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), shifted_primitive[2u], one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), shifted_primitive[3u], one);
 
     Series<X> exponential_series(Exp(),X(0u,dp));
     D variable=D::variable(2u,X(0u,dp));
     auto composition=compose(exponential_series,variable);
-    ARIADNE_TEST_EQUALS(composition[0u],one);
-    ARIADNE_TEST_EQUALS(composition[1u],one);
-    ARIADNE_TEST_EQUALS(composition[2u],one/coefficient_two);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), composition[0u], one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), composition[1u], one);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), composition[2u], one/coefficient_two);
 }
 
 Void test_derivative()
@@ -114,24 +114,30 @@ Void test_derivative()
     auto y=exp(x);
     auto dy=derivative(y);
 
-    ARIADNE_TEST_EQUAL(dy.degree(),3u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), dy.degree(), 3u);
     for(DegreeType i=0; i<=dy.degree(); ++i) {
-        ARIADNE_TEST_EQUAL(dy[i],(i+1u)*y[i+1u]);
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), dy[i], (i+1u)*y[i+1u]);
     }
 
     auto constant=D::constant(0u,X(2u,dp));
     auto constant_derivative=derivative(constant);
-    ARIADNE_TEST_EQUAL(constant_derivative.degree(),0u);
-    ARIADNE_TEST_EQUALS(constant_derivative[0],0);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), constant_derivative.degree(), 0u);
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), constant_derivative[0], 0);
 }
 
 } // namespace
 
-Int main()
-{
-    ARIADNE_TEST_CALL(test_data_access());
-    ARIADNE_TEST_CALL(test_inplace_and_calculus());
-    ARIADNE_TEST_CALL(test_derivative());
+int main(int argc, char** argv) {
+    Ariadne::Testing::Suite suite("univariate_differential");
+    suite.add("legacy tests", [](Ariadne::Testing::Context& ctx) {
+        AlgebraTesting::CaseScope capture(ctx);
 
-    return ARIADNE_TEST_FAILURES;
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_data_access());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_inplace_and_calculus());
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_derivative());
+
+    
+
+    });
+    return Ariadne::Testing::run_suite(suite, argc, argv);
 }
