@@ -99,28 +99,28 @@ TestMatrix::test_project()
     Matrix<X> B({{120,130,140},{220,230,240}},pr);
 
     Vector<X> v = A[range(0,2)][1];
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), v[1], A[1][1]);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), v[1], A[1][1]);
     Covector<X> u = A[2][range(1,4)];
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), u[2], A[2][3]);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), u[2], A[2][3]);
 
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A[range(0,2)][range(1,4)].row_size(), 2);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A[range(0,2)][range(1,4)].column_size(), 3);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A[range(0,2)][range(1,4)].row_size(), 2);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A[range(0,2)][range(1,4)].column_size(), 3);
     MatrixRange<Matrix<X>> AR(A[range(0,2)][range(1,4)]);
     Matrix<X> ACR(A[range(0,2)][range(1,4)]);
 
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), AR[1][2], A[1][3]);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), ACR[1][2], A[1][3]);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), AR[1][2], A[1][3]);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), ACR[1][2], A[1][3]);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AR=B);
     ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "A", A);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A[range(0,2)][range(1,4)], B);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A[range(0,2)][range(1,4)], B);
 
     const Matrix<X> original=A;
     Matrix<X> wrong_rows(1u,3u,pr);
     Matrix<X> wrong_columns(2u,2u,pr);
     ARIADNE_TESTING_EXPECT_THROWS_CTX(AlgebraTesting::context(), std::runtime_error, AR=wrong_rows);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A, original);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A, original);
     ARIADNE_TESTING_EXPECT_THROWS_CTX(AlgebraTesting::context(), std::runtime_error, AR=wrong_columns);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A, original);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A, original);
 //    ARIADNE_TEST_EQUALS(AR,B);
 //    ARIADNE_TEST_EQUALS(ACR,B);
 
@@ -132,8 +132,8 @@ TestMatrix::test_data_access()
 {
     Matrix<FloatDP> A({{1,2,3},{4,5,6}},pr);
     const Matrix<FloatDP>& C=A;
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A.at(1u,2u), FloatDP(6,pr));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), C.at(1u,2u), FloatDP(6,pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A.at(1u,2u), FloatDP(6,pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), C.at(1u,2u), FloatDP(6,pr));
 
     // Keep the other index valid to exercise each part of the bounds check.
     ARIADNE_TESTING_EXPECT_THROWS_CTX(AlgebraTesting::context(), std::runtime_error, A.at(A.row_size(),0u));
@@ -149,11 +149,11 @@ TestMatrix::test_factorisations()
     {
         PivotMatrix P=PivotMatrix::identity(2u);
         PivotMatrix const& CP=P;
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), CP.size(), 2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), CP.pivot(0u), 0u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), CP.size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), CP.pivot(0u), 0u);
         std::ostringstream oss;
         oss << P;
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), oss.str().find("PivotMatrix(")==0u);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), oss.str().find("PivotMatrix(")==0u);
     }
 
     {
@@ -173,7 +173,7 @@ TestMatrix::test_factorisations()
 
     {
         Matrix<Rational> A({{Rational(1),Rational(2)},{Rational(3),Rational(4)}});
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), midpoint(A), A);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), midpoint(A), A);
     }
 
     // Set all diagonal elements to 0.
@@ -183,7 +183,7 @@ TestMatrix::test_factorisations()
         // LU test_factorisation
         auto A = FloatApproximationMatrix({{1.0_x,2.0_x,3.0_x},{4.0_x,5.0_x,6.0_x},{7.0_x,8.0_x,10.0_x}},pr);
         auto PLU = triangular_decomposition(A); auto P=std::get<0>(PLU); auto L=std::get<1>(PLU); auto U=std::get<2>(PLU);
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(L*U-P*A), 1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(L*U-P*A), <,  1e-12);
     }
 
     {
@@ -191,31 +191,31 @@ TestMatrix::test_factorisations()
         auto I = FloatApproximationMatrix::identity(3,dp);
         auto A = FloatApproximationMatrix({{1.0_x,2.0_x,3.0_x},{4.0_x,5.0_x,6.0_x},{7.0_x,8.0_x,10.0_x}},pr);
         auto QR = gram_schmidt_orthogonalisation(A); auto Q=std::get<0>(QR); auto R=std::get<1>(QR);
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(Q*R-A), 1e-12);
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(transpose(Q)*Q-I), 1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(Q*R-A), <,  1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(transpose(Q)*Q-I), <,  1e-12);
     }
 
     {
         // Orthogonal decomposition
         auto A1 = FloatApproximationMatrix({{1,7,4},{4,-2,5},{-5,-5,-3}},pr);
         auto OR1 = orthogonal_decomposition(A1); auto O1=std::get<0>(OR1); auto R1=std::get<1>(OR1);
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(O1*R1-A1), 1e-12);
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(set_diagonal_to_zero(transpose(O1)*O1)), 1e-12);
-        ARIADNE_TESTING_EXPECT_LESS_EQUAL_CTX(AlgebraTesting::context(), norm(R1), 1.0+1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(O1*R1-A1), <,  1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(set_diagonal_to_zero(transpose(O1)*O1)), <,  1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(R1), <=,  1.0+1e-12);
 
         auto A2 = FloatApproximationMatrix({{9,-5,6},{-7,-1,-1},{8,-5,5},{-5,5,2}},pr);
         auto OR2 = orthogonal_decomposition(A2); auto O2=std::get<0>(OR2); auto R2=std::get<1>(OR2);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A2.column_size(), O2.column_size());
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(O2*R2-A2), 1e-12);
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(set_diagonal_to_zero(transpose(O2)*O2)), 1e-12);
-        ARIADNE_TESTING_EXPECT_LESS_EQUAL_CTX(AlgebraTesting::context(), norm(R2), 1.0+1e-12);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A2.column_size(), O2.column_size());
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(O2*R2-A2), <,  1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(set_diagonal_to_zero(transpose(O2)*O2)), <,  1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(R2), <=,  1.0+1e-12);
 
         auto A3 = FloatApproximationMatrix({{-2,-7,1,5},{-6,-5,-7,7},{3,2,0,8}},dp);
         auto OR3 = orthogonal_decomposition(A3); auto O3=std::get<0>(OR3); auto R3=std::get<1>(OR3);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A3.row_size(), O3.column_size());
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(O3*R3-A3), 1e-12);
-        ARIADNE_TESTING_EXPECT_LESS_CTX(AlgebraTesting::context(), norm(set_diagonal_to_zero(transpose(O3)*O3)), 1e-12);
-        ARIADNE_TESTING_EXPECT_LESS_EQUAL_CTX(AlgebraTesting::context(), norm(R3), 1.0+1e-12);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A3.row_size(), O3.column_size());
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(O3*R3-A3), <,  1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(set_diagonal_to_zero(transpose(O3)*O3)), <,  1e-12);
+        ARIADNE_ALGEBRA_DECIDED_REL_CTX(AlgebraTesting::context(), norm(R3), <=,  1.0+1e-12);
     }
 
 }
@@ -290,7 +290,7 @@ TestMatrix::test_misc()
     Covector<FloatDPApproximation> empty_covector(0u,pr);
     std::ostringstream empty_covector_stream;
     empty_covector_stream << empty_covector;
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), empty_covector_stream.str(), String("{}"));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), empty_covector_stream.str(), String("{}"));
 #ifndef NDEBUG
     ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), empty_covector.zero_element());
 #endif
@@ -298,7 +298,7 @@ TestMatrix::test_misc()
     Covector<FloatDP> empty_float_covector(0u,dp);
     std::ostringstream empty_float_covector_stream;
     empty_float_covector_stream << empty_float_covector;
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), empty_float_covector_stream.str(), String("{}"));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), empty_float_covector_stream.str(), String("{}"));
 
     Array<FloatDPApproximation> Aary(InitializerList<Dbl>{-1.0,3.0,1.0, -1.0,1.0,2.0, 2.0,1.0,1.0},pr);
     Array<FloatDPBounds> iAary(InitializerList<ExactDouble>{-1.0_x,3.0_x, -1.0_x,1.0_x},pr);
@@ -316,18 +316,18 @@ TestMatrix::test_misc()
     {
         Matrix<FloatDPApproximation> R(2u,3u,pr);
         R.resize(3u,2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), R.row_size(), 3u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), R.column_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), R.row_size(), 3u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), R.column_size(), 2u);
         R.resize(4u,2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), R.row_size(), 4u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), R.column_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), R.row_size(), 4u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), R.column_size(), 2u);
     }
 
     {
         Matrix<FloatDPApproximation> empty_row(1u,0u,pr);
         std::ostringstream oss;
         oss << empty_row;
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !oss.str().empty());
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !oss.str().empty());
     }
 
     {
@@ -339,8 +339,8 @@ TestMatrix::test_misc()
     {
         auto rc=characteristics(Rational(0));
         Matrix<Rational> Z=Matrix<Rational>::zero(2u,3u,rc);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Z.row_size(), 2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Z.column_size(), 3u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Z.row_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Z.column_size(), 3u);
     }
 
     {
@@ -350,11 +350,11 @@ TestMatrix::test_misc()
 
     {
         Matrix<FloatDPBounds> I=Matrix<FloatDPBounds>::identity(2u,dp);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), I.row_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), I.row_size(), 2u);
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), Matrix<FloatDPBounds>::identity<DoublePrecision>(2u,dp));
         MultiplePrecision mp(128);
         Matrix<FloatMPBounds> J=Matrix<FloatMPBounds>::identity(2u,mp);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), J.column_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), J.column_size(), 2u);
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), Matrix<FloatMPBounds>::identity<MultiplePrecision>(2u,mp));
     }
 
@@ -362,7 +362,7 @@ TestMatrix::test_misc()
         Matrix<FloatDPBounds> A({{1.0_x},{2.0_x}},dp);
         MatrixColumn<Matrix<FloatDPBounds>> c(A,0u);
         Vector<FloatDPBounds> v=c;
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), v.size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), v.size(), 2u);
         Vector<FloatDPBounds> w({3.0_x,4.0_x},dp);
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c=w);
     }
@@ -372,7 +372,7 @@ TestMatrix::test_misc()
         Matrix<FloatMPApproximation> A({{1.0_x},{2.0_x}},mp);
         MatrixColumn<Matrix<FloatMPApproximation>> c(A,0u);
         Vector<FloatMPApproximation> v=c;
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), v.size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), v.size(), 2u);
         Vector<FloatMPApproximation> w({3.0_x,4.0_x},mp);
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c=w);
     }
@@ -382,7 +382,7 @@ TestMatrix::test_misc()
         Matrix<FloatMPBounds> A({{1.0_x},{2.0_x}},mp);
         MatrixColumn<Matrix<FloatMPBounds>> c(A,0u);
         Vector<FloatMPBounds> v=c;
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), v.size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), v.size(), 2u);
         Vector<FloatMPBounds> w({3.0_x,4.0_x},mp);
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c=w);
     }
@@ -462,8 +462,8 @@ TestMatrix::test_misc()
         Matrix<Rational> exact_a({{Rational(1),Rational(2)}});
         Matrix<Rational> exact_row_mismatch({{Rational(1),Rational(2)},{Rational(3),Rational(4)}});
         Matrix<Rational> exact_col_mismatch({{Rational(1)}});
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(exact_a==exact_row_mismatch));
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !(exact_a==exact_col_mismatch));
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !(exact_a==exact_row_mismatch));
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !(exact_a==exact_col_mismatch));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), static_cast<void>(exact_a==exact_a));
     }
 
@@ -476,37 +476,37 @@ TestMatrix::test_misc()
 
     for(SizeType i=0; i!=A2.row_size(); ++i) {
         for(SizeType j=0; j!=A2.column_size(); ++j) {
-            ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A2[i][j], A2.get(i,j));
-            ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A2[i][j], Aptr[i*A2.column_size()+j]);
+            ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A2[i][j], A2.get(i,j));
+            ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A2[i][j], Aptr[i*A2.column_size()+j]);
         }
     }
 
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A2, A3);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A2, A3);
 
     A1[0][0]=1.0;
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A1[0][0], 1.0);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A1[0][0], 1.0);
     A1.set(0,1,3.0);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A1[0][1], 3.0);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A1[0][1], 3.0);
 
     A1.at(1,0)=2.0;
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), A1[1][0], 2.0);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), A1[1][0], 2.0);
 
     A0=Matrix<FloatDPApproximation>::zero(2,3,dp);
     ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "A0", A0);
     A1=Matrix<FloatDPApproximation>::identity(4,dp);
     ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "A1", A1);
 
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), +FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), -FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr), FloatApproximationMatrix({{-1.0_x,-2.0_x},{-3.0_x,-4.0_x}},pr));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)+FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr), FloatApproximationMatrix({{6.0_x,9.0_x},{11.0_x,10.0_x}},pr));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)-FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr), FloatApproximationMatrix({{-4.0_x,-5.0_x},{-5.0_x,-2.0_x}},pr));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)*FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr), FloatApproximationMatrix({{21.0_x,19.0_x},{47.0_x,45.0_x}},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), +FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), -FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr), FloatApproximationMatrix({{-1.0_x,-2.0_x},{-3.0_x,-4.0_x}},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)+FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr), FloatApproximationMatrix({{6.0_x,9.0_x},{11.0_x,10.0_x}},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)-FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr), FloatApproximationMatrix({{-4.0_x,-5.0_x},{-5.0_x,-2.0_x}},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)*FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr), FloatApproximationMatrix({{21.0_x,19.0_x},{47.0_x,45.0_x}},pr));
 
     // Transpose operations
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix(transpose(FloatApproximationMatrix({{1.0_x,2.0_x,3.0_x},{4.0_x,5.0_x,6.0_x}},pr))), FloatApproximationMatrix({{1.0_x,4.0_x},{2.0_x,5.0_x},{3.0_x,6.0_x}},pr));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), transpose(FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr))*FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr), FloatApproximationMatrix({{1.0_x,3.0_x},{2.0_x,4.0_x}},pr)*FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)*transpose(FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr)), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)*FloatApproximationMatrix({{5.0_x,8.0_x},{7.0_x,6.0_x}},pr));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), transpose(FloatApproximationMatrix({{1.0_x,2.0_x,3.0_x},{4.0_x,5.0_x,6.0_x}},pr))*FloatDPApproximationVector({5.0_x,7.0_x},pr), FloatApproximationMatrix({{1.0_x,4.0_x},{2.0_x,5.0_x},{3.0_x,6.0_x}},pr)*FloatDPApproximationVector({5.0_x,7.0_x},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix(transpose(FloatApproximationMatrix({{1.0_x,2.0_x,3.0_x},{4.0_x,5.0_x,6.0_x}},pr))), FloatApproximationMatrix({{1.0_x,4.0_x},{2.0_x,5.0_x},{3.0_x,6.0_x}},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), transpose(FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr))*FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr), FloatApproximationMatrix({{1.0_x,3.0_x},{2.0_x,4.0_x}},pr)*FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)*transpose(FloatApproximationMatrix({{5.0_x,7.0_x},{8.0_x,6.0_x}},pr)), FloatApproximationMatrix({{1.0_x,2.0_x},{3.0_x,4.0_x}},pr)*FloatApproximationMatrix({{5.0_x,8.0_x},{7.0_x,6.0_x}},pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), transpose(FloatApproximationMatrix({{1.0_x,2.0_x,3.0_x},{4.0_x,5.0_x,6.0_x}},pr))*FloatDPApproximationVector({5.0_x,7.0_x},pr), FloatApproximationMatrix({{1.0_x,4.0_x},{2.0_x,5.0_x},{3.0_x,6.0_x}},pr)*FloatDPApproximationVector({5.0_x,7.0_x},pr));
 
 }
 

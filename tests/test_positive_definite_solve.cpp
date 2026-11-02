@@ -75,7 +75,7 @@ Void check_contains(const X& enclosure, const X& required,
     InclusionAudit audit("known solution, test line "+std::to_string(caller.line()));
     audit.add(enclosure,required,"expected exact value");
     const bool known_exact_value_enclosed=audit.valid();
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), known_exact_value_enclosed);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), known_exact_value_enclosed);
 }
 
 // Check the algebraic residual as an interval inclusion, not equality of
@@ -83,8 +83,8 @@ Void check_contains(const X& enclosure, const X& required,
 Void check_matrix_solution(const S& A, const Matrix<X>& B,
                            const Matrix<X>& enclosure)
 {
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), enclosure.row_size(), B.row_size());
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), enclosure.column_size(), B.column_size());
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), enclosure.row_size(), B.row_size());
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), enclosure.column_size(), B.column_size());
     const Matrix<X> dense_A=static_cast<Matrix<X>>(A);
     const Matrix<X> residual=dense_A*enclosure;
     InclusionAudit audit("SPD matrix residual: B contained in A*X");
@@ -95,13 +95,13 @@ Void check_matrix_solution(const S& A, const Matrix<X>& B,
         }
     }
     const bool matrix_residual_enclosed=audit.valid();
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), matrix_residual_enclosed);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), matrix_residual_enclosed);
 }
 
 Void check_vector_solution(const S& A, const Vector<X>& b,
                            const Vector<X>& enclosure)
 {
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), enclosure.size(), b.size());
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), enclosure.size(), b.size());
     const Matrix<X> dense_A=static_cast<Matrix<X>>(A);
     const Vector<X> residual=dense_A*enclosure;
     InclusionAudit audit("SPD vector residual: b contained in A*x");
@@ -109,15 +109,15 @@ Void check_vector_solution(const S& A, const Vector<X>& b,
         audit.add(residual[i],b[i],"row "+std::to_string(i));
     }
     const bool vector_residual_enclosed=audit.valid();
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), vector_residual_enclosed);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), vector_residual_enclosed);
 }
 
 Void check_saddle_point_residuals(
     const S& H, const Matrix<X>& A, const Vector<X>& f, const Vector<X>& g,
     const Vector<X>& x, const Vector<X>& second_block)
 {
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), x.size(), H.size());
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), second_block.size(), A.row_size());
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), x.size(), H.size());
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), second_block.size(), A.row_size());
     const Matrix<X> dense_H=static_cast<Matrix<X>>(H);
     const Vector<X> stationary=dense_H*x+transpose(A)*second_block;
     const Vector<X> coupled=A*x;
@@ -126,14 +126,14 @@ Void check_saddle_point_residuals(
         primary_audit.add(stationary[i],f[i],"row "+std::to_string(i));
     }
     const bool saddle_point_stationarity_enclosed=primary_audit.valid();
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), saddle_point_stationarity_enclosed);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), saddle_point_stationarity_enclosed);
 
     InclusionAudit equality_audit("saddle-point equalities: g contained in A*x");
     for(SizeType i=0; i!=g.size(); ++i) {
         equality_audit.add(coupled[i],g[i],"row "+std::to_string(i));
     }
     const bool saddle_point_equalities_enclosed=equality_audit.valid();
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), saddle_point_equalities_enclosed);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), saddle_point_equalities_enclosed);
 }
 
 // Check both primary and secondary variable components against a selected exact
@@ -144,13 +144,13 @@ Void check_known_saddle_point_solution(
     const Vector<X>& expected_secondary,
     const std::string& scenario)
 {
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), solution.secondary.has_value());
     if(!solution.primary.has_value() || !solution.secondary.has_value()) {
         return;
     }
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), solution.primary->size(), expected_primary.size());
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), solution.secondary->size(), expected_secondary.size());
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), solution.primary->size(), expected_primary.size());
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), solution.secondary->size(), expected_secondary.size());
     InclusionAudit audit("saddle-point known solution: "+scenario);
     for(SizeType i=0; i!=expected_primary.size(); ++i) {
         audit.add((*solution.primary)[i],expected_primary[i],
@@ -161,7 +161,7 @@ Void check_known_saddle_point_solution(
                   "secondary variable["+std::to_string(i)+"]");
     }
     const bool saddle_point_reference_solution_enclosed=audit.valid();
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), saddle_point_reference_solution_enclosed);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), saddle_point_reference_solution_enclosed);
 }
 
 Void test_validated_saddle_point_solve()
@@ -175,9 +175,9 @@ Void test_validated_saddle_point_solve()
     const Matrix<X> empty_coupling_rows(0u,0u,zero);
     const auto empty_solution=validated_saddle_point_solve(
         empty_leading_block,empty_coupling_rows,empty_vector,empty_vector);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), empty_solution.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), empty_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), empty_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_solution.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_solution.secondary.has_value());
     check_saddle_point_residuals(empty_leading_block,empty_coupling_rows,empty_vector,
                         empty_vector,empty_solution.primary.value(),empty_solution.secondary.value());
 
@@ -187,9 +187,9 @@ Void test_validated_saddle_point_solve()
     const Vector<X> uncoupled_rhs({X(6u,dp)});
     const auto uncoupled_solution=validated_saddle_point_solve(
         scalar_leading_block,no_coupling_rows,uncoupled_rhs,empty_vector);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncoupled_solution.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncoupled_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncoupled_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncoupled_solution.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncoupled_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncoupled_solution.secondary.has_value());
     check_known_saddle_point_solution(uncoupled_solution,Vector<X>({X(3u,dp)}),
                              empty_vector,"uncoupled SPD system");
     check_saddle_point_residuals(scalar_leading_block,no_coupling_rows,uncoupled_rhs,
@@ -207,9 +207,9 @@ Void test_validated_saddle_point_solve()
     const Vector<X> f(2u,zero);
     const Vector<X> g({X(2u,dp)});
     const auto single_solution=validated_saddle_point_solve(leading_block,coupling_rows,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), single_solution.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), single_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), single_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), single_solution.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), single_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), single_solution.secondary.has_value());
     check_known_saddle_point_solution(single_solution,
                              Vector<X>({X(1u,dp),X(1u,dp)}),
                              Vector<X>({X(-2,dp)}),"one equality");
@@ -227,9 +227,9 @@ Void test_validated_saddle_point_solve()
     const Vector<X> coupled_g({X(2u,dp)});
     const auto coupled_solution=validated_saddle_point_solve(
         coupled_leading_block,first_coordinate,coupled_f,coupled_g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), coupled_solution.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), coupled_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), coupled_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), coupled_solution.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), coupled_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), coupled_solution.secondary.has_value());
     check_known_saddle_point_solution(coupled_solution,
                              Vector<X>({X(2u,dp),X(3u,dp)}),
                              Vector<X>({X(4u,dp)}),"coupled leading block");
@@ -249,9 +249,9 @@ Void test_validated_saddle_point_solve()
     const Vector<X> f3({X(5u,dp),X(7u,dp),X(12u,dp)});
     const Vector<X> g2({X(4u,dp),X(5u,dp)});
     const auto multi_solution=validated_saddle_point_solve(h3,a2,f3,g2);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), multi_solution.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), multi_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), multi_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), multi_solution.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), multi_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), multi_solution.secondary.has_value());
     check_saddle_point_residuals(h3,a2,f3,g2,
                         multi_solution.primary.value(),multi_solution.secondary.value());
     check_known_saddle_point_solution(multi_solution,
@@ -268,9 +268,9 @@ Void test_validated_saddle_point_solve()
     const Vector<X> interval_g({X(1,2,dp)});
     const auto interval_solution=validated_saddle_point_solve(
         interval_leading_block,interval_coupling_rows,interval_f,interval_g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval_solution.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval_solution.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval_solution.secondary.has_value());
     check_saddle_point_residuals(interval_leading_block,interval_coupling_rows,interval_f,interval_g,
                         interval_solution.primary.value(),interval_solution.secondary.value());
     check_known_saddle_point_solution(interval_solution,
@@ -284,26 +284,26 @@ Void test_validated_saddle_point_solve()
     const Vector<X> scalar_rhs({X(1u,dp)});
     const auto negative_solution=validated_saddle_point_solve(
         negative,scalar_coupling_rows,scalar_rhs,scalar_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), negative_solution.status==ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !negative_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !negative_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), negative_solution.status==ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !negative_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !negative_solution.secondary.has_value());
 
     S uncertain_leading_block(1u,zero);
     uncertain_leading_block[0u][0u]=X(-1,1,dp);
     const auto uncertain_h_solution=validated_saddle_point_solve(
         uncertain_leading_block,scalar_coupling_rows,scalar_rhs,scalar_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncertain_h_solution.status==ValidatedSaddlePointStatus::INDETERMINATE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !uncertain_h_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !uncertain_h_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncertain_h_solution.status==ValidatedSaddlePointStatus::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !uncertain_h_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !uncertain_h_solution.secondary.has_value());
 
     // More coupling_row rows than unknowns is universally rank deficient.
     Matrix<X> overcoupled(2u,1u,X(1u,dp));
     const Vector<X> two_coupling_rows({X(1u,dp),X(1u,dp)});
     const auto dependent_solution=validated_saddle_point_solve(
         scalar_leading_block,overcoupled,scalar_rhs,two_coupling_rows);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), dependent_solution.status==ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !dependent_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !dependent_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), dependent_solution.status==ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !dependent_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !dependent_solution.secondary.has_value());
 
     // Repeated coupling_rows are dependent even without dimension excess.
     Matrix<X> repeated(2u,2u,zero);
@@ -311,9 +311,9 @@ Void test_validated_saddle_point_solve()
     repeated[1u][0u]=X(1u,dp);
     const auto repeated_solution=validated_saddle_point_solve(
         leading_block,repeated,f,two_coupling_rows);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), repeated_solution.status==ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !repeated_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !repeated_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), repeated_solution.status==ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !repeated_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !repeated_solution.secondary.has_value());
 
     // Interval dependence of the same A entry is unresolved. Never use
     // a midpoint-rank decision, and do not infer dependence from an
@@ -321,9 +321,9 @@ Void test_validated_saddle_point_solve()
     Matrix<X> ambiguous(1u,1u,X(-1,1,dp));
     const auto ambiguous_solution=validated_saddle_point_solve(
         scalar_leading_block,ambiguous,scalar_rhs,scalar_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), ambiguous_solution.status==ValidatedSaddlePointStatus::INDETERMINATE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !ambiguous_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !ambiguous_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), ambiguous_solution.status==ValidatedSaddlePointStatus::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !ambiguous_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !ambiguous_solution.secondary.has_value());
 
     Matrix<X> bad_columns(1u,2u,zero);
     const Vector<X> bad_f(2u,zero);
@@ -353,16 +353,16 @@ Void test_validated_saddle_point_matrix_rhs()
     G[0u][1u]=X(5u,dp);
 
     const auto multiple=validated_saddle_point_solve(H,A,F,G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), multiple.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), multiple.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), multiple.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), multiple.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), multiple.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), multiple.secondary.has_value());
     if(multiple.primary.has_value() && multiple.secondary.has_value()) {
         const Matrix<X>& X_solution=*multiple.primary;
         const Matrix<X>& Secondary=*multiple.secondary;
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), X_solution.row_size(), 2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), X_solution.column_size(), 2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Secondary.row_size(), 1u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Secondary.column_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), X_solution.row_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), X_solution.column_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Secondary.row_size(), 1u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Secondary.column_size(), 2u);
         const Matrix<X> residual=static_cast<Matrix<X>>(H)*X_solution+
                                  transpose(A)*Secondary;
         const Matrix<X> equality=A*X_solution;
@@ -384,7 +384,7 @@ Void test_validated_saddle_point_matrix_rhs()
         audit.add(X_solution[1u][1u],X(3u,dp),"primary[1,1]");
         audit.add(Secondary[0u][1u],X(4u,dp),"second_block[0,1]");
         const bool both_saddle_point_columns_enclosed=audit.valid();
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), both_saddle_point_columns_enclosed);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), both_saddle_point_columns_enclosed);
     }
 
     // A zero-column right-hand side must still certify the shared
@@ -392,14 +392,14 @@ Void test_validated_saddle_point_matrix_rhs()
     Matrix<X> empty_F(2u,0u,zero);
     Matrix<X> empty_G(1u,0u,zero);
     const auto no_rhs=validated_saddle_point_solve(H,A,empty_F,empty_G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), no_rhs.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), no_rhs.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), no_rhs.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_rhs.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_rhs.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_rhs.secondary.has_value());
     if(no_rhs.primary.has_value() && no_rhs.secondary.has_value()) {
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), no_rhs.primary->row_size(), 2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), no_rhs.primary->column_size(), 0u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), no_rhs.secondary->row_size(), 1u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), no_rhs.secondary->column_size(), 0u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), no_rhs.primary->row_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), no_rhs.primary->column_size(), 0u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), no_rhs.secondary->row_size(), 1u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), no_rhs.secondary->column_size(), 0u);
     }
 
     const Matrix<X> wrong_F(1u,2u,zero);
@@ -416,27 +416,27 @@ Void test_validated_saddle_point_matrix_rhs()
     nonspd[0u][0u]=X(-1,dp);
     nonspd[1u][1u]=X(1u,dp);
     const auto rejected_h=validated_saddle_point_solve(nonspd,A,F,G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), rejected_h.status==ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !rejected_h.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !rejected_h.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), rejected_h.status==ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !rejected_h.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !rejected_h.secondary.has_value());
 
     S uncertain(2u,zero);
     uncertain[0u][0u]=X(-1,1,dp);
     uncertain[1u][1u]=X(1u,dp);
     const auto rejected_uncertain=validated_saddle_point_solve(uncertain,A,F,G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), rejected_uncertain.status==ValidatedSaddlePointStatus::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), rejected_uncertain.status==ValidatedSaddlePointStatus::INDETERMINATE);
 
     Matrix<X> dependent_A(2u,2u,zero);
     dependent_A[0u][0u]=X(1u,dp);
     dependent_A[1u][0u]=X(1u,dp);
     const Matrix<X> G2(2u,2u,zero);
     const auto rejected_rank=validated_saddle_point_solve(H,dependent_A,F,G2);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), rejected_rank.status==ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), rejected_rank.status==ValidatedSaddlePointStatus::DEPENDENT_COUPLING_ROWS);
 
     Matrix<X> ambiguous_A(1u,2u,zero);
     ambiguous_A[0u][0u]=X(-1,1,dp);
     const auto rejected_ambiguous=validated_saddle_point_solve(H,ambiguous_A,F,G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), rejected_ambiguous.status==ValidatedSaddlePointStatus::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), rejected_ambiguous.status==ValidatedSaddlePointStatus::INDETERMINATE);
 
     // Zero-dimensional operator with multiple columns.
     S h0(0u,zero);
@@ -444,24 +444,24 @@ Void test_validated_saddle_point_matrix_rhs()
     const Matrix<X> f0(0u,2u,zero);
     const Matrix<X> g0(0u,2u,zero);
     const auto zero_system=validated_saddle_point_solve(h0,a0,f0,g0);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), zero_system.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), zero_system.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), zero_system.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), zero_system.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), zero_system.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), zero_system.secondary.has_value());
     if(zero_system.primary.has_value() && zero_system.secondary.has_value()) {
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), zero_system.primary->column_size(), 2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), zero_system.secondary->column_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), zero_system.primary->column_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), zero_system.secondary->column_size(), 2u);
     }
 
     // Uncoupled multi-RHS: the same SPD solve is used with m=0.
     const Matrix<X> no_A(0u,2u,zero);
     const Matrix<X> no_G(0u,2u,zero);
     const auto uncoupled=validated_saddle_point_solve(H,no_A,F,no_G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncoupled.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncoupled.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncoupled.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncoupled.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncoupled.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncoupled.secondary.has_value());
     if(uncoupled.primary.has_value() && uncoupled.secondary.has_value()) {
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), uncoupled.primary->column_size(), 2u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), uncoupled.secondary->row_size(), 0u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), uncoupled.primary->column_size(), 2u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), uncoupled.secondary->row_size(), 0u);
     }
 
     // Interval family with a certified unique solution for each member.
@@ -480,9 +480,9 @@ Void test_validated_saddle_point_matrix_rhs()
     interval_G[0u][1u]=X(1,2,dp);
     const auto interval_system=validated_saddle_point_solve(
         interval_H,interval_A,interval_F,interval_G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval_system.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval_system.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval_system.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval_system.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval_system.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval_system.secondary.has_value());
     if(interval_system.primary.has_value() && interval_system.secondary.has_value()) {
         InclusionAudit audit("saddle-point interval family, two right-hand sides");
         const Matrix<X> exact_X=static_cast<Matrix<X>>(interval_H)*(*interval_system.primary)+
@@ -499,7 +499,7 @@ Void test_validated_saddle_point_matrix_rhs()
                       "equality[0,"+std::to_string(col)+"]");
         }
         const bool family_rhs_enclosed=audit.valid();
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), family_rhs_enclosed);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), family_rhs_enclosed);
     }
 }
 
@@ -521,9 +521,9 @@ Void test_saddle_point_augmented_leading_block()
     const Vector<X> f({X(5u,dp),X(6u,dp)});
     const Vector<X> g({X(2u,dp)});
     const auto coupled=validated_saddle_point_solve(semidefinite,A,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), coupled.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), coupled.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), coupled.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), coupled.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), coupled.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), coupled.secondary.has_value());
     if(coupled.primary.has_value() && coupled.secondary.has_value()) {
         check_known_saddle_point_solution(coupled,
                                  Vector<X>({X(2u,dp),X(3u,dp)}),
@@ -543,9 +543,9 @@ Void test_saddle_point_augmented_leading_block()
     const Vector<X> g_scalar({X(2u,dp)});
     const auto uncertain_coupled=validated_saddle_point_solve(
         uncertain,A_scalar,f_scalar,g_scalar);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncertain_coupled.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncertain_coupled.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncertain_coupled.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncertain_coupled.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncertain_coupled.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncertain_coupled.secondary.has_value());
     if(uncertain_coupled.primary.has_value()
        && uncertain_coupled.secondary.has_value()) {
         check_known_saddle_point_solution(uncertain_coupled,
@@ -565,9 +565,9 @@ Void test_saddle_point_augmented_leading_block()
     const Vector<X> negative_f({X(3u,dp)});
     const auto negative_coupled=validated_saddle_point_solve(
         negative_scalar,A_scalar,negative_f,g_scalar);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), negative_coupled.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), negative_coupled.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), negative_coupled.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), negative_coupled.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), negative_coupled.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), negative_coupled.secondary.has_value());
     if(negative_coupled.primary.has_value()
        && negative_coupled.secondary.has_value()) {
         check_known_saddle_point_solution(negative_coupled,
@@ -597,9 +597,9 @@ Void test_saddle_point_augmented_leading_block()
     G[1u][1u]=X(6u,dp);
     const auto zero_full_rank=validated_saddle_point_solve(
         zero_leading_block,identity,F,G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), zero_full_rank.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), zero_full_rank.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), zero_full_rank.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), zero_full_rank.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), zero_full_rank.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), zero_full_rank.secondary.has_value());
     if(zero_full_rank.primary.has_value()
        && zero_full_rank.secondary.has_value()) {
         InclusionAudit audit("zero leading block, full-rank coupling_rows, two RHS");
@@ -621,7 +621,7 @@ Void test_saddle_point_augmented_leading_block()
             }
         }
         const bool coupled_zero_leading_block_enclosed=audit.valid();
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), coupled_zero_leading_block_enclosed);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), coupled_zero_leading_block_enclosed);
     }
 
     // A zero-curvature direction not coupled by A cannot be
@@ -630,9 +630,9 @@ Void test_saddle_point_augmented_leading_block()
     missing_direction[0u][1u]=X(1u,dp);
     const auto incomplete=validated_saddle_point_solve(
         semidefinite,missing_direction,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), incomplete.status==ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !incomplete.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !incomplete.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), incomplete.status==ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !incomplete.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !incomplete.secondary.has_value());
 
     // No coupling_rows: a semidefinite leading block remains uncertifiable by
     // either direct or augmented SPD tests.
@@ -640,9 +640,9 @@ Void test_saddle_point_augmented_leading_block()
     const Vector<X> empty_g(0u,zero);
     const auto uncoupled=validated_saddle_point_solve(
         semidefinite,no_coupling_rows,f,empty_g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncoupled.status==ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !uncoupled.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !uncoupled.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncoupled.status==ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !uncoupled.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !uncoupled.secondary.has_value());
 }
 
 
@@ -660,9 +660,9 @@ Void test_generalized_saddle_point()
     const Vector<X> f(2u,zero);
     const Vector<X> g({X(6u,dp)});
     const auto one=validated_saddle_point_solve(H,A,C,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), one.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), one.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), one.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), one.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), one.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), one.secondary.has_value());
     if(one.primary.has_value() && one.secondary.has_value()) {
         check_known_saddle_point_solution(one,Vector<X>({X(1u,dp),X(1u,dp)}),
                                           Vector<X>({X(-2,dp)}),"nonzero lower block");
@@ -675,7 +675,7 @@ Void test_generalized_saddle_point()
         }
         audit.add(lower[0u],g[0u],"lower[0]");
         const bool generalized_vector_residual_enclosed=audit.valid();
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), generalized_vector_residual_enclosed);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), generalized_vector_residual_enclosed);
     }
 
     Matrix<X> F(2u,2u,zero);
@@ -685,9 +685,9 @@ Void test_generalized_saddle_point()
     G[0u][0u]=X(6u,dp);
     G[0u][1u]=X(-3,dp);
     const auto many=validated_saddle_point_solve(H,A,C,F,G);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), many.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), many.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), many.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), many.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), many.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), many.secondary.has_value());
     if(many.primary.has_value() && many.secondary.has_value()) {
         const Matrix<X> upper=static_cast<Matrix<X>>(H)*(*many.primary)+
                               transpose(A)*(*many.secondary);
@@ -709,7 +709,7 @@ Void test_generalized_saddle_point()
         audit.add((*many.primary)[1u][1u],X(3u,dp),"x11");
         audit.add((*many.secondary)[0u][1u],X(4u,dp),"y01");
         const bool generalized_matrix_residual_enclosed=audit.valid();
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), generalized_matrix_residual_enclosed);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), generalized_matrix_residual_enclosed);
     }
 
     // Dependent coupling rows are allowed when C regularizes the lower block.
@@ -722,7 +722,7 @@ Void test_generalized_saddle_point()
     const auto dependent=validated_saddle_point_solve(
         scalar,repeated,identity,Vector<X>({X(15u,dp)}),
         Vector<X>({X(-1,dp),X(-2,dp)}));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), dependent.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), dependent.status==ValidatedSaddlePointStatus::SOLVED);
     if(dependent.primary.has_value() && dependent.secondary.has_value()) {
         check_known_saddle_point_solution(dependent,
             Vector<X>({X(3u,dp)}),Vector<X>({X(4u,dp),X(5u,dp)}),
@@ -733,7 +733,7 @@ Void test_generalized_saddle_point()
     const auto decoupled=validated_saddle_point_solve(
         scalar,no_coupling,identity,Vector<X>({X(6u,dp)}),
         Vector<X>({X(-4,dp),X(-5,dp)}));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), decoupled.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), decoupled.status==ValidatedSaddlePointStatus::SOLVED);
     if(decoupled.primary.has_value() && decoupled.secondary.has_value()) {
         check_known_saddle_point_solution(decoupled,
             Vector<X>({X(3u,dp)}),Vector<X>({X(4u,dp),X(5u,dp)}),
@@ -747,7 +747,7 @@ Void test_generalized_saddle_point()
     const auto indefinite=validated_saddle_point_solve(
         scalar,strong,negative_C,Vector<X>({X(6u,dp)}),
         Vector<X>({X(4u,dp)}));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), indefinite.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), indefinite.status==ValidatedSaddlePointStatus::SOLVED);
     if(indefinite.primary.has_value() && indefinite.secondary.has_value()) {
         check_known_saddle_point_solution(indefinite,
             Vector<X>({X(1u,dp)}),Vector<X>({X(2u,dp)}),
@@ -760,7 +760,7 @@ Void test_generalized_saddle_point()
     const auto interval=validated_saddle_point_solve(
         scalar,Matrix<X>(1u,1u,X(1u,dp)),interval_C,
         Vector<X>({X(4u,dp)}),Vector<X>({X(-3,-1,dp)}));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval.status==ValidatedSaddlePointStatus::SOLVED);
     if(interval.primary.has_value() && interval.secondary.has_value()) {
         check_known_saddle_point_solution(interval,
             Vector<X>({X(1u,dp)}),Vector<X>({X(2u,dp)}),
@@ -774,7 +774,7 @@ Void test_generalized_saddle_point()
     const auto augmented=validated_saddle_point_solve(
         zero_H,coupling,zero_C,Vector<X>({X(4u,dp)}),
         Vector<X>({X(2u,dp)}));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), augmented.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), augmented.status==ValidatedSaddlePointStatus::SOLVED);
     if(augmented.primary.has_value() && augmented.secondary.has_value()) {
         check_known_saddle_point_solution(augmented,
             Vector<X>({X(2u,dp)}),Vector<X>({X(4u,dp)}),
@@ -788,7 +788,7 @@ Void test_generalized_saddle_point()
     const auto no_leading=validated_saddle_point_solve(
         empty_H,empty_A,lower_only,Vector<X>(0u,zero),
         Vector<X>({X(-4,dp)}));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), no_leading.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_leading.status==ValidatedSaddlePointStatus::SOLVED);
     if(no_leading.primary.has_value() && no_leading.secondary.has_value()) {
         check_known_saddle_point_solution(no_leading,
             Vector<X>(0u,zero),Vector<X>({X(2u,dp)}),
@@ -797,12 +797,12 @@ Void test_generalized_saddle_point()
 
     const auto no_rhs=validated_saddle_point_solve(
         H,A,C,Matrix<X>(2u,0u,zero),Matrix<X>(1u,0u,zero));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), no_rhs.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), no_rhs.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), no_rhs.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_rhs.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_rhs.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_rhs.secondary.has_value());
     if(no_rhs.primary.has_value() && no_rhs.secondary.has_value()) {
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), no_rhs.primary->column_size(), 0u);
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), no_rhs.secondary->column_size(), 0u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), no_rhs.primary->column_size(), 0u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), no_rhs.secondary->column_size(), 0u);
     }
 }
 
@@ -832,13 +832,13 @@ Void test_generalized_saddle_point_failures()
     S negative(1u,zero);
     negative[0u][0u]=X(-1,dp);
     const auto no_augmentation=validated_saddle_point_solve(negative,A,C,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), no_augmentation.status==
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_augmentation.status==
         ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
 
     S uncertain(1u,zero);
     uncertain[0u][0u]=X(-1,1,dp);
     const auto unknown=validated_saddle_point_solve(uncertain,A,C,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), unknown.status==ValidatedSaddlePointStatus::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), unknown.status==ValidatedSaddlePointStatus::INDETERMINATE);
 
     // An indefinite Schur complement is inconclusive even if A has dependent rows.
     Matrix<X> dependent(2u,1u,X(1u,dp));
@@ -846,7 +846,7 @@ Void test_generalized_saddle_point_failures()
     negative_C[0u][0u]=X(-1,dp);
     const auto schur_failure=validated_saddle_point_solve(
         H,dependent,negative_C,F,Matrix<X>(2u,1u,zero));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), schur_failure.status==ValidatedSaddlePointStatus::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), schur_failure.status==ValidatedSaddlePointStatus::INDETERMINATE);
 
     // The zero lower endpoint does NOT make C identically zero:
     // [0,1] exercises the upper-endpoint comparison in the structural
@@ -855,9 +855,9 @@ Void test_generalized_saddle_point_failures()
     one_sided_C[0u][0u]=X(0,1,dp);
     const auto one_sided_solution=validated_saddle_point_solve(
         H,A,one_sided_C,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), one_sided_solution.status==ValidatedSaddlePointStatus::SOLVED);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), one_sided_solution.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), one_sided_solution.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), one_sided_solution.status==ValidatedSaddlePointStatus::SOLVED);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), one_sided_solution.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), one_sided_solution.secondary.has_value());
     if(one_sided_solution.primary.has_value() && one_sided_solution.secondary.has_value()) {
         check_known_saddle_point_solution(
             one_sided_solution,Vector<X>({X(1u,dp)}),
@@ -870,24 +870,24 @@ Void test_generalized_saddle_point_failures()
         audit.add(upper[0u],f[0u],"upper[0]");
         audit.add(lower[0u],g[0u],"lower[0]");
         const bool one_sided_interval_residual_enclosed=audit.valid();
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), one_sided_interval_residual_enclosed);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), one_sided_interval_residual_enclosed);
     }
 
     // If H cannot be certified SPD, a C=[0,1] interval still
     // forbids the C=0 augmentation: some represented C are nonzero.
     const auto one_sided_rejected=validated_saddle_point_solve(
         negative,A,one_sided_C,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), one_sided_rejected.status==
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), one_sided_rejected.status==
         ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !one_sided_rejected.primary.has_value());
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !one_sided_rejected.secondary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !one_sided_rejected.primary.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !one_sided_rejected.secondary.has_value());
 
     // A zero-containing interval is not a structural zero: no fallback.
     S uncertain_C(1u,zero);
     uncertain_C[0u][0u]=X(-1,1,dp);
     const auto not_structurally_zero=validated_saddle_point_solve(
         negative,A,uncertain_C,f,g);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), not_structurally_zero.status==
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), not_structurally_zero.status==
         ValidatedSaddlePointStatus::LEADING_BLOCK_NOT_POSITIVE_DEFINITE);
 }
 
@@ -897,36 +897,36 @@ Void test_empty_and_zero_rhs()
     const S empty(0u,zero);
     const Matrix<X> no_rhs(0u,0u,zero);
     const auto empty_matrix_solution=validated_positive_definite_solve(empty,no_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), empty_matrix_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), empty_matrix_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_matrix_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_matrix_solution.solution.has_value());
     check_matrix_solution(empty,no_rhs,*empty_matrix_solution.solution);
 
     // Empty equation system with two separate empty right-hand sides.
     const Matrix<X> two_empty_rhs(0u,2u,zero);
     const auto two_empty_solution=validated_positive_definite_solve(empty,two_empty_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), two_empty_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), two_empty_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), two_empty_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), two_empty_solution.solution.has_value());
     check_matrix_solution(empty,two_empty_rhs,*two_empty_solution.solution);
 
     const Vector<X> empty_rhs(0u,zero);
     const auto empty_vector_solution=validated_positive_definite_solve(empty,empty_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), empty_vector_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), empty_vector_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_vector_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_vector_solution.solution.has_value());
     check_vector_solution(empty,empty_rhs,*empty_vector_solution.solution);
 
     const S positive(2u,X(0u,dp));
     // A non-SPD matrix remains non-SPD even when there are no right-hand sides.
     const Matrix<X> absent_rhs(2u,0u,zero);
     const auto absent_rhs_solution=validated_positive_definite_solve(positive,absent_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), absent_rhs_solution.status==Status::NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !absent_rhs_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), absent_rhs_solution.status==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !absent_rhs_solution.solution.has_value());
 
     S identity(2u,zero);
     identity[0u][0u]=X(1u,dp);
     identity[1u][1u]=X(1u,dp);
     const auto zero_column_solution=validated_positive_definite_solve(identity,absent_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), zero_column_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), zero_column_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), zero_column_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), zero_column_solution.solution.has_value());
     check_matrix_solution(identity,absent_rhs,*zero_column_solution.solution);
 }
 
@@ -938,8 +938,8 @@ Void test_scalar_and_dense_spd()
     scalar[0u][0u]=X(4u,dp);
     const Vector<X> b1({X(8u,dp)});
     const auto scalar_solution=validated_positive_definite_solve(scalar,b1);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), scalar_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), scalar_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), scalar_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), scalar_solution.solution.has_value());
     check_contains((*scalar_solution.solution)[0u],X(2u,dp));
     check_vector_solution(scalar,b1,*scalar_solution.solution);
 
@@ -948,8 +948,8 @@ Void test_scalar_and_dense_spd()
     irrational[0u][0u]=X(2u,dp);
     const Vector<X> b2({X(2u,dp)});
     const auto irrational_solution=validated_positive_definite_solve(irrational,b2);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), irrational_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), irrational_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), irrational_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), irrational_solution.solution.has_value());
     check_contains((*irrational_solution.solution)[0u],X(1u,dp));
     check_vector_solution(irrational,b2,*irrational_solution.solution);
 
@@ -965,8 +965,8 @@ Void test_scalar_and_dense_spd()
     right_hand_sides[1u][1u]=X(2u,dp);
 
     const auto matrix_solution=validated_positive_definite_solve(matrix,right_hand_sides);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), matrix_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), matrix_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), matrix_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), matrix_solution.solution.has_value());
     check_matrix_solution(matrix,right_hand_sides,*matrix_solution.solution);
     check_contains((*matrix_solution.solution)[0u][0u],X(1u,dp));
     check_contains((*matrix_solution.solution)[1u][0u],X(1u,dp));
@@ -975,8 +975,8 @@ Void test_scalar_and_dense_spd()
 
     const Vector<X> b({X(3u,dp),X(3u,dp)});
     const auto vector_solution=validated_positive_definite_solve(matrix,b);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), vector_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), vector_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), vector_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), vector_solution.solution.has_value());
     check_vector_solution(matrix,b,*vector_solution.solution);
     check_contains((*vector_solution.solution)[0u],X(1u,dp));
     check_contains((*vector_solution.solution)[1u],X(1u,dp));
@@ -995,8 +995,8 @@ Void test_three_by_three_and_interval_family()
 
     const Vector<X> rhs({X(9u,dp),X(12u,dp),X(15u,dp)});
     const auto dense_solution=validated_positive_definite_solve(matrix,rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), dense_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), dense_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), dense_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), dense_solution.solution.has_value());
     check_vector_solution(matrix,rhs,*dense_solution.solution);
     for(SizeType i=0; i!=3u; ++i) {
         check_contains((*dense_solution.solution)[i],X(static_cast<Int>(i+1u),dp));
@@ -1011,8 +1011,8 @@ Void test_three_by_three_and_interval_family()
     interval_rhs[1u]=X(8,10,dp);
 
     const auto interval_solution=validated_positive_definite_solve(interval_matrix,interval_rhs);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval_solution.status==Status::POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), interval_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval_solution.status==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), interval_solution.solution.has_value());
     check_vector_solution(interval_matrix,interval_rhs,*interval_solution.solution);
 
     // Choose one exact member of the family: A=diag(4,4), b=(4,8).
@@ -1027,23 +1027,23 @@ Void test_failure_and_indeterminate()
     negative[0u][0u]=X(-1,dp);
     const Vector<X> b1({X(1u,dp)});
     const auto negative_vector_solution=validated_positive_definite_solve(negative,b1);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), negative_vector_solution.status==Status::NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !negative_vector_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), negative_vector_solution.status==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !negative_vector_solution.solution.has_value());
 
     const Matrix<X> B1(1u,1u,X(1u,dp));
     const auto negative_matrix_solution=validated_positive_definite_solve(negative,B1);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), negative_matrix_solution.status==Status::NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !negative_matrix_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), negative_matrix_solution.status==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !negative_matrix_solution.solution.has_value());
 
     S uncertain(1u,zero);
     uncertain[0u][0u]=X(-1,1,dp);
     const auto uncertain_vector_solution=validated_positive_definite_solve(uncertain,b1);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncertain_vector_solution.status==Status::INDETERMINATE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !uncertain_vector_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncertain_vector_solution.status==Status::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !uncertain_vector_solution.solution.has_value());
 
     const auto uncertain_matrix_solution=validated_positive_definite_solve(uncertain,B1);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), uncertain_matrix_solution.status==Status::INDETERMINATE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !uncertain_matrix_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), uncertain_matrix_solution.status==Status::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !uncertain_matrix_solution.solution.has_value());
 
     // A singular positive-semidefinite matrix cannot use an SPD solve.
     S semidefinite(2u,zero);
@@ -1052,8 +1052,8 @@ Void test_failure_and_indeterminate()
     semidefinite[1u][1u]=X(1u,dp);
     const Vector<X> b2({X(2u,dp),X(2u,dp)});
     const auto semidefinite_solution=validated_positive_definite_solve(semidefinite,b2);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), semidefinite_solution.status==Status::NOT_POSITIVE_DEFINITE);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !semidefinite_solution.solution.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), semidefinite_solution.status==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !semidefinite_solution.solution.has_value());
 
     const Matrix<X> bad_matrix_rhs(2u,1u,zero);
     const Vector<X> bad_vector_rhs(2u,zero);

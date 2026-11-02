@@ -51,8 +51,8 @@ Void test_threshold_sweeper()
     ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)ThresholdSweeper<FloatDP>(dp,FloatDP(-1,dp)));
 
     MultiIndex constant_index({0u});
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), sweeper_dp.discard(constant_index,FloatDP(0u,dp)));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), !sweeper_dp.discard(constant_index,FloatDP(1u,dp)));
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), sweeper_dp.discard(constant_index,FloatDP(0u,dp)));
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !sweeper_dp.discard(constant_index,FloatDP(1u,dp)));
 
     SweeperInterface<FloatDP>* cloned_interface=sweeper_dp._copy();
     ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "cloned_interface->precision()", cloned_interface->precision());
@@ -77,8 +77,8 @@ Void test_sweeper_handle()
     FloatDPError sweep_error(0u,dp);
 
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), threshold_copy.sweep(sweep_terms,sweep_error));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sweep_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sweep_terms.front().coefficient(), FloatDP(1u,dp));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), sweep_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), sweep_terms.front().coefficient(), FloatDP(1u,dp));
 }
 
 Void test_sweeper_overloads()
@@ -91,8 +91,8 @@ Void test_sweeper_overloads()
     float_terms.append(MultiIndex({1u}),FloatDP(1.0_x,dp));
     FloatDPError float_error(0u,dp);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), threshold_interface.sweep(float_terms,float_error));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), float_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), float_terms.front().index(), MultiIndex({1u}));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), float_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), float_terms.front().index(), MultiIndex({1u}));
 
     Expansion<MultiIndex,FloatDPBounds> bounds_terms(1u,dp);
     bounds_terms.append(MultiIndex({0u}),FloatDPBounds(0.125_x,dp));
@@ -103,23 +103,23 @@ Void test_sweeper_overloads()
 
     FloatDPError bounds_error(0u,dp);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), threshold_interface.sweep(bounds_terms,bounds_error));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), bounds_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), bounds_terms.front().index(), MultiIndex({1u}));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), bounds_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), bounds_terms.front().index(), MultiIndex({1u}));
 
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), threshold_interface.sweep(approximation_terms));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), approximation_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), approximation_terms.front().index(), MultiIndex({1u}));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), approximation_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), approximation_terms.front().index(), MultiIndex({1u}));
 
     FloatDPError upper_error(0u,dp);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), threshold_interface.sweep(upper_terms,upper_error));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), upper_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), upper_terms.front().index(), MultiIndex({1u}));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), upper_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), upper_terms.front().index(), MultiIndex({1u}));
 }
 
 Void test_relative_sweeper()
 {
     RelativeThresholdSweeper<FloatDP> relative_sweeper(dp,FloatDP(0.25_x,dp));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), relative_sweeper.relative_sweep_threshold(), FloatDP(0.25_x,dp));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), relative_sweeper.relative_sweep_threshold(), FloatDP(0.25_x,dp));
     ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)RelativeThresholdSweeper<FloatDP>(dp,FloatDP(0u,dp)));
     ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "relative_sweeper", relative_sweeper);
 
@@ -135,8 +135,8 @@ Void test_relative_sweeper()
     float_terms.append(MultiIndex({1u}),FloatDP(1.0_x,dp));
     FloatDPError float_error(0u,dp);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), relative_interface.sweep(float_terms,float_error));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), float_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), float_terms.front().index(), MultiIndex({1u}));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), float_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), float_terms.front().index(), MultiIndex({1u}));
 
     Expansion<MultiIndex,FloatDPBounds> bounds_source(1u,dp);
     bounds_source.append(MultiIndex({0u}),FloatDPBounds(0.125_x,dp));
@@ -148,17 +148,17 @@ Void test_relative_sweeper()
 
     FloatDPError bounds_error(0u,dp);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), relative_interface.sweep(bounds_terms,bounds_error));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), bounds_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), bounds_terms.front().index(), MultiIndex({1u}));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), bounds_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), bounds_terms.front().index(), MultiIndex({1u}));
 
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), relative_interface.sweep(approximation_terms));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), approximation_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), approximation_terms.front().index(), MultiIndex({1u}));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), approximation_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), approximation_terms.front().index(), MultiIndex({1u}));
 
     FloatDPError upper_error(0u,dp);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), relative_interface.sweep(upper_terms,upper_error));
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), upper_terms.size(), 1u);
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), upper_terms.front().index(), MultiIndex({1u}));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), upper_terms.size(), 1u);
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), upper_terms.front().index(), MultiIndex({1u}));
 }
 
 } // namespace

@@ -37,27 +37,27 @@ using Status=PositiveDefinitenessStatus;
 Void test_empty_and_scalar_matrices()
 {
     S empty(0u,X(0u,dp));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(empty)==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(empty)==Status::POSITIVE_DEFINITE);
 
     S positive(1u,X(0u,dp));
     positive[0u][0u]=X(1u,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(positive)==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(positive)==Status::POSITIVE_DEFINITE);
 
     S negative(1u,X(0u,dp));
     negative[0u][0u]=X(-2,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(negative)==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(negative)==Status::NOT_POSITIVE_DEFINITE);
 
     S singular(1u,X(0u,dp));
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(singular)==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(singular)==Status::NOT_POSITIVE_DEFINITE);
 
     S uncertain(1u,X(0u,dp));
     uncertain[0u][0u]=X(-1,1,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(uncertain)==Status::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(uncertain)==Status::INDETERMINATE);
 
     // A nonnegative interval containing zero does not prove strict positivity.
     S boundary(1u,X(0u,dp));
     boundary[0u][0u]=X(0,2,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(boundary)==Status::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(boundary)==Status::INDETERMINATE);
 }
 
 Void test_validated_schur_complements()
@@ -67,40 +67,40 @@ Void test_validated_schur_complements()
     positive[0u][0u]=X(2u,dp);
     positive[0u][1u]=X(1u,dp);
     positive[1u][1u]=X(2u,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(positive)==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(positive)==Status::POSITIVE_DEFINITE);
 
     // A negative second Schur pivot proves failure even with positive diagonal.
     S indefinite(2u,X(0u,dp));
     indefinite[0u][0u]=X(1u,dp);
     indefinite[0u][1u]=X(2u,dp);
     indefinite[1u][1u]=X(1u,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(indefinite)==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(indefinite)==Status::NOT_POSITIVE_DEFINITE);
 
     // A rank-one matrix has a zero exact second Schur pivot.
     S semidefinite(2u,X(0u,dp));
     semidefinite[0u][0u]=X(1u,dp);
     semidefinite[0u][1u]=X(1u,dp);
     semidefinite[1u][1u]=X(1u,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(semidefinite)==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(semidefinite)==Status::NOT_POSITIVE_DEFINITE);
 
     // Uncertainty in the last Schur pivot cannot be collapsed to one sign.
     S uncertain(2u,X(0u,dp));
     uncertain[0u][0u]=X(1u,dp);
     uncertain[0u][1u]=X(1u,dp);
     uncertain[1u][1u]=X(0,2,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(uncertain)==Status::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(uncertain)==Status::INDETERMINATE);
 
     // A negative first pivot rejects positive definiteness before elimination.
     S negative(2u,X(0u,dp));
     negative[0u][0u]=X(-1,dp);
     negative[1u][1u]=X(2u,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(negative)==Status::NOT_POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(negative)==Status::NOT_POSITIVE_DEFINITE);
 
     // Uncertainty in an earlier pivot must not be bypassed using later rows.
     S uncertain_first(2u,X(0u,dp));
     uncertain_first[0u][0u]=X(-1,1,dp);
     uncertain_first[1u][1u]=X(3u,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(uncertain_first)==Status::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(uncertain_first)==Status::INDETERMINATE);
 }
 
 Void test_interval_matrix_family()
@@ -112,7 +112,7 @@ Void test_interval_matrix_family()
     positive_family[0u][1u]=X(-1,1,dp);
     positive_family[0u][2u]=X(-1,1,dp);
     positive_family[1u][2u]=X(-1,1,dp);
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(positive_family)==Status::POSITIVE_DEFINITE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(positive_family)==Status::POSITIVE_DEFINITE);
 
     S uncertain_family(2u,X(0u,dp));
     uncertain_family[0u][0u]=X(1u,dp);
@@ -121,7 +121,7 @@ Void test_interval_matrix_family()
     // The family includes a singular member; interval evaluation may
     // either certify non-positive-definiteness only when universal or
     // return indeterminate. It must not certify positive definiteness.
-    ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), validated_positive_definiteness(uncertain_family)==Status::INDETERMINATE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated_positive_definiteness(uncertain_family)==Status::INDETERMINATE);
 }
 
 } // namespace
