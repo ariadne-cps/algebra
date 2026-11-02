@@ -34,7 +34,7 @@
 #include <optional>
 
 #include "utility/metaprogramming.hpp"
-#include "macro/general.hpp"
+#include "utility/macros.hpp"
 // matrix.hpp declares midpoint<Rational>, which requires Rational to be complete.
 #include "numeric/numeric.hpp"
 #include "vector.hpp"

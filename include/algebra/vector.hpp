@@ -31,7 +31,7 @@
 
 #define SIMPLE_VECTOR_OPERATORS
 
-#include "macro/general.hpp"
+#include "utility/macros.hpp"
 #include "utility/metaprogramming.hpp"
 #include "utility/container.hpp"
 #include "algebra/declarations.hpp"

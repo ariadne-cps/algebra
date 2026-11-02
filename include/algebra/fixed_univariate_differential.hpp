@@ -29,7 +29,7 @@
 #ifndef ARIADNE_FIXED_UNIVARIATE_DIFFERENTIAL_HPP
 #define ARIADNE_FIXED_UNIVARIATE_DIFFERENTIAL_HPP
 
-#include "macro/general.hpp"
+#include "utility/macros.hpp"
 
 namespace Ariadne {
 

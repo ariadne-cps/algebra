@@ -37,7 +37,7 @@
 #include <vector>
 
 #include "utility/iterator.hpp"
-#include "macro/general.hpp"
+#include "utility/macros.hpp"
 #include "utility/array.hpp"
 #include "numeric/numeric.hpp"
 
