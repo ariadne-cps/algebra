@@ -87,7 +87,7 @@ class TestAlgebra {
         SizeType ind=1;
         DegreeType deg=4;
         X cx(3.0_x,pr);
-        DX dx = variable(as,deg,cx,ind);
+        DX dx = DX::variable(as,deg,cx,ind);
         AX ax(dx);
         AX rx=ax;
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), ax = cx);

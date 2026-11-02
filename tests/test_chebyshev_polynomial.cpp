@@ -103,8 +103,8 @@ static_assert(check_concept<FloatMPApproximation>());
 
 
 template<class X> Void TestChebyshevPolynomial<X>::test_univariate() {
-    UnivariateChebyshevPolynomial<X> one = constant(1,pr);
-    UnivariateChebyshevPolynomial<X> x = coordinate(pr);
+    UnivariateChebyshevPolynomial<X> one = UnivariateChebyshevPolynomial<X>::constant(1,pr);
+    UnivariateChebyshevPolynomial<X> x = UnivariateChebyshevPolynomial<X>::coordinate(pr);
 
     std::function<X(DegreeType)> coefficients=[this](DegreeType i) {
         return X(static_cast<Nat>(i)+1u,pr);
@@ -164,10 +164,10 @@ template<class X> Void TestChebyshevPolynomial<X>::test_univariate() {
 
 
 template<class X> Void TestChebyshevPolynomial<X>::test_multivariate() {
-    MultivariateChebyshevPolynomial<X> one = constant(2u,1,pr);
+    MultivariateChebyshevPolynomial<X> one = MultivariateChebyshevPolynomial<X>::constant(2u,1,pr);
     ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), one.zero_coefficient(), X(0u,pr));
-    MultivariateChebyshevPolynomial<X> x = coordinate(2u,0u,pr);
-    MultivariateChebyshevPolynomial<X> y = coordinate(2u,1u,pr);
+    MultivariateChebyshevPolynomial<X> x = MultivariateChebyshevPolynomial<X>::coordinate(2u,0u,pr);
+    MultivariateChebyshevPolynomial<X> y = MultivariateChebyshevPolynomial<X>::coordinate(2u,1u,pr);
     auto multivariate_constant=MultivariateChebyshevPolynomial<X>::constant(2u,X(2u,pr));
     auto multivariate_basis=MultivariateChebyshevPolynomial<X>::basis(2u,0u,2u,pr);
     ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "multivariate_constant", multivariate_constant);
