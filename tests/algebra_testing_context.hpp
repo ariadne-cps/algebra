@@ -5,6 +5,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <utility>
 namespace AlgebraTesting {
 inline thread_local Ariadne::Testing::Context* active = nullptr;
 inline Ariadne::Testing::Context& context() {
@@ -50,7 +52,16 @@ template<class A, class B>
 void decided_equal(Ariadne::Testing::Context& context, A const& actual,
                    B const& expected, char const* description,
                    char const* actual_name, char const* expected_name) {
-    bool const decision = legacy_decision(actual == expected);
+    // For built-in integers, compare values without signed/unsigned promotion.
+    // Keep legacy domain decisions for Ariadne numeric and logical types.
+    bool const decision = [&] {
+        if constexpr (std::is_integral_v<A> && std::is_integral_v<B> &&
+                      !std::is_same_v<A, bool> && !std::is_same_v<B, bool>) {
+            return std::cmp_equal(actual, expected);
+        } else {
+            return legacy_decision(actual == expected);
+        }
+    }();
     if (!decision) {
         context.inspect(actual_name, actual);
         context.inspect(expected_name, expected);
