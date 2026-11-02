@@ -895,7 +895,7 @@ Void test_univariate_sorted_equality_ordering(PR const& pr)
     X zero(0u,pr), one(1u,pr), coefficient_two(2u,pr);
 
     auto check_symmetric = [](E const& lhs, E const& rhs) {
-        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), AriadneTesting::truth(lhs==rhs)==AriadneTesting::truth(rhs==lhs));
+        ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), Ariadne::Testing::Detail::evidence(lhs==rhs)==Ariadne::Testing::Detail::evidence(rhs==lhs));
     };
 
     E empty(SizeOne(),pr);
