@@ -202,8 +202,8 @@ class TestGraded
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(3.0_x,pr),5u),4), apply(Sqr(),apply(Pow(),Graded<X>::variable(X(3.0_x,pr),5u),2)));
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(3.0_x,pr),5u),4), apply(Pow(),apply(Sqr(),Graded<X>::variable(X(3.0_x,pr),5u)),2));
 
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(2.0_x,pr),7u),6), (apply(Pow(),apply(Sqr(),Graded<X>::variable(X(2,pr),7u)),3)))
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(2.0_x,pr),7u),6), (apply(Sqr(),apply(Pow(),Graded<X>::variable(X(2,pr),7u),3))))
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(2.0_x,pr),7u),6), (apply(Pow(),apply(Sqr(),Graded<X>::variable(X(2,pr),7u)),3)));
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(2.0_x,pr),7u),6), (apply(Sqr(),apply(Pow(),Graded<X>::variable(X(2,pr),7u),3))));
 
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(3.0_x,pr),5u),0), (Graded<X>({1,0,0,0,0,0},pr)));
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(3.0_x,pr),5u),1), (Graded<X>({3.0_x,1.0_x,0.0_x,0.0_x,0.0_x,0.0_x},pr)));
@@ -211,8 +211,8 @@ class TestGraded
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(1.0_x,pr),5u),5), (Graded<X>({1.0_x,5.0_x,10.0_x,10.0_x,5.0_x,1.0_x},pr)));
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(3.0_x,pr),5u),5), (Graded<X>({243.0_x,405.0_x,270.0_x,90.0_x,15.0_x,1.0_x},pr)));
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(-3.0_x,pr),5u),5), (Graded<X>({-243.0_x,405.0_x,-270.0_x,90.0_x,-15.0_x,1.0_x},pr)));
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(-3.0_x,pr),7u),2), (apply(Sqr(),Graded<X>::variable(X(-3,pr),7u))))
-        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(2.0_x,pr),7u),6), (apply(Sqr(),apply(Pow(),Graded<X>::variable(X(2,pr),7u),3))))
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(-3.0_x,pr),7u),2), (apply(Sqr(),Graded<X>::variable(X(-3,pr),7u))));
+        ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>::variable(X(2.0_x,pr),7u),6), (apply(Sqr(),apply(Pow(),Graded<X>::variable(X(2,pr),7u),3))));
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>({2.0_x,0.0_x,1.0_x,0.0_x,0.0_x,0.0_x,0.0_x,0.0_x},pr),3), (Graded<X>({8.0_x,0.0_x,12.0_x,0.0_x,6.0_x,0.0_x,1.0_x,0.0_x},pr)));
 
         ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), apply(Pow(),Graded<X>({4.0_x,4.0_x,1.0_x, 0,0,0,0,0},pr),3), (Graded<X>({64.0_x,192.0_x,240.0_x, 160.0_x,60.0_x,12.0_x,1.0_x,0.0_x},pr)));

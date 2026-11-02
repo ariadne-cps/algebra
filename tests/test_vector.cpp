@@ -168,7 +168,7 @@ TestVector::test_arithmetic()
     ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) * RoundedFloatDP(4.0_x,dp), Vector<RoundedFloatDP>({8.0_x,-12.0_x,20.0_x},dp));
     ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), Vector<RoundedFloatDP>({2.0_x,-3.0_x,5.0_x},dp) / RoundedFloatDP(4.0_x,dp), Vector<RoundedFloatDP>({0.5_x,-0.75_x,1.25_x},dp));
 
-    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sup_norm(Vector<RoundedFloatDP>({2.0_x,-3.0_x,1.0_x},dp)), RoundedFloatDP(3.0_x,dp))
+    ARIADNE_TESTING_EXPECT_EQUAL_CTX(AlgebraTesting::context(), sup_norm(Vector<RoundedFloatDP>({2.0_x,-3.0_x,1.0_x},dp)), RoundedFloatDP(3.0_x,dp));
 }
 
 

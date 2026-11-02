@@ -540,10 +540,10 @@ template<class F> Void TestExpansion<F>::test_sort()
 
     GradedIndexLess graded_index_less;
     Expansion<MI,F> e2s({{{0,0},5.0_x},{{1,0},11.0_x}},prec);
-    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e2s", e2s)
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e2s", e2s);
     ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), e2s.is_sorted(graded_index_less));
     Expansion<MI,F> e2u({{{1,0},2.0_x},{{0,0},5.0_x}},prec);
-    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e2u", e2u)
+    ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "e2u", e2u);
     ARIADNE_TESTING_PROVE_CTX(AlgebraTesting::context(), not e2u.is_sorted(graded_index_less));
 
 //    ARIADNE_TEST_CONSTRUCT( Expansion<MI,F>, e1, ({{{0,1},1.0_x},{{1,1},1.0_x},{{2,1},1.0_x},{{0,1},11.0_x},{{0,1},11.0_x},{{1,1},11.0_x}},prec) );
