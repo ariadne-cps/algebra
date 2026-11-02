@@ -97,33 +97,32 @@ void legacy_assert(Ariadne::Testing::Context& context, T const& proposition,
 
 // These names deliberately mark legacy decision-based checks. Avoid using them
 // in new tests that require definite three-valued mathematical evidence.
+// Keep operands in the same full-expression as their comparison and diagnostics:
+// an expression such as Series(...).coefficients(n) returns a reference to a
+// subobject of a temporary, which would dangle after an auto&& declaration.
 #define ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(context, actual, expected) \
     do { \
-        auto&& a_ariadne = (actual); \
-        auto&& b_ariadne = (expected); \
-        ::AlgebraTesting::decided_equal((context), a_ariadne, b_ariadne, \
+        ::AlgebraTesting::decided_equal((context), (actual), (expected), \
             #actual " == " #expected, #actual, #expected); \
     } while (false)
 
 #define ARIADNE_ALGEBRA_DECIDED_SAME_CTX(context, actual, expected) \
     do { \
-        auto&& a_ariadne = (actual); \
-        auto&& b_ariadne = (expected); \
-        ::AlgebraTesting::decided_same((context), a_ariadne, b_ariadne, \
+        ::AlgebraTesting::decided_same((context), (actual), (expected), \
             #actual " same " #expected, #actual, #expected); \
     } while (false)
 
 #define ARIADNE_ALGEBRA_DECIDED_REL_CTX(context, actual, op, expected) \
     do { \
-        auto&& a_ariadne = (actual); \
-        auto&& b_ariadne = (expected); \
-        bool const result_ariadne = ::AlgebraTesting::legacy_decision(a_ariadne op b_ariadne); \
-        if (!result_ariadne) { \
-            (context).inspect(#actual, a_ariadne); \
-            (context).inspect(#expected, b_ariadne); \
-        } \
-        (context).check([&] { return result_ariadne; }, \
-                        #actual " " #op " " #expected); \
+        [&](auto&& a_ariadne, auto&& b_ariadne) { \
+            bool const result_ariadne = ::AlgebraTesting::legacy_decision(a_ariadne op b_ariadne); \
+            if (!result_ariadne) { \
+                (context).inspect(#actual, a_ariadne); \
+                (context).inspect(#expected, b_ariadne); \
+            } \
+            (context).check([&] { return result_ariadne; }, \
+                            #actual " " #op " " #expected); \
+        }((actual), (expected)); \
     } while (false)
 
 #define ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(context, expression) \
@@ -131,18 +130,18 @@ void legacy_assert(Ariadne::Testing::Context& context, T const& proposition,
 
 #define ARIADNE_ALGEBRA_DECIDED_BINARY_CTX(context, predicate, left, right) \
     do { \
-        auto&& a_ariadne = (left); \
-        auto&& b_ariadne = (right); \
-        bool const result_ariadne = ::AlgebraTesting::legacy_decision(predicate(a_ariadne, b_ariadne)); \
-        (context).check([&] { return result_ariadne; }, #predicate "(" #left ", " #right ")"); \
+        [&](auto&& a_ariadne, auto&& b_ariadne) { \
+            bool const result_ariadne = ::AlgebraTesting::legacy_decision(predicate(a_ariadne, b_ariadne)); \
+            (context).check([&] { return result_ariadne; }, #predicate "(" #left ", " #right ")"); \
+        }((left), (right)); \
     } while (false)
 
 #define ARIADNE_ALGEBRA_DECIDED_NOT_BINARY_CTX(context, predicate, left, right) \
     do { \
-        auto&& a_ariadne = (left); \
-        auto&& b_ariadne = (right); \
-        bool const result_ariadne = ::AlgebraTesting::legacy_decision(!predicate(a_ariadne, b_ariadne)); \
-        (context).check([&] { return result_ariadne; }, "!" #predicate "(" #left ", " #right ")"); \
+        [&](auto&& a_ariadne, auto&& b_ariadne) { \
+            bool const result_ariadne = ::AlgebraTesting::legacy_decision(!predicate(a_ariadne, b_ariadne)); \
+            (context).check([&] { return result_ariadne; }, "!" #predicate "(" #left ", " #right ")"); \
+        }((left), (right)); \
     } while (false)
 
 #endif
