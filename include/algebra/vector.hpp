@@ -38,7 +38,7 @@
 #include "utility/uniform_array.hpp"
 #include "numeric/builtin.hpp"
 
-#include "range.hpp"
+#include "utility/range.hpp"
 #include "slice.hpp"
 
 namespace Ariadne {
