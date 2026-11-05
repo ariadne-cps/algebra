@@ -40,5 +40,6 @@ target_link_libraries(pyariadne-algebra INTERFACE
 
 ariadne_add_python_module(
     NAME algebra
+    MODULE_IMPORT_NAME pyariadne_algebra
     MODULE_SOURCE algebra_module.cpp
 )

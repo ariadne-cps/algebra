@@ -37,7 +37,3 @@ When a compatible Python development environment is available, the build produce
 - Python: `python/tutorials/tutorial_algebra.py`
 
 Both progress through linear algebra, multi-indices and sparse expansions, power-basis and Chebyshev polynomials, power series, and multivariate and univariate differential algebra.
-
-## License
-
-Algebra is released under the GNU General Public License v3.0.
