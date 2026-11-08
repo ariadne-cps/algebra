@@ -56,7 +56,7 @@ setup_project_library(
     LINK_LIBRARIES algebra
 )
 
-setup_standalone_project_tests(
+setup_standalone_project(
     TARGET ariadne-algebra
     TEST_DIRECTORY tests
     TEST_TARGET tests
