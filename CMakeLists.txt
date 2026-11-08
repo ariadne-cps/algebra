@@ -22,8 +22,10 @@ endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # Pinned child commits are internally consistent; check direct occurrences
     # without traversing redundant descendant chains.
+    # Testing is a development-only dependency and is deliberately excluded
+    # from cross-repository commit consistency checks.
     require_same_dependency_commit(Build CHAINS
-        "build" "interval|build" "testing|build")
+        "build" "interval|build")
 endif()
 
 setup_project()
