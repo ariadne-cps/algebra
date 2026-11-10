@@ -33,7 +33,7 @@ When a compatible Python development environment is available, the build produce
 
 ## Tutorials
 
-- C++: `tutorials/tutorial_algebra/tutorial_algebra.cpp`
-- Python: `python/tutorials/tutorial_algebra.py`
+- C++: `tutorial/tutorial_algebra.cpp`
+- Python: `python/tutorial.py`
 
 Both progress through linear algebra, multi-indices and sparse expansions, power-basis and Chebyshev polynomials, power series, and multivariate and univariate differential algebra.

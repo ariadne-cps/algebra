@@ -73,7 +73,7 @@ jobs:
 
       - name: Prepare C++ algebra tutorial
         if: matrix.build_type == 'Release'
-        run: cmake -E copy_directory "$GITHUB_WORKSPACE/tutorials/tutorial_algebra" "${{ runner.workspace }}/tutorial_algebra"
+        run: cmake -E copy_directory "$GITHUB_WORKSPACE/tutorial" "${{ runner.workspace }}/tutorial_algebra"
 
       - name: Build and check C++ algebra tutorial
         if: matrix.build_type == 'Release'
@@ -91,7 +91,7 @@ jobs:
 
       - name: Check Python algebra tutorial
         if: matrix.build_type == 'Release'
-        working-directory: ${{ github.workspace }}/python/tutorials
+        working-directory: ${{ github.workspace }}/tutorial
         env:
           PYTHONPATH: ${{ runner.workspace }}/build/python
         run: python tutorial_algebra.py
