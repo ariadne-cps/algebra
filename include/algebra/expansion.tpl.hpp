@@ -326,6 +326,13 @@ template<class I, class X, class CMP> EqualityType<X,X> SortedExpansion<I,X,CMP>
 }
 
 
+
+template<class I, class X, class CMP>
+EqualityType<X> SortedExpansion<I,X,CMP>::operator!=(const SortedExpansion<I,X,CMP>& other) const {
+    return !(*this==other);
+}
+
+
 template<class I, class X> Bool Expansion<I,X>::same_as(const Expansion<I,X>& other) const {
     auto iter1=this->begin();
     auto iter2=other.begin();

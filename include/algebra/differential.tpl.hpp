@@ -62,6 +62,16 @@ template<class X> Differential<X>::Differential(const Expansion<MultiIndex,X>& e
 }
 
 
+template<class X>
+Differential<X>::Differential(
+    SizeType as, DegreeType deg,
+    InitializerList<Pair<InitializerList<DegreeType>,X>> lst)
+    : Differential(Expansion<MultiIndex,X>(lst),deg)
+{
+    ARIADNE_PRECONDITION(this->argument_size()==as);
+}
+
+
 template<class X> Differential<X>& Differential<X>::operator=(const X& c) {
     this->_expansion.clear();
     this->_expansion.append(MultiIndex(this->argument_size()),c);
@@ -131,18 +141,28 @@ template<class X> Vector<Differential<X>> Differential<X>::variables(DegreeType 
     return r;
 }
 
-template<class X> Vector<Differential<X>> Differential<X>::affine(DegreeType deg, const Vector<X>& v, const Matrix<X>& G) {
-    X zero=v.zero_element();
-    Vector<Differential<X>> r(v.size(),Differential<X>(v.size(),deg,zero));
-    MultiIndex a(r.argument_size());
-    for(SizeType i=0; i!=r.size(); ++i) {
-        r[i]._expansion.append(a,v[i]);
-        for(SizeType j=0; j!=r.argument_size(); ++j) {
-            const X& gij=G[i][j];
-            if(decide(gij!=0)) { a[i]=1; r[i]._expansion.append(a,gij); a[i]=0; }
+template<class X>
+Vector<Differential<X>> Differential<X>::affine(
+    SizeType rs, SizeType as, DegreeType deg, const Vector<X>& v, const Matrix<X>& G)
+{
+    ARIADNE_PRECONDITION(rs==v.size());
+    ARIADNE_PRECONDITION(rs==G.row_size());
+    ARIADNE_PRECONDITION(as==G.column_size());
+    Vector<Differential<X>> r(rs,as,deg,v.zero_element());
+    for(SizeType i=0; i!=rs; ++i) {
+        r[i].set_value(v[i]);
+        if(deg>=1u) {
+            for(SizeType j=0; j!=as; ++j) {
+                r[i].set_gradient(j,G[i][j]);
+            }
         }
     }
     return r;
+}
+
+template<class X>
+Vector<Differential<X>> Differential<X>::affine(DegreeType deg, const Vector<X>& v, const Matrix<X>& G) {
+    return affine(v.size(),G.column_size(),deg,v,G);
 }
 
 
@@ -266,6 +286,13 @@ template<class X> const X& Differential<X>::operator[](const MultiIndex& a) cons
     ConstIterator iter=this->_expansion.find(a);
     if(iter==this->_expansion.end()) { return this->_expansion.zero_coefficient(); }
     else { return iter->coefficient(); }
+}
+
+
+template<class X> Matrix<X> Differential<X>::_jacobian(
+    Vector<Differential<X>> const& differentials)
+{
+    return differentials.jacobian();
 }
 
 

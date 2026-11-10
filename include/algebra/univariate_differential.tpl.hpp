@@ -54,6 +54,58 @@ template<class X> UnivariateDifferential<X> UnivariateDifferential<X>::variable(
     return r;
 }
 
+template<class X> UnivariateDifferential<X> UnivariateDifferential<X>::create_zero() const {
+    return UnivariateDifferential<X>(this->degree(),this->zero_coefficient());
+}
+
+template<class X> UnivariateDifferential<X>
+UnivariateDifferential<X>::create_constant(const NumericType& c) const {
+    return UnivariateDifferential<X>(this->degree(),c);
+}
+
+template<class X> UnivariateDifferential<X>
+UnivariateDifferential<X>::create_variable(const NumericType& c) const {
+    return UnivariateDifferential<X>::variable(this->degree(),c);
+}
+
+template<class X> UnivariateDifferential<X>&
+UnivariateDifferential<X>::operator=(const NumericType& c) {
+    X zero=nul(c);
+    for(SizeType i=0; i!=this->_ary.size(); ++i) {
+        this->_ary[i]=zero;
+    }
+    this->_ary[0u]=c;
+    return *this;
+}
+
+template<class X> Void UnivariateDifferential<X>::clear() {
+    X zero=this->zero_coefficient();
+    for(SizeType i=0; i!=this->_ary.size(); ++i) {
+        this->_ary[i]=zero;
+    }
+}
+
+// Compute the truncated reciprocal from f*g=1, coefficient by coefficient.
+template<class X> UnivariateDifferential<X> UnivariateDifferential<X>::apply(Rec) const {
+    UnivariateDifferential<X> result(this->degree(),this->zero_coefficient());
+    result[0u]=rec(this->_ary[0u]);
+    for(DegreeType n=1u; n<=this->degree(); ++n) {
+        X sum=this->zero_coefficient();
+        for(DegreeType k=1u; k<=n; ++k) {
+            sum+=this->_ary[k]*result[n-k];
+        }
+        result[n]=-result[0u]*sum;
+    }
+    return result;
+}
+
+template<class X> Differential<X> UnivariateDifferential<X>::_compose(
+    Series<X> const& f, Differential<X> const& dx)
+{
+    return Differential<X>::_compose(f,dx);
+}
+
+
 template<class X> X UnivariateDifferential<X>::zero_coefficient() const {
     return nul(this->_ary[0]);
 }
