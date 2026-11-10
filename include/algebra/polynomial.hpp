@@ -280,7 +280,6 @@ class Polynomial
     OutputStream& _write(OutputStream& os, typename IndexTraits<I>::NameType const& names) const;
   private:
     Void _append(const IndexType& a, const X& c);
-    Iterator _unique_key();
   private:
     SortedExpansion<I,X,ReverseLexicographicIndexLess> _expansion;
   private: // FIXME: Put these concrete-generic operations in proper place

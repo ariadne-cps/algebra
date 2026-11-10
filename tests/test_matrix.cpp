@@ -35,6 +35,7 @@
 #include "algebra/vector.hpp"
 #include "algebra/matrix.hpp"
 #include "algebra/matrix.tpl.hpp"
+#include "algebra/symmetric_matrix.hpp"
 #include "interval/interval.hpp"
 #include "algebra/covector.hpp"
 
@@ -223,6 +224,21 @@ TestMatrix::test_factorisations()
 Void
 TestMatrix::test_misc()
 {
+    // The initializer-list constructor must reuse Matrix's shape checks
+    // and reject nonsymmetric input without changing stored values.
+    {
+        SymmetricMatrix<Rational> symmetric(
+            {{Rational(1),Rational(2)},{Rational(2),Rational(3)}});
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(
+            AlgebraTesting::context(), symmetric[0u][1u], Rational(2));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(
+            AlgebraTesting::context(), symmetric[1u][0u], Rational(2));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(
+            AlgebraTesting::context(),
+            (SymmetricMatrix<Rational>(
+                {{Rational(1),Rational(2)},{Rational(3),Rational(4)}})));
+    }
+
     {
         InitializerList<InitializerList<Rational>> empty_matrix{};
         ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (Matrix<Rational>(empty_matrix)));

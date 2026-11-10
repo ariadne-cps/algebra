@@ -137,10 +137,6 @@ template<class X> class Matrix
     //! Destructor
     ~Matrix();
 
-    //! Construct a matrix with \a m rows and \a n columns with values uninitialised.
-    //! The values should be initialised using placement new.
-    Matrix(SizeType m, SizeType n, Uninitialised);
-
     //! Construct a matrix with \a r rows and \a c columns with values initialised to \a x.
     Matrix(SizeType m, SizeType n, Ariadne::CharacteristicsType<X> prs);
 
@@ -160,9 +156,6 @@ template<class X> class Matrix
     //! Construct a matrix using initializer lists.
     template<class... PRS> requires Constructible<X,ExactDouble,PRS...> explicit Matrix(InitializerList<InitializerList<ExactDouble>> lst, PRS... prs);
     template<class... PRS> requires Constructible<X,Dbl,PRS...> explicit Matrix(InitializerList<InitializerList<Dbl>> lst, PRS... prs);
-
-    //! Construct a matrix as a linear map from functionals.
-    Matrix(Vector<Covector<X>>);
 
     //! \brief Generate from a function (object) \a g of type \a G mapping an index pair to a value. */
     template<class G> requires InvocableReturning<X,G,SizeType,SizeType>
@@ -233,15 +226,11 @@ template<class X> class Matrix
     Ariadne::CharacteristicsType<X> element_characteristics() const;
     //! \brief The zero element of the field/algebra of the matrix.
     X zero_element() const;
-  public:
-    static Matrix<X> _mul(const Matrix<X>& A1, const Matrix<X>& A2);
   private:
     Void _check_data_access(SizeType i, SizeType j) const;
     OutputStream& _write(OutputStream& os) const;
-    InputStream& read(InputStream& is);
 
     template<class T> friend OutputStream& operator<<(OutputStream& os, Matrix<T>const& A);
-    template<class T> friend InputStream& operator>>(InputStream& is, Matrix<T>& A);
 };
 
 template<class X> struct IsMatrix<Matrix<X>> : True { };
@@ -569,10 +558,6 @@ template<class X> inline const X* Matrix<X>::begin() const {
 
 template<class X> inline OutputStream& operator<<(OutputStream& os, Matrix<X> const& A) {
     A._write(os); return os;
-}
-
-template<class X> inline InputStream& operator>>(InputStream& is, Matrix<X>& A) {
-    A.read(is); return is;
 }
 
 template<class X> OutputStream& Matrix<X>::_write(OutputStream& os) const {

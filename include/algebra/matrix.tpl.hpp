@@ -138,49 +138,7 @@ template<class X> Matrix<X> cojoin(Vector<X> const& v1, Matrix<X> const& A2) {
 }
 
 
-#ifdef ARIADNE_OMIT
-template<class X> InputStream& Matrix<X>::read(InputStream& is) {
-    Matrix<X>& A=*this;
-    char c;
-    is >> c;
-    is.putback(c);
-    if(c=='[') {
-        is >> c;
-        /* Representation as a literal [a11,a12,...,a1n; a21,a22,...a2n; ... ; am1,am2,...,amn] */
-        std::vector< std::vector<X> > v;
-        X x;
-        c=';';
-        while(is && c==';') {
-            v.push_back(std::vector<X>());
-            c=',';
-            while(is && c==',') {
-                is >> x;
-                v.back().push_back(x);
-                is >> c;
-            }
-        }
-        if(is) {
-            A=Matrix<X>(v.size(),v.front().size());
-            for(SizeType i=0; i!=A.row_size(); ++i) {
-                if(v[i].size()!=A.column_size()) {
-                    // TOOD: Add exception
-                    assert(false);
-                    //ARIADNE_THROW(InvalidInput,"Matrix::read(istream&)","row[0].size()="<<v[0].size()<<", row["<<i<<"].size()="<<v[i].size());
-                }
-                for(SizeType j=0; j!=A.column_size(); ++j) {
-                    A[i][j]=v[i][j];
-                }
-            }
-        }
-    }
-    else {
-        // TOOD: Add exception
-        assert(false);
-        //ARIADNE_THROW(InvalidInput,"Matrix::read(istream&)"," separator c="<<c);
-    }
-    return is;
-}
-#endif
+
 
 template<class X> decltype(mag(declval<X>())) sup_norm(const Matrix<X>& A)
 {

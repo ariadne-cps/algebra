@@ -183,6 +183,12 @@ template<class X> SymmetricMatrix<X>::SymmetricMatrix(Matrix<X> const& A)
     }
 }
 
+// Delegate parsing and dimension validation to Matrix, then reuse the
+// existing symmetry check in the Matrix-to-SymmetricMatrix constructor.
+template<class X> SymmetricMatrix<X>::SymmetricMatrix(InitializerList<InitializerList<X>> lst)
+    : SymmetricMatrix(Matrix<X>(lst)) {
+}
+
 template<class X> template<class... PRS> requires Constructible<X,Nat,PRS...>
 SymmetricMatrix<X> SymmetricMatrix<X>::zero(SizeType n, PRS... prs) {
     return SymmetricMatrix<X>(n,X(0u,prs...));
