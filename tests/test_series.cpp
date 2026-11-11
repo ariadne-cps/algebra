@@ -24,37 +24,48 @@
 
 #include <sstream>
 
-#include "numeric/numeric.hpp"
 #include "algebra/series.hpp"
-
 #include "algebra_testing_context.hpp"
+#include "numeric/numeric.hpp"
 
 namespace Ariadne {
 
-template<class F> decltype(auto) operator==(Rounded<F> const& x, Rational const& q) { return x.raw()==q; }
+template<class F>
+decltype(auto) operator==(const Rounded<F>& x, const Rational& q) { return x.raw() == q; }
 
-//template<class Iter> container(Iter b, Iter e) -> container<typename std::iterator_traits<Iter>::value_type>;
-template<class X> List(InitializerList<X>) -> List<X>;
+// template<class Iter> container(Iter b, Iter e) -> container<typename std::iterator_traits<Iter>::value_type>;
+template<class X>
+List(InitializerList<X>) -> List<X>;
 
-template<class T1, class T2> EqualsType<T1,T2> operator==(List<T1> const& lst1, List<T2> const& lst2) {
-    if(lst1.size()!=lst2.size()) { return false; }
-    EqualsType<T1,T2> r=true;
-    for(SizeType i=0; i!=lst1.size(); ++i) {
-        r = r && (lst1[i]==lst2[i]);
+template<class T1, class T2>
+EqualsType<T1, T2> operator==(const List<T1>& lst1, const List<T2>& lst2) {
+    if (lst1.size() != lst2.size()) {
+        return false;
+    }
+    EqualsType<T1, T2> r = true;
+    for (SizeType i = 0; i != lst1.size(); ++i) {
+        r = r && (lst1[i] == lst2[i]);
     }
     return r;
 }
 
-template<class T> Bool same(List<T> const& lst1, List<T> const& lst2) {
-    if(lst1.size()!=lst2.size()) { return false; }
-    for(SizeType i=0; i!=lst1.size(); ++i) {
-        if(!same(lst1[i],lst2[i])) { return false; }
+template<class T>
+Bool same(const List<T>& lst1, const List<T>& lst2) {
+    if (lst1.size() != lst2.size()) {
+        return false;
+    }
+    for (SizeType i = 0; i != lst1.size(); ++i) {
+        if (!same(lst1[i], lst2[i])) {
+            return false;
+        }
     }
     return true;
-    auto iter1=lst1.begin();
-    auto iter2=lst2.begin();
-    for(; iter1!=lst1.end(); ++iter1, ++iter2) {
-        if(not same(*iter1,*iter2)) { return false; }
+    auto iter1 = lst1.begin();
+    auto iter2 = lst2.begin();
+    for (; iter1 != lst1.end(); ++iter1, ++iter2) {
+        if (not same(*iter1, *iter2)) {
+            return false;
+        }
     }
     return true;
 }
@@ -62,13 +73,14 @@ template<class T> Bool same(List<T> const& lst1, List<T> const& lst2) {
 
 using namespace Ariadne;
 
-template<class X> class TestSeries
-{
+template<class X>
+class TestSeries {
     typedef Rational Q;
     typedef typename X::PrecisionType PR;
     PR pr;
+
   public:
-    TestSeries(PR prec) : pr(prec) { }
+    TestSeries(PR prec) : pr(prec) {}
 
     void test() {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_class());
@@ -80,98 +92,95 @@ template<class X> class TestSeries
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_sin());
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_cos());
     }
+
   private:
     void test_class() {
-        Series<X> series(Rec(),X(1.0_x,pr));
+        Series<X> series(Rec(), X(1.0_x, pr));
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), series[0], 1.0_x);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), series[10], 1.0_x);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), series[1], -1.0_x);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), series[127], -1.0_x);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), series[255], -1.0_x);
-//        ARIADNE_TEST_EQUALS(series[32767],1.0);
-        std::cerr<<std::setprecision(18);
+        //        ARIADNE_TEST_EQUALS(series[32767],1.0);
+        std::cerr << std::setprecision(18);
     }
     void test_basic_operators() {
-        const X zero(0,pr), one(1,pr), two_value(2,pr);
+        const X zero(0, pr), one(1, pr), two_value(2, pr);
 
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Pos(),two_value).coefficients(2), (List<X>{two_value,one,zero}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Neg(),two_value).coefficients(2), (List<X>{-two_value,-one,zero}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Pos(), two_value).coefficients(2), (List<X>{two_value, one, zero}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Neg(), two_value).coefficients(2), (List<X>{-two_value, -one, zero}));
 
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)Series<X>(Asin(),zero)[0]);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)Series<X>(Acos(),zero)[0]);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)Series<X>(Abs(),zero)[0]);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)Series<X>(Asin(), zero)[0]);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)Series<X>(Acos(), zero)[0]);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)Series<X>(Abs(), zero)[0]);
     }
 
     void test_rec() {
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Rec(),X(2.0_x,pr)).coefficients(5), (List<Q>{0.5_q,-0.25_q,0.125_q,-0.0625_q,0.03125_q,-0.015625_q}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Rec(),X(1.0_x,pr)).coefficients(5), (List<Q>{1.0_q,-1.0_q,1.0_q,-1.0_q,1.0_q,-1.0_q}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Rec(),X(0.5_x,pr)).coefficients(5), (List<Q>{2.0_q,-4.0_q,8.0_q,-16.0_q,32.0_q,-64.0_q}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Rec(),X(-1.0_x,pr)).coefficients(5), (List<Q>{-1.0_q,-1.0_q,-1.0_q,-1.0_q,-1.0_q,-1.0_q}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Rec(), X(2.0_x, pr)).coefficients(5), (List<Q>{0.5_q, -0.25_q, 0.125_q, -0.0625_q, 0.03125_q, -0.015625_q}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Rec(), X(1.0_x, pr)).coefficients(5), (List<Q>{1.0_q, -1.0_q, 1.0_q, -1.0_q, 1.0_q, -1.0_q}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Rec(), X(0.5_x, pr)).coefficients(5), (List<Q>{2.0_q, -4.0_q, 8.0_q, -16.0_q, 32.0_q, -64.0_q}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Rec(), X(-1.0_x, pr)).coefficients(5), (List<Q>{-1.0_q, -1.0_q, -1.0_q, -1.0_q, -1.0_q, -1.0_q}));
     }
 
     void test_sqrt() {
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sqrt(),X(4.0_x,pr)).coefficients(5), (List<Q>{2.0_q,0.25_q,-0.015625_q,0.001953125_q,-0.00030517578125_q,0.00005340576171875_q}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sqrt(),X(1.0_x,pr)).coefficients(5), (List<Q>{1.0_q,0.5_q,-0.125_q,0.0625_q,-0.0390625_q,0.02734375_q}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sqrt(),X(0.25_x,pr)).coefficients(5), (List<Q>{0.5_q,1.0_q,-1.0_q,2.0_q,-5.0_q,14.0_q}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sqrt(), X(4.0_x, pr)).coefficients(5), (List<Q>{2.0_q, 0.25_q, -0.015625_q, 0.001953125_q, -0.00030517578125_q, 0.00005340576171875_q}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sqrt(), X(1.0_x, pr)).coefficients(5), (List<Q>{1.0_q, 0.5_q, -0.125_q, 0.0625_q, -0.0390625_q, 0.02734375_q}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sqrt(), X(0.25_x, pr)).coefficients(5), (List<Q>{0.5_q, 1.0_q, -1.0_q, 2.0_q, -5.0_q, 14.0_q}));
     }
 
     void test_exp() {
-        const X zero(0,pr), one(1,pr);
-        const X exp1=exp(one);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Exp(),zero).coefficients(5), (List<X>{one,one/1,one/2,one/6,one/24,one/120}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Exp(),one).coefficients(5), (List<X>{exp1,exp1/1,exp1/2,exp1/6,exp1/24,exp1/120}));
+        const X zero(0, pr), one(1, pr);
+        const X exp1 = exp(one);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Exp(), zero).coefficients(5), (List<X>{one, one / 1, one / 2, one / 6, one / 24, one / 120}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Exp(), one).coefficients(5), (List<X>{exp1, exp1 / 1, exp1 / 2, exp1 / 6, exp1 / 24, exp1 / 120}));
     }
 
     void test_log() {
-        const X zero(0,pr), one(1,pr), two_value(2,pr);
-        const X log2=log(two_value);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Log(),one).coefficients(5), (List<X>{zero,one,-one/2,one/3,-one/4,one/5}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Log(),two_value).coefficients(5), (List<X>{log2,one/2,-one/8,one/24,-one/64,one/160}));
+        const X zero(0, pr), one(1, pr), two_value(2, pr);
+        const X log2 = log(two_value);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Log(), one).coefficients(5), (List<X>{zero, one, -one / 2, one / 3, -one / 4, one / 5}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Log(), two_value).coefficients(5), (List<X>{log2, one / 2, -one / 8, one / 24, -one / 64, one / 160}));
     }
 
     void test_sin() {
-        const X zero(0,pr), one(1,pr);
-        const X sin1=sin(one);
-        const X cos1=cos(one);
+        const X zero(0, pr), one(1, pr);
+        const X sin1 = sin(one);
+        const X cos1 = cos(one);
 
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sin(),zero).coefficients(5), (List<X>{zero,one,zero,-one/6,zero,one/120}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sin(),one).coefficients(5), (List<X>{sin1,cos1,-sin1/2,-cos1/6,sin1/24,cos1/120}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sin(), zero).coefficients(5), (List<X>{zero, one, zero, -one / 6, zero, one / 120}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Sin(), one).coefficients(5), (List<X>{sin1, cos1, -sin1 / 2, -cos1 / 6, sin1 / 24, cos1 / 120}));
     }
 
     void test_cos() {
-        const X zero(0,pr), one(1,pr);
-        const X sin1=sin(one);
-        const X cos1=cos(one);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Cos(),zero).coefficients(5), (List<X>{one,zero,-one/2,zero,one/24,zero}));
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Cos(),one).coefficients(4), (List<X>{cos1,-sin1,-cos1/2,sin1/6,cos1/24}));
+        const X zero(0, pr), one(1, pr);
+        const X sin1 = sin(one);
+        const X cos1 = cos(one);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Cos(), zero).coefficients(5), (List<X>{one, zero, -one / 2, zero, one / 24, zero}));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), Series<X>(Cos(), one).coefficients(4), (List<X>{cos1, -sin1, -cos1 / 2, sin1 / 6, cos1 / 24}));
     }
 };
-
 
 int main(int argc, char** argv) {
     Ariadne::Testing::Suite suite("series");
     suite.add("legacy tests", [](Ariadne::Testing::Context& ctx) {
         AlgebraTesting::CaseScope capture(ctx);
 
-    TestSeries<RoundedFloatDP>(dp).test();
+        TestSeries<RoundedFloatDP>(dp).test();
 
-    AnalyticFunction analytic_exp{Exp()};
-    FloatDPApproximation approximate_c={1.0_x,dp};
-    FloatDPBounds validated_c(1.0_x,dp);
-    FloatDP exact_c(1.0_x,dp);
+        AnalyticFunction analytic_exp{Exp()};
+        FloatDPApproximation approximate_c = {1.0_x, dp};
+        FloatDPBounds validated_c(1.0_x, dp);
+        FloatDP exact_c(1.0_x, dp);
 
-    auto approximate_series=analytic_exp.series(approximate_c);
-    auto validated_series=analytic_exp.series(validated_c);
-    auto exact_series=analytic_exp.series(exact_c);
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)approximate_series[0]);
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)validated_series[0]);
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)exact_series[0]);
+        auto approximate_series = analytic_exp.series(approximate_c);
+        auto validated_series = analytic_exp.series(validated_c);
+        auto exact_series = analytic_exp.series(exact_c);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)approximate_series[0]);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)validated_series[0]);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)exact_series[0]);
 
-    std::ostringstream analytic_stream;
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), analytic_stream << analytic_exp);
-
-    
-
+        std::ostringstream analytic_stream;
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), analytic_stream << analytic_exp);
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

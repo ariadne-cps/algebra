@@ -5,7 +5,6 @@
  *
  ****************************************************************************/
 
-
 /*
  *  This file is part of Ariadne Algebra.
  *
@@ -46,65 +45,95 @@
 #ifndef ARIADNE_TENSOR_HPP
 #define ARIADNE_TENSOR_HPP
 
-#include "vector.hpp"
-#include "matrix.hpp"
 #include "diagonal_matrix.hpp"
+#include "matrix.hpp"
+#include "vector.hpp"
 
 namespace Ariadne {
 
 //! \brief A row of a rank-2 tensor.
-template<class T> class TensorRow {
-    T _t; SizeType _i;
+template<class T>
+class TensorRow {
+    T _t;
+    SizeType _i;
+
   public:
-    TensorRow(T& t, SizeType i) : _t(t), _i(i) { };
-    T const& operator[] (SizeType j) const { return _t[Array<SizeType>({_i,j})]; }
-    T& operator[] (SizeType j) { return _t[Array<SizeType>({_i,j})]; }
+    TensorRow(T& t, SizeType i) : _t(t), _i(i) {};
+    const T& operator[](SizeType j) const { return _t[Array<SizeType>({_i, j})]; }
+    T& operator[](SizeType j) { return _t[Array<SizeType>({_i, j})]; }
 };
 
 //! \ingroup LinearAlgebraSubModule
 //! \brief A rank-\a N tensor with elements of type \a X.
-template<SizeType N, class X> class Tensor {
-//   TODO: Also provide a version which is not templated on rank.
+template<SizeType N, class X>
+class Tensor {
+    //   TODO: Also provide a version which is not templated on rank.
     Array<SizeType> _ns;
     Array<X> _a;
 
   public:
     typedef X ValueType;
-    Tensor(Array<SizeType> const& ns, X const& z) : _ns(ns), _a(_total_size(),z) { }
-    template<class G> requires InvocableReturning<X,G,Array<SizeType>> Tensor(Array<SizeType> const& ns, G const& g);
+    Tensor(const Array<SizeType>& ns, const X& z) : _ns(ns), _a(_total_size(), z) {}
+    template<class G>
+        requires InvocableReturning<X, G, Array<SizeType>>
+    Tensor(const Array<SizeType>& ns, const G& g);
     constexpr SizeType rank() const { return _ns.size(); }
     Array<SizeType> sizes() const { return _ns; }
     SizeType size(SizeType i) const { return _ns[i]; }
-    X const& operator[] (Array<SizeType> const& is) const { return _a[_index(is)]; }
-    X& operator[] (Array<SizeType> const& is) { return _a[_index(is)]; }
+    const X& operator[](const Array<SizeType>& is) const { return _a[_index(is)]; }
+    X& operator[](const Array<SizeType>& is) { return _a[_index(is)]; }
 
-    TensorRow<Tensor<N,X>const&> operator[] (SizeType const& i) const { return TensorRow<Tensor<N,X>const&>(*this,i); }
-    TensorRow<Tensor<N,X>&> operator[] (SizeType const& i) { return TensorRow<Tensor<N,X>&>(*this,i); }
-  private: public:
-    SizeType _index(Array<SizeType> is) const { SizeType k=0; SizeType r=is[k]; ++k; while(k!=is.size()) { r*=_ns[k]; r+=is[k]; ++k; } return r; }
-    SizeType _total_size() const { SizeType r=1; for(SizeType i=0; i!=N; ++i) { r*=_ns[i]; } return r; }
+    TensorRow<const Tensor<N, X>&> operator[](const SizeType& i) const { return TensorRow<const Tensor<N, X>&>(*this, i); }
+    TensorRow<Tensor<N, X>&> operator[](const SizeType& i) { return TensorRow<Tensor<N, X>&>(*this, i); }
+
+  private:
+
+  public:
+    SizeType _index(Array<SizeType> is) const {
+        SizeType k = 0;
+        SizeType r = is[k];
+        ++k;
+        while (k != is.size()) {
+            r *= _ns[k];
+            r += is[k];
+            ++k;
+        }
+        return r;
+    }
+    SizeType _total_size() const {
+        SizeType r = 1;
+        for (SizeType i = 0; i != N; ++i) {
+            r *= _ns[i];
+        }
+        return r;
+    }
     OutputStream& _write(OutputStream& os) const;
 };
 
-template<class X, class F> requires Invocable<F,X> auto transform(Tensor<2,X> const& t, F const& f) -> Tensor<2,ResultOf<F(X)>> {
-    Tensor<2,ResultOf<F(X)>> r(t.sizes(), f(t[{0,0}]));
-    for(SizeType i0=0; i0!=r.size(0); ++i0) { for(SizeType i1=0; i1!=r.size(1); ++i1) { r[{i0,i1}]=f(t[{i0,i1}]); } }
+template<class X, class F>
+    requires Invocable<F, X>
+auto transform(const Tensor<2, X>& t, const F& f) -> Tensor<2, ResultOf<F(X)>> {
+    Tensor<2, ResultOf<F(X)>> r(t.sizes(), f(t[{0, 0}]));
+    for (SizeType i0 = 0; i0 != r.size(0); ++i0) {
+        for (SizeType i1 = 0; i1 != r.size(1); ++i1) {
+            r[{i0, i1}] = f(t[{i0, i1}]);
+        }
+    }
     return r;
 }
 
-template<SizeType N, class X> template<class G> requires InvocableReturning<X,G,Array<SizeType>>
-Tensor<N,X>::Tensor(Array<SizeType> const& ns, G const& g)
-    : _ns(ns), _a(_total_size(),g({0,0}))
-{
-    static_assert(N==2);
-    for(SizeType i0=0; i0!=ns[0]; ++i0) {
-        for(SizeType i1=0; i1!=ns[1]; ++i1) {
-            _a[i0*ns[1]+i1]=g({i0,i1});
+template<SizeType N, class X>
+template<class G>
+    requires InvocableReturning<X, G, Array<SizeType>>
+Tensor<N, X>::Tensor(const Array<SizeType>& ns, const G& g)
+    : _ns(ns), _a(_total_size(), g({0, 0})) {
+    static_assert(N == 2);
+    for (SizeType i0 = 0; i0 != ns[0]; ++i0) {
+        for (SizeType i1 = 0; i1 != ns[1]; ++i1) {
+            _a[i0 * ns[1] + i1] = g({i0, i1});
         }
     }
 }
-
-
 
 } // namespace Ariadne
 

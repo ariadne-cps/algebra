@@ -5,7 +5,6 @@
  *
  ****************************************************************************/
 
-
 /*
  *  This file is part of Ariadne Algebra.
  *
@@ -31,31 +30,36 @@
 
 #include <iosfwd>
 
+#include "algebra/differential.decl.hpp"
+#include "algebra/linear_algebra.decl.hpp"
+#include "foundation/logical.decl.hpp"
+#include "foundation/paradigm.hpp"
 #include "utility/metaprogramming.hpp"
 #include "utility/typedefs.hpp"
-
-#include "foundation/paradigm.hpp"
-#include "foundation/logical.decl.hpp"
-
-#include "algebra/linear_algebra.decl.hpp"
-#include "algebra/differential.decl.hpp"
 
 namespace Ariadne {
 
 class UniIndex;
 class MultiIndex;
 
+template<class X>
+class Algebra;
+template<class X>
+class ElementaryAlgebra;
+template<class X>
+class Series;
 
-template<class X> class Algebra;
-template<class X> class ElementaryAlgebra;
-template<class X> class Series;
+template<class I, class X>
+class Polynomial;
+template<class X>
+using UnivariatePolynomial = Polynomial<UniIndex, X>;
+template<class X>
+using MultivariatePolynomial = Polynomial<MultiIndex, X>;
 
-template<class I, class X> class Polynomial;
-template<class X> using UnivariatePolynomial = Polynomial<UniIndex,X>;
-template<class X> using MultivariatePolynomial = Polynomial<MultiIndex,X>;
-
-template<class X> class UnivariateChebyshevPolynomial;
-template<class X> class MultivariateChebyshevPolynomial;
+template<class X>
+class UnivariateChebyshevPolynomial;
+template<class X>
+class MultivariateChebyshevPolynomial;
 
 } // namespace Ariadne
 

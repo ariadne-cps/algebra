@@ -22,79 +22,81 @@
  *  along with Ariadne Algebra.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "expansion.hpp"
+
+#include <tuple>
+#include <utility>
+
+#include "expansion.tpl.hpp"
+#include "interval/interval.hpp"
 #include "numeric/float.decl.hpp"
 #include "numeric/floats.hpp"
 #include "numeric/rounded_float.hpp"
-#include "interval/interval.hpp"
-
-#include "expansion.hpp"
-#include "expansion.tpl.hpp"
-
-#include <utility>
-#include <tuple>
 
 namespace Ariadne {
-    template<> struct CharacteristicsTrait<double> { typedef std::tuple<> Type; };
+template<>
+struct CharacteristicsTrait<double> {
+    typedef std::tuple<> Type;
+};
 
-    DP characteristics(FloatDP flt) { return flt.precision(); }
-    MultiplePrecision characteristics(FloatMP flt) { return flt.precision(); }
+DP characteristics(FloatDP flt) { return flt.precision(); }
+MultiplePrecision characteristics(FloatMP flt) { return flt.precision(); }
 
-    static_assert(Same<CharacteristicsType<FloatDP>,DP>);
-    static_assert(Same<CharacteristicsType<RoundedFloatDP>,DP>);
+static_assert(Same<CharacteristicsType<FloatDP>, DP>);
+static_assert(Same<CharacteristicsType<RoundedFloatDP>, DP>);
 
-    static_assert(HasCharacteristics<RoundedFloatDP>);
-    static_assert(HasCharacteristics<RoundedFloatMP>);
+static_assert(HasCharacteristics<RoundedFloatDP>);
+static_assert(HasCharacteristics<RoundedFloatMP>);
 
-    template class Expansion<UniIndex,FloatDP>;
-    template class Expansion<UniIndex,RoundedFloatDP>;
-    template class Expansion<UniIndex,FloatDPApproximation>;
-    template class Expansion<UniIndex,FloatMPApproximation>;
+template class Expansion<UniIndex, FloatDP>;
+template class Expansion<UniIndex, RoundedFloatDP>;
+template class Expansion<UniIndex, FloatDPApproximation>;
+template class Expansion<UniIndex, FloatMPApproximation>;
 
-    template class Expansion<MultiIndex,double>;
-    template class Expansion<MultiIndex,ExactDouble>;
-    template class Expansion<MultiIndex,Dyadic>;
+template class Expansion<MultiIndex, double>;
+template class Expansion<MultiIndex, ExactDouble>;
+template class Expansion<MultiIndex, Dyadic>;
 
-    template class Expansion<MultiIndex,RoundedFloatDP>;
-    template class Expansion<MultiIndex,FloatDP>;
-    template class Expansion<MultiIndex,FloatDPBounds>;
-    template class Expansion<MultiIndex,FloatDPApproximation>;
+template class Expansion<MultiIndex, RoundedFloatDP>;
+template class Expansion<MultiIndex, FloatDP>;
+template class Expansion<MultiIndex, FloatDPBounds>;
+template class Expansion<MultiIndex, FloatDPApproximation>;
 
-    template class SortedExpansion<MultiIndex,RoundedFloatDP,GradedIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatDP,GradedIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatDPApproximation,GradedIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatDPBounds,GradedIndexLess>;
+template class SortedExpansion<MultiIndex, RoundedFloatDP, GradedIndexLess>;
+template class SortedExpansion<MultiIndex, FloatDP, GradedIndexLess>;
+template class SortedExpansion<MultiIndex, FloatDPApproximation, GradedIndexLess>;
+template class SortedExpansion<MultiIndex, FloatDPBounds, GradedIndexLess>;
 
-    template class SortedExpansion<MultiIndex,RoundedFloatDP,ReverseLexicographicIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatDP,ReverseLexicographicIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatDPBounds,ReverseLexicographicIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatDPApproximation,ReverseLexicographicIndexLess>;
+template class SortedExpansion<MultiIndex, RoundedFloatDP, ReverseLexicographicIndexLess>;
+template class SortedExpansion<MultiIndex, FloatDP, ReverseLexicographicIndexLess>;
+template class SortedExpansion<MultiIndex, FloatDPBounds, ReverseLexicographicIndexLess>;
+template class SortedExpansion<MultiIndex, FloatDPApproximation, ReverseLexicographicIndexLess>;
 
-    template class Expansion<MultiIndex,FloatDPUpperInterval>;
-    template class SortedExpansion<MultiIndex,FloatDPUpperInterval,GradedIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatDPUpperInterval,ReverseLexicographicIndexLess>;
+template class Expansion<MultiIndex, FloatDPUpperInterval>;
+template class SortedExpansion<MultiIndex, FloatDPUpperInterval, GradedIndexLess>;
+template class SortedExpansion<MultiIndex, FloatDPUpperInterval, ReverseLexicographicIndexLess>;
 
+template class Expansion<MultiIndex, RoundedFloatMP>;
+template class Expansion<MultiIndex, FloatMP>;
+template class Expansion<MultiIndex, FloatMPBounds>;
+template class Expansion<MultiIndex, FloatMPApproximation>;
 
-    template class Expansion<MultiIndex,RoundedFloatMP>;
-    template class Expansion<MultiIndex,FloatMP>;
-    template class Expansion<MultiIndex,FloatMPBounds>;
-    template class Expansion<MultiIndex,FloatMPApproximation>;
+template class SortedExpansion<MultiIndex, FloatMP, GradedIndexLess>;
+template class SortedExpansion<MultiIndex, FloatMPApproximation, GradedIndexLess>;
+template class SortedExpansion<MultiIndex, FloatMPBounds, GradedIndexLess>;
 
-    template class SortedExpansion<MultiIndex,FloatMP,GradedIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatMPApproximation,GradedIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatMPBounds,GradedIndexLess>;
+template class SortedExpansion<MultiIndex, FloatMP, ReverseLexicographicIndexLess>;
+template class SortedExpansion<MultiIndex, FloatMPBounds, ReverseLexicographicIndexLess>;
+template class SortedExpansion<MultiIndex, FloatMPApproximation, ReverseLexicographicIndexLess>;
 
-    template class SortedExpansion<MultiIndex,FloatMP,ReverseLexicographicIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatMPBounds,ReverseLexicographicIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatMPApproximation,ReverseLexicographicIndexLess>;
+template class Expansion<MultiIndex, FloatMPUpperInterval>;
+template class SortedExpansion<MultiIndex, FloatMPUpperInterval, GradedIndexLess>;
+template class SortedExpansion<MultiIndex, FloatMPUpperInterval, ReverseLexicographicIndexLess>;
 
-    template class Expansion<MultiIndex,FloatMPUpperInterval>;
-    template class SortedExpansion<MultiIndex,FloatMPUpperInterval,GradedIndexLess>;
-    template class SortedExpansion<MultiIndex,FloatMPUpperInterval,ReverseLexicographicIndexLess>;
+// FIXME: Put in accessible header file
+template Void Expansion<MultiIndex, FloatDPUpperInterval>::_fill(const Expansion<MultiIndex, FloatDPBounds>&);
+template Void Expansion<MultiIndex, FloatDPApproximation>::_fill(const Expansion<MultiIndex, FloatDPBounds>&);
 
-    // FIXME: Put in accessible header file
-    template Void Expansion<MultiIndex,FloatDPUpperInterval>::_fill(Expansion<MultiIndex,FloatDPBounds> const&);
-    template Void Expansion<MultiIndex,FloatDPApproximation>::_fill(Expansion<MultiIndex,FloatDPBounds> const&);
-
-    template Void Expansion<MultiIndex,FloatMPUpperInterval>::_fill(Expansion<MultiIndex,FloatMPBounds> const&);
-    template Void Expansion<MultiIndex,FloatMPApproximation>::_fill(Expansion<MultiIndex,FloatMPBounds> const&);
-}
+template Void Expansion<MultiIndex, FloatMPUpperInterval>::_fill(const Expansion<MultiIndex, FloatMPBounds>&);
+template Void Expansion<MultiIndex, FloatMPApproximation>::_fill(const Expansion<MultiIndex, FloatMPBounds>&);
+} // namespace Ariadne

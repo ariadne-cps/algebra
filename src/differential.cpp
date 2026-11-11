@@ -22,17 +22,15 @@
  *  along with Ariadne Algebra.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "numeric/numeric.hpp"
-#include "interval/interval.hpp"
-
 #include "algebra/differential.hpp"
-#include "algebra/univariate_differential.hpp"
+
 #include "algebra/fixed_differential.hpp"
 #include "algebra/fixed_univariate_differential.hpp"
-
-#include "operations.hpp"
-
+#include "algebra/univariate_differential.hpp"
 #include "differential.tpl.hpp"
+#include "interval/interval.hpp"
+#include "numeric/numeric.hpp"
+#include "operations.hpp"
 #include "univariate_differential.tpl.hpp"
 
 namespace Ariadne {
@@ -77,4 +75,4 @@ template class GradedAlgebraOperations<Differential<FloatMPUpperInterval>>;
 template class Vector<Differential<FloatMPBounds>>;
 template class Vector<Differential<FloatMPApproximation>>;
 
-}
+} // namespace Ariadne

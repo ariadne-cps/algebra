@@ -29,43 +29,48 @@
 #ifndef ARIADNE_DIFFERENTIAL_DECL_HPP
 #define ARIADNE_DIFFERENTIAL_DECL_HPP
 
-#include "numeric/number.decl.hpp"
-#include "numeric/float.decl.hpp"
 #include "interval/interval.decl.hpp"
+#include "numeric/float.decl.hpp"
+#include "numeric/number.decl.hpp"
 
 namespace Ariadne {
 
-template<class X> class Vector;
+template<class X>
+class Vector;
 
-template<class X> class Differential;
-template<class X> class UnivariateDifferential;
-template<class X> class NonAssignableDifferential;
+template<class X>
+class Differential;
+template<class X>
+class UnivariateDifferential;
+template<class X>
+class NonAssignableDifferential;
 
-template<class X> class Series;
-
+template<class X>
+class Series;
 
 //!@{
 //! \relates Differential
 //! \name Type synonyms
-template<class X> using DifferentialVector = Vector<Differential<X>>; //!< <p/>
+template<class X>
+using DifferentialVector = Vector<Differential<X>>; //!< <p/>
 
-using FloatDPDifferential = Differential<FloatDP>; //!< DEPRECATED.
+using FloatDPDifferential = Differential<FloatDP>;                           //!< DEPRECATED.
 using FloatDPApproximationDifferential = Differential<FloatDPApproximation>; //!< <p/>
-using FloatDPBoundsDifferential = Differential<FloatDPBounds>; //!< <p/>
+using FloatDPBoundsDifferential = Differential<FloatDPBounds>;               //!< <p/>
 
-using FloatMPDifferential = Differential<FloatMP>; //!< DEPRECATED.
+using FloatMPDifferential = Differential<FloatMP>;                           //!< DEPRECATED.
 using FloatMPApproximationDifferential = Differential<FloatMPApproximation>; //!< <p/>
-using FloatMPBoundsDifferential = Differential<FloatMPBounds>; //!< <p/>
+using FloatMPBoundsDifferential = Differential<FloatMPBounds>;               //!< <p/>
 
 using FloatDPApproximationDifferentialVector = DifferentialVector<FloatDPApproximation>; //!< <p/>
-using FloatDPBoundsDifferentialVector = DifferentialVector<FloatDPBounds>; //!< <p/>
+using FloatDPBoundsDifferentialVector = DifferentialVector<FloatDPBounds>;               //!< <p/>
 using FloatMPApproximationDifferentialVector = DifferentialVector<FloatMPApproximation>; //!< <p/>
-using FloatMPBoundsDifferentialVector = DifferentialVector<FloatMPBounds>; //!< <p/>
+using FloatMPBoundsDifferentialVector = DifferentialVector<FloatMPBounds>;               //!< <p/>
 
 using FloatDPUpperIntervalDifferential = Differential<FloatDPUpperInterval>; //!< <p/>
 using FloatMPUpperIntervalDifferential = Differential<FloatMPUpperInterval>; //!< <p/>
 //!@}
 
-} //namespace Ariadne
+} // namespace Ariadne
 
 #endif // ARIADNE_DIFFERENTIAL_DECL_HPP

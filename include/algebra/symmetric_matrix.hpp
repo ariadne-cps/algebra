@@ -33,43 +33,46 @@
 #include <initializer_list>
 #include <optional>
 
-#include "utility/metaprogramming.hpp"
 #include "utility/macros.hpp"
+#include "utility/metaprogramming.hpp"
 // matrix.hpp declares midpoint<Rational>, which requires Rational to be complete.
+#include "matrix.hpp"
 #include "numeric/numeric.hpp"
 #include "vector.hpp"
-#include "matrix.hpp"
 
 namespace Ariadne {
 
-template<class T> using InitializerList = std::initializer_list<T>;
+template<class T>
+using InitializerList = std::initializer_list<T>;
 
 /************ Matrix *********************************************************/
 
-template<class X> class Vector;
-template<class X> class Covector;
+template<class X>
+class Vector;
+template<class X>
+class Covector;
 
-template<class X> class Matrix;
+template<class X>
+class Matrix;
 
 class SingularMatrixException;
 
-class NonSymmetricMatrixException { };
-
-
+class NonSymmetricMatrixException {};
 
 //! \ingroup LinearAlgebraSubModule
 //! \brief Symmetric matrices over some type \a X.
-template<class X> class SymmetricMatrix
-    : public MatrixContainer<Matrix<X>>
-{
+template<class X>
+class SymmetricMatrix
+    : public MatrixContainer<Matrix<X>> {
     X _zero;
     SizeType _s;
     Array<X> _ary;
+
   public:
     typedef X ScalarType;
     typedef X ValueType;
-  public:
 
+  public:
     //!@{
     //! \name Constructors
 
@@ -77,11 +80,12 @@ template<class X> class SymmetricMatrix
     ~SymmetricMatrix();
 
     //! Construct a symmetric matrix with \a n rows and \a n columns with values initialised to \a z.
-    SymmetricMatrix(SizeType n, X const& z);
+    SymmetricMatrix(SizeType n, const X& z);
 
     //! Construct a symmetric matrix with \a n rows and \a n columns with values initialised to zero.
-    template<class... PRS> requires Constructible<X,Nat,PRS...>
-    SymmetricMatrix(SizeType n, PRS... prs) : SymmetricMatrix(n,X(0u,prs...)) { }
+    template<class... PRS>
+        requires Constructible<X, Nat, PRS...>
+    SymmetricMatrix(SizeType n, PRS... prs) : SymmetricMatrix(n, X(0u, prs...)) {}
 
     //! Construct a matrix using initializer lists.
     SymmetricMatrix(InitializerList<InitializerList<X>> lst);
@@ -90,10 +94,12 @@ template<class X> class SymmetricMatrix
     //! \name Static constructors
 
     //! \brief The zero matrix with \a n rows and \a n columns.
-    template<class... PRS> requires Constructible<X,Nat,PRS...>
+    template<class... PRS>
+        requires Constructible<X, Nat, PRS...>
     static SymmetricMatrix<X> zero(SizeType n, PRS... prs);
     //! \brief The itentity matrix with \a n rows and \a n columns.
-    template<class... PRS> requires Constructible<X,Nat,PRS...>
+    template<class... PRS>
+        requires Constructible<X, Nat, PRS...>
     static SymmetricMatrix<X> identity(SizeType n, PRS... prs);
     //!@}
 
@@ -101,11 +107,11 @@ template<class X> class SymmetricMatrix
     SymmetricMatrix(const Matrix<X>& A);
 
     //! Conversion of a symmetric matrix to a dense matrix.
-    operator Matrix<X> () const;
+    operator Matrix<X>() const;
 
     //! \brief The number of rows (equivalently, columns) of the matrix.
     SizeType size() const;
-     //! \brief The number of rows of the matrix.
+    //! \brief The number of rows of the matrix.
     SizeType row_size() const;
     //! \brief The number of columns of the matrix.
     SizeType column_size() const;
@@ -115,7 +121,7 @@ template<class X> class SymmetricMatrix
     X& at(SizeType i, SizeType j);
     const X& at(SizeType i, SizeType j) const;
     //! \brief Get the value stored in the \a i<sup>th</sup> row and \a j<sup>th</sup> column.
-    const X& get(SizeType i, SizeType j) const ;
+    const X& get(SizeType i, SizeType j) const;
     //! \brief Set the value stored in the \a i<sup>th</sup> row and \a j<sup>th</sup> column to \a x.
     Void set(SizeType i, SizeType j, const X& x);
     //! \brief A pointer to the first element of the data storage.
@@ -132,244 +138,285 @@ template<class X> class SymmetricMatrix
 #endif
     //! \brief The zero element of the field/algebra of the matrix.
     X zero_element() const;
+
   public:
-    template<class T> friend OutputStream& operator<<(OutputStream& os, SymmetricMatrix<T>const& A);
-    template<class T> friend SymmetricMatrix<T> operator+(SymmetricMatrix<T> const&, SymmetricMatrix<T> const&);
-    template<class T> friend SymmetricMatrix<T> operator-(SymmetricMatrix<T> const&, SymmetricMatrix<T> const&);
-    template<class T> friend SymmetricMatrix<T> operator*(T const&, SymmetricMatrix<T> const&);
-    template<class T> friend SymmetricMatrix<T> operator*(SymmetricMatrix<T> const&, T const&);
-    template<class T> friend SymmetricMatrix<T> operator/(SymmetricMatrix<T> const&, T const&);
-    template<class T> friend SymmetricMatrix<T> symmetrize(Matrix<T> const& A);
-    template<class T> friend SymmetricMatrix<T> outer(Matrix<T> const& A);
-    template<class T> friend SymmetricMatrix<T> AxTpTA(Matrix<T> const&, SymmetricMatrix<T> const&);
+    template<class T>
+    friend OutputStream& operator<<(OutputStream& os, const SymmetricMatrix<T>& A);
+    template<class T>
+    friend SymmetricMatrix<T> operator+(const SymmetricMatrix<T>&, const SymmetricMatrix<T>&);
+    template<class T>
+    friend SymmetricMatrix<T> operator-(const SymmetricMatrix<T>&, const SymmetricMatrix<T>&);
+    template<class T>
+    friend SymmetricMatrix<T> operator*(const T&, const SymmetricMatrix<T>&);
+    template<class T>
+    friend SymmetricMatrix<T> operator*(const SymmetricMatrix<T>&, const T&);
+    template<class T>
+    friend SymmetricMatrix<T> operator/(const SymmetricMatrix<T>&, const T&);
+    template<class T>
+    friend SymmetricMatrix<T> symmetrize(const Matrix<T>& A);
+    template<class T>
+    friend SymmetricMatrix<T> outer(const Matrix<T>& A);
+    template<class T>
+    friend SymmetricMatrix<T> AxTpTA(const Matrix<T>&, const SymmetricMatrix<T>&);
+
   private:
     OutputStream& _write(OutputStream& os) const;
 
     friend Vector<X>& to_vector(SymmetricMatrix<X>& S) { return reinterpret_cast<Vector<X>&>(S._ary); }
-    friend Vector<X> const& to_vector(SymmetricMatrix<X> const& S) { return reinterpret_cast<Vector<X>const&>(S._ary); }
+    friend const Vector<X>& to_vector(const SymmetricMatrix<X>& S) { return reinterpret_cast<const Vector<X>&>(S._ary); }
+
   private:
-    SizeType _fast_position(SizeType i, SizeType j) const { return i*(2*this->size()-i-1)/2+j; }
+    SizeType _fast_position(SizeType i, SizeType j) const { return i * (2 * this->size() - i - 1) / 2 + j; }
     SizeType _position(SizeType i, SizeType j) const {
-        ARIADNE_PRECONDITION(i<this->size() && j<this->size());
-        if(i<=j) { return this->_fast_position(i,j); } else { return this->_fast_position(j,i); }
+        ARIADNE_PRECONDITION(i < this->size() && j < this->size());
+        if (i <= j) {
+            return this->_fast_position(i, j);
+        } else {
+            return this->_fast_position(j, i);
+        }
     }
 };
 
-template<class X> Vector<X>& to_vector(SymmetricMatrix<X>& S);
-template<class X> Vector<X> const& to_vector(SymmetricMatrix<X> const& S);
+template<class X>
+Vector<X>& to_vector(SymmetricMatrix<X>& S);
+template<class X>
+const Vector<X>& to_vector(const SymmetricMatrix<X>& S);
 
-
-
-
-template<class X> SymmetricMatrix<X>::~SymmetricMatrix() {
+template<class X>
+SymmetricMatrix<X>::~SymmetricMatrix() {
 }
 
-template<class X> SymmetricMatrix<X>::SymmetricMatrix(SizeType n, X const& z)
-    : _zero(z), _s(n), _ary(n*(n+1)/2,z)
-{
+template<class X>
+SymmetricMatrix<X>::SymmetricMatrix(SizeType n, const X& z)
+    : _zero(z), _s(n), _ary(n * (n + 1) / 2, z) {
 }
 
-template<class X> SymmetricMatrix<X>::SymmetricMatrix(Matrix<X> const& A)
-    : _zero(A.zero_element()), _s(A.row_size()), _ary(_s*(_s+1)/2,_zero)
-{
-    ARIADNE_PRECONDITION(A.row_size()==A.column_size());
-    const SizeType n=this->_s;
-    for(SizeType i=0; i!=n; ++i) {
-        this->_ary[this->_fast_position(i,i)]=A[i][i];
-        for(SizeType j=i+1; j!=n; ++j) {
-            if(decide(A[i][j]!=A[j][i])) { throw NonSymmetricMatrixException(); }
-            this->_ary[this->_fast_position(i,j)]=A[i][j];
+template<class X>
+SymmetricMatrix<X>::SymmetricMatrix(const Matrix<X>& A)
+    : _zero(A.zero_element()), _s(A.row_size()), _ary(_s * (_s + 1) / 2, _zero) {
+    ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+    const SizeType n = this->_s;
+    for (SizeType i = 0; i != n; ++i) {
+        this->_ary[this->_fast_position(i, i)] = A[i][i];
+        for (SizeType j = i + 1; j != n; ++j) {
+            if (decide(A[i][j] != A[j][i])) {
+                throw NonSymmetricMatrixException();
+            }
+            this->_ary[this->_fast_position(i, j)] = A[i][j];
         }
     }
 }
 
 // Delegate parsing and dimension validation to Matrix, then reuse the
 // existing symmetry check in the Matrix-to-SymmetricMatrix constructor.
-template<class X> SymmetricMatrix<X>::SymmetricMatrix(InitializerList<InitializerList<X>> lst)
+template<class X>
+SymmetricMatrix<X>::SymmetricMatrix(InitializerList<InitializerList<X>> lst)
     : SymmetricMatrix(Matrix<X>(lst)) {
 }
 
-template<class X> template<class... PRS> requires Constructible<X,Nat,PRS...>
+template<class X>
+template<class... PRS>
+    requires Constructible<X, Nat, PRS...>
 SymmetricMatrix<X> SymmetricMatrix<X>::zero(SizeType n, PRS... prs) {
-    return SymmetricMatrix<X>(n,X(0u,prs...));
+    return SymmetricMatrix<X>(n, X(0u, prs...));
 }
 
-template<class X> template<class... PRS> requires Constructible<X,Nat,PRS...>
+template<class X>
+template<class... PRS>
+    requires Constructible<X, Nat, PRS...>
 SymmetricMatrix<X> SymmetricMatrix<X>::identity(SizeType n, PRS... prs) {
-    SymmetricMatrix<X> S(n,X(0u,prs...));
-    for(SizeType i=0; i!=n; ++i) {
-        S[i][i]=1u;
+    SymmetricMatrix<X> S(n, X(0u, prs...));
+    for (SizeType i = 0; i != n; ++i) {
+        S[i][i] = 1u;
     }
     return S;
 }
 
-template<class X> inline SizeType SymmetricMatrix<X>::size() const {
+template<class X>
+inline SizeType SymmetricMatrix<X>::size() const {
     return this->_s;
 }
 
-template<class X> inline SizeType SymmetricMatrix<X>::row_size() const {
+template<class X>
+inline SizeType SymmetricMatrix<X>::row_size() const {
     return this->_s;
 }
 
-template<class X> inline SizeType SymmetricMatrix<X>::column_size() const {
+template<class X>
+inline SizeType SymmetricMatrix<X>::column_size() const {
     return this->_s;
 }
 
-template<class X> inline Void SymmetricMatrix<X>::resize(SizeType n) {
+template<class X>
+inline Void SymmetricMatrix<X>::resize(SizeType n) {
     this->_s = n;
-    this->_ary.resize(n*(n+1)/2,this->_zero);
+    this->_ary.resize(n * (n + 1) / 2, this->_zero);
 }
 
-template<class X> inline X& SymmetricMatrix<X>::at(SizeType i, SizeType j) {
-    return this->_ary[this->_position(i,j)];
+template<class X>
+inline X& SymmetricMatrix<X>::at(SizeType i, SizeType j) {
+    return this->_ary[this->_position(i, j)];
 }
 
-template<class X> inline const X& SymmetricMatrix<X>::at(SizeType i, SizeType j) const {
-    return this->_ary[this->_position(i,j)];
+template<class X>
+inline const X& SymmetricMatrix<X>::at(SizeType i, SizeType j) const {
+    return this->_ary[this->_position(i, j)];
 }
 
-template<class X> inline const X& SymmetricMatrix<X>::get(SizeType i, SizeType j) const {
-    return this->_ary[this->_position(i,j)];
+template<class X>
+inline const X& SymmetricMatrix<X>::get(SizeType i, SizeType j) const {
+    return this->_ary[this->_position(i, j)];
 }
 
-template<class X> inline Void SymmetricMatrix<X>::set(SizeType i, SizeType j, const X& x) {
-    this->_ary[this->_position(i,j)]=x;
+template<class X>
+inline Void SymmetricMatrix<X>::set(SizeType i, SizeType j, const X& x) {
+    this->_ary[this->_position(i, j)] = x;
 }
 
-template<class X> inline const X* SymmetricMatrix<X>::begin() const {
+template<class X>
+inline const X* SymmetricMatrix<X>::begin() const {
     return this->_ary.begin();
 }
 
 #ifndef DOXYGEN
-template<class X> inline MatrixRow<const SymmetricMatrix<X>> SymmetricMatrix<X>::operator[](SizeType i) const {
-    return MatrixRow<const SymmetricMatrix<X>>(*this,i);
+template<class X>
+inline MatrixRow<const SymmetricMatrix<X>> SymmetricMatrix<X>::operator[](SizeType i) const {
+    return MatrixRow<const SymmetricMatrix<X>>(*this, i);
 }
-template<class X> inline MatrixRow<SymmetricMatrix<X>> SymmetricMatrix<X>::operator[](SizeType i) {
-    return MatrixRow<SymmetricMatrix<X>>(*this,i);
+template<class X>
+inline MatrixRow<SymmetricMatrix<X>> SymmetricMatrix<X>::operator[](SizeType i) {
+    return MatrixRow<SymmetricMatrix<X>>(*this, i);
 }
 #endif
 
-template<class X> inline X SymmetricMatrix<X>::zero_element() const {
+template<class X>
+inline X SymmetricMatrix<X>::zero_element() const {
     return _zero;
 }
 
-template<class X> inline OutputStream& operator<<(OutputStream& os, SymmetricMatrix<X>const& S) {
+template<class X>
+inline OutputStream& operator<<(OutputStream& os, const SymmetricMatrix<X>& S) {
     return S._write(os);
 }
 
-
-
-template<class X> SymmetricMatrix<X>::operator Matrix<X>() const {
-    SymmetricMatrix<X> const& S=*this;
-    Matrix<X> A(S.row_size(),S.column_size(),S.zero_element());
-    for(SizeType i=0; i!=S.row_size(); ++i) {
-        A[i][i]=S.at(i,i);
-        for(SizeType j=i+1; j!=S.row_size(); ++j) {
-            A[i][j]=S.at(i,j);
-            A[j][i]=S.at(i,j);
+template<class X>
+SymmetricMatrix<X>::operator Matrix<X>() const {
+    const SymmetricMatrix<X>& S = *this;
+    Matrix<X> A(S.row_size(), S.column_size(), S.zero_element());
+    for (SizeType i = 0; i != S.row_size(); ++i) {
+        A[i][i] = S.at(i, i);
+        for (SizeType j = i + 1; j != S.row_size(); ++j) {
+            A[i][j] = S.at(i, j);
+            A[j][i] = S.at(i, j);
         }
     }
     return A;
 }
 
-
-template<class X> OutputStream& SymmetricMatrix<X>::_write(OutputStream& os) const {
+template<class X>
+OutputStream& SymmetricMatrix<X>::_write(OutputStream& os) const {
     return os << Matrix<X>(*this);
 }
 
-template<class X> SymmetricMatrix<X> operator+(SymmetricMatrix<X> const& S1, SymmetricMatrix<X> const& S2) {
-    ARIADNE_PRECONDITION(S1.size()==S2.size());
-    const SizeType n=S1.size();
-    SymmetricMatrix<X> R(n,S1.zero_element()+S2.zero_element());
-    for(SizeType i=0; i!=n*(n+1)/2; ++i) {
-        R._ary[i]=S1._ary[i]+S2._ary[i];
+template<class X>
+SymmetricMatrix<X> operator+(const SymmetricMatrix<X>& S1, const SymmetricMatrix<X>& S2) {
+    ARIADNE_PRECONDITION(S1.size() == S2.size());
+    const SizeType n = S1.size();
+    SymmetricMatrix<X> R(n, S1.zero_element() + S2.zero_element());
+    for (SizeType i = 0; i != n * (n + 1) / 2; ++i) {
+        R._ary[i] = S1._ary[i] + S2._ary[i];
     }
     return R;
 }
 
-template<class X> SymmetricMatrix<X> operator-(SymmetricMatrix<X> const& S1, SymmetricMatrix<X> const& S2) {
-    assert(S1.size()==S2.size());
-    const SizeType n=S1.size();
-    SymmetricMatrix<X> R(n,S1.zero_element()-S2.zero_element());
-    for(SizeType i=0; i!=n*(n+1)/2; ++i) {
-        R._ary[i]=S1._ary[i]-S2._ary[i];
+template<class X>
+SymmetricMatrix<X> operator-(const SymmetricMatrix<X>& S1, const SymmetricMatrix<X>& S2) {
+    assert(S1.size() == S2.size());
+    const SizeType n = S1.size();
+    SymmetricMatrix<X> R(n, S1.zero_element() - S2.zero_element());
+    for (SizeType i = 0; i != n * (n + 1) / 2; ++i) {
+        R._ary[i] = S1._ary[i] - S2._ary[i];
     }
     return R;
 }
 
-template<class X> SymmetricMatrix<X> operator*(X const& x1, SymmetricMatrix<X> const& S2) {
-    const SizeType n=S2.size();
-    SymmetricMatrix<X> R(n,x1*S2.zero_element());
-    for(SizeType i=0; i!=n*(n+1)/2; ++i) {
-        R._ary[i]=x1*S2._ary[i];
+template<class X>
+SymmetricMatrix<X> operator*(const X& x1, const SymmetricMatrix<X>& S2) {
+    const SizeType n = S2.size();
+    SymmetricMatrix<X> R(n, x1 * S2.zero_element());
+    for (SizeType i = 0; i != n * (n + 1) / 2; ++i) {
+        R._ary[i] = x1 * S2._ary[i];
     }
     return R;
 }
 
-template<class X> SymmetricMatrix<X> operator*(SymmetricMatrix<X> const& S1, X const& x2) {
-    const SizeType n=S1.size();
-    SymmetricMatrix<X> R(n,S1.zero_element()*x2);
-    for(SizeType i=0; i!=n*(n+1)/2; ++i) {
-        R._ary[i]=S1._ary[i]*x2;
+template<class X>
+SymmetricMatrix<X> operator*(const SymmetricMatrix<X>& S1, const X& x2) {
+    const SizeType n = S1.size();
+    SymmetricMatrix<X> R(n, S1.zero_element() * x2);
+    for (SizeType i = 0; i != n * (n + 1) / 2; ++i) {
+        R._ary[i] = S1._ary[i] * x2;
     }
     return R;
 }
 
-template<class X> SymmetricMatrix<X> operator/(SymmetricMatrix<X> const& S1, X const& x2) {
-    const SizeType n=S1.size();
-    SymmetricMatrix<X> R(n,S1.zero_element()/x2);
-    for(SizeType i=0; i!=n*(n+1)/2; ++i) {
-        R._ary[i]=S1._ary[i]/x2;
+template<class X>
+SymmetricMatrix<X> operator/(const SymmetricMatrix<X>& S1, const X& x2) {
+    const SizeType n = S1.size();
+    SymmetricMatrix<X> R(n, S1.zero_element() / x2);
+    for (SizeType i = 0; i != n * (n + 1) / 2; ++i) {
+        R._ary[i] = S1._ary[i] / x2;
     }
     return R;
 }
 
-template<class X> SymmetricMatrix<X> outer(Matrix<X> const& A) {
-    const SizeType m=A.row_size();
-    const SizeType n=A.column_size();
-    SymmetricMatrix<X> S(n,A.zero_element());
-    for(SizeType i=0; i!=n; ++i) {
-        for(SizeType j=i; j!=n; ++j) {
-            X& Sij=S.at(i,j);
-            Sij=0;
-            for(SizeType k=0; k!=m; ++k) {
-                Sij+=A[k][i]*A[k][j];
+template<class X>
+SymmetricMatrix<X> outer(const Matrix<X>& A) {
+    const SizeType m = A.row_size();
+    const SizeType n = A.column_size();
+    SymmetricMatrix<X> S(n, A.zero_element());
+    for (SizeType i = 0; i != n; ++i) {
+        for (SizeType j = i; j != n; ++j) {
+            X& Sij = S.at(i, j);
+            Sij = 0;
+            for (SizeType k = 0; k != m; ++k) {
+                Sij += A[k][i] * A[k][j];
             }
         }
     }
     return S;
 }
 
-template<class X> SymmetricMatrix<X> outer(SymmetricMatrix<X> const& A) {
-    const SizeType m=A.row_size();
-    const SizeType n=A.column_size();
-    SymmetricMatrix<X> S(n,A.zero_element());
-    for(SizeType i=0; i!=n; ++i) {
-        for(SizeType j=i; j!=n; ++j) {
-            X& Sij=S.at(i,j);
-            Sij=0;
-            for(SizeType k=0; k!=m; ++k) {
-                Sij+=A[k][i]*A[k][j];
+template<class X>
+SymmetricMatrix<X> outer(const SymmetricMatrix<X>& A) {
+    const SizeType m = A.row_size();
+    const SizeType n = A.column_size();
+    SymmetricMatrix<X> S(n, A.zero_element());
+    for (SizeType i = 0; i != n; ++i) {
+        for (SizeType j = i; j != n; ++j) {
+            X& Sij = S.at(i, j);
+            Sij = 0;
+            for (SizeType k = 0; k != m; ++k) {
+                Sij += A[k][i] * A[k][j];
             }
         }
     }
     return S;
 }
 
-template<class X> SymmetricMatrix<X> symmetrize(Matrix<X> const& A) {
-    ARIADNE_PRECONDITION(A.row_size()==A.column_size());
-    const SizeType n=A.row_size();
-    SymmetricMatrix S(n,A.zero_element());
-    for(SizeType i=0; i!=n; ++i) {
-        S.at(i,i)=A[i][i];
-        for(SizeType j=i+1; j!=n; ++j) {
-            S.at(i,j)=hlf(A[i][j]+A[j][i]);
+template<class X>
+SymmetricMatrix<X> symmetrize(const Matrix<X>& A) {
+    ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+    const SizeType n = A.row_size();
+    SymmetricMatrix S(n, A.zero_element());
+    for (SizeType i = 0; i != n; ++i) {
+        S.at(i, i) = A[i][i];
+        for (SizeType j = i + 1; j != n; ++j) {
+            S.at(i, j) = hlf(A[i][j] + A[j][i]);
         }
     }
     return S;
 }
-
-
 
 //!@{
 //! \name Validated symmetric linear algebra
@@ -380,9 +427,9 @@ template<class X> SymmetricMatrix<X> symmetrize(Matrix<X> const& A) {
 //! to *every* real symmetric matrix represented by its entries.
 //! Indeterminate is not a claim that some represented matrix is singular.
 enum class PositiveDefinitenessStatus {
-    POSITIVE_DEFINITE,      //!< Every represented real matrix is positive definite.
-    NOT_POSITIVE_DEFINITE,  //!< No represented real matrix is positive definite.
-    INDETERMINATE           //!< Neither assertion could be certified.
+    POSITIVE_DEFINITE,     //!< Every represented real matrix is positive definite.
+    NOT_POSITIVE_DEFINITE, //!< No represented real matrix is positive definite.
+    INDETERMINATE          //!< Neither assertion could be certified.
 };
 
 //! \ingroup LinearAlgebraSubModule
@@ -419,7 +466,7 @@ PositiveDefinitenessStatus validated_positive_definiteness(
 //! In particular, the result is not a pointwise equality between interval
 //! matrices: L*transpose(L) is an interval enclosure of the input family.
 struct ValidatedCholeskyResult {
-    PositiveDefinitenessStatus status; //!< Rigorous universal classification.
+    PositiveDefinitenessStatus status;          //!< Rigorous universal classification.
     std::optional<Matrix<FloatDPBounds>> lower; //!< Validated lower factor, if certified.
 };
 
@@ -462,7 +509,8 @@ ValidatedCholeskyResult validated_cholesky_decomposition(
 //! symmetric coefficient matrix and every admissible right-hand side.
 //! An absent solution is not a claim that the linear system is unsolvable:
 //! the positive-definiteness precondition could not be established.
-template<class T> struct ValidatedPositiveDefiniteSolveResult {
+template<class T>
+struct ValidatedPositiveDefiniteSolveResult {
     PositiveDefinitenessStatus status; //!< Classification of the coefficient matrix.
     std::optional<T> solution;         //!< Validated solution enclosure if certified.
 };
@@ -489,9 +537,9 @@ template<class T> struct ValidatedPositiveDefiniteSolveResult {
 //! 4th ed., Johns Hopkins University Press, 2013, Cholesky factorization
 //! and triangular substitution.
 ValidatedPositiveDefiniteSolveResult<Matrix<FloatDPBounds>>
-validated_positive_definite_solve(
-    const SymmetricMatrix<FloatDPBounds>& A,
-    const Matrix<FloatDPBounds>& B);
+    validated_positive_definite_solve(
+        const SymmetricMatrix<FloatDPBounds>& A,
+        const Matrix<FloatDPBounds>& B);
 
 //! \ingroup LinearAlgebraSubModule
 //! \brief Enclose the solutions of Ax=b via validated Cholesky.
@@ -503,9 +551,9 @@ validated_positive_definite_solve(
 //! \details Equivalent to the matrix right-hand-side overload with
 //! one column, including its universal enclosure guarantee.
 ValidatedPositiveDefiniteSolveResult<Vector<FloatDPBounds>>
-validated_positive_definite_solve(
-    const SymmetricMatrix<FloatDPBounds>& A,
-    const Vector<FloatDPBounds>& b);
+    validated_positive_definite_solve(
+        const SymmetricMatrix<FloatDPBounds>& A,
+        const Vector<FloatDPBounds>& b);
 
 //! \ingroup LinearAlgebraSubModule
 //! \brief Certification status for an interval saddle-point linear system.
@@ -527,8 +575,8 @@ enum class ValidatedSaddlePointStatus {
 //! \c primary encloses the first block x; \c secondary encloses the
 //! second block y. The names convey no optimization-specific semantics.
 struct ValidatedSaddlePointResult {
-    ValidatedSaddlePointStatus status; //!< Universal certification outcome.
-    std::optional<Vector<FloatDPBounds>> primary; //!< n-vector solving the first block.
+    ValidatedSaddlePointStatus status;              //!< Universal certification outcome.
+    std::optional<Vector<FloatDPBounds>> primary;   //!< n-vector solving the first block.
     std::optional<Vector<FloatDPBounds>> secondary; //!< m-vector solving the second block.
 };
 
@@ -575,8 +623,8 @@ ValidatedSaddlePointResult validated_saddle_point_solve(
 //! Their columns enclose the respective solutions of the upper and
 //! lower block equations of the same represented system family.
 struct ValidatedSaddlePointMatrixResult {
-    ValidatedSaddlePointStatus status; //!< Universal certification outcome.
-    std::optional<Matrix<FloatDPBounds>> primary; //!< n-by-p first-block solution.
+    ValidatedSaddlePointStatus status;              //!< Universal certification outcome.
+    std::optional<Matrix<FloatDPBounds>> primary;   //!< n-by-p first-block solution.
     std::optional<Matrix<FloatDPBounds>> secondary; //!< m-by-p second-block solution.
 };
 

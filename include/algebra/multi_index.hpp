@@ -33,27 +33,37 @@
 #include <initializer_list>
 #include <iostream>
 
-#include "utility/macros.hpp"
+#include "numeric/numeric.hpp"
 #include "utility/array.hpp"
 #include "utility/container.hpp"
+#include "utility/macros.hpp"
 #include "utility/uniform_list.hpp"
-#include "numeric/numeric.hpp"
 
 namespace Ariadne {
 
-
 class UniIndex {
     DegreeType _a;
+
   public:
-    UniIndex(DegreeType a=0u) : _a(a) { }
-    UniIndex& operator++() { ++_a; return *this; }
-    UniIndex& operator--() { --_a; return *this; }
-    UniIndex operator+(UniIndex const& other) const { return UniIndex(this->_a+other._a); }
-    short int operator-(UniIndex const& other) const { return (short int)this->_a-(short int)other._a; }
-    UniIndex& operator+=(UniIndex const& other) { this->_a+=other._a; return *this; }
-    template<BuiltinIntegral D> UniIndex operator+(D d) const { return UniIndex(static_cast<DegreeType>(this->_a+d)); }
-    DegreeType& operator[] (IndexZero) { return _a; }
-    DegreeType const& operator[] (IndexZero) const { return _a; }
+    UniIndex(DegreeType a = 0u) : _a(a) {}
+    UniIndex& operator++() {
+        ++_a;
+        return *this;
+    }
+    UniIndex& operator--() {
+        --_a;
+        return *this;
+    }
+    UniIndex operator+(const UniIndex& other) const { return UniIndex(this->_a + other._a); }
+    short int operator-(const UniIndex& other) const { return (short int)this->_a - (short int)other._a; }
+    UniIndex& operator+=(const UniIndex& other) {
+        this->_a += other._a;
+        return *this;
+    }
+    template<BuiltinIntegral D>
+    UniIndex operator+(D d) const { return UniIndex(static_cast<DegreeType>(this->_a + d)); }
+    DegreeType& operator[](IndexZero) { return _a; }
+    const DegreeType& operator[](IndexZero) const { return _a; }
     SizeOne size() const { return SizeOne(); }
     DegreeType degree() const { return _a; }
     operator DegreeType() const { return _a; }
@@ -61,45 +71,53 @@ class UniIndex {
 
 struct MultiIndexData {
     friend class MultiIndexList;
+
   public:
     typedef DegreeType IndexType;
     typedef DegreeType& Reference;
     typedef const DegreeType& ConstReference;
+
   protected:
     ~MultiIndexData();
     explicit MultiIndexData(SizeType n, IndexType* p);
+
   public:
     SizeType size() const;
     SizeType number_of_variables() const;
     DegreeType degree() const;
-    IndexType const& operator[](SizeType i) const;
+    const IndexType& operator[](SizeType i) const;
     IndexType& operator[](SizeType i);
 
     DegreeType get(SizeType i) const;
     Void set(SizeType i, DegreeType n);
 
     Void assign(const MultiIndexData& a);
+
   public:
     friend Bool operator==(const MultiIndexData& a1, const MultiIndexData& a2);
     friend Bool operator!=(const MultiIndexData& a1, const MultiIndexData& a2);
+
   public:
     friend Bool graded_less(const MultiIndexData& a1, const MultiIndexData& a2);
     friend Bool lexicographic_less(const MultiIndexData& a1, const MultiIndexData& a2);
     friend Bool reverse_lexicographic_less(const MultiIndexData& a1, const MultiIndexData& a2);
     friend OutputStream& operator<<(OutputStream&, const MultiIndexData&);
+
   public:
     IndexType* begin();
     IndexType* end();
     const IndexType* begin() const;
     const IndexType* end() const;
-  protected: public:
+
+  protected:
+
+  public:
     SizeType _n;
     IndexType* _p;
 };
 
 class MultiIndex
-    : public MultiIndexData
-{
+    : public MultiIndexData {
   public:
     ~MultiIndex();
     explicit MultiIndex();
@@ -128,77 +146,78 @@ class MultiIndex
 
     friend Void swap(MultiIndex& a1, MultiIndex& a2);
 
-//    SizeType position() const;
-//    SizeType factorial() const;
-//    SizeType number() const;
+    //    SizeType position() const;
+    //    SizeType factorial() const;
+    //    SizeType number() const;
 };
 
 struct LexicographicLess {
-    Bool operator() (DegreeType const& a1, DegreeType const& a2) const;
-    Bool operator() (MultiIndex const& a1, MultiIndex const& a2) const;
+    Bool operator()(const DegreeType& a1, const DegreeType& a2) const;
+    Bool operator()(const MultiIndex& a1, const MultiIndex& a2) const;
 };
 
 struct ReverseLexicographicLess {
-    Bool operator() (DegreeType const& a1, DegreeType const& a2) const;
-    Bool operator() (MultiIndex const& a1, MultiIndex const& a2) const;
+    Bool operator()(const DegreeType& a1, const DegreeType& a2) const;
+    Bool operator()(const MultiIndex& a1, const MultiIndex& a2) const;
 };
 
 struct GradedLess {
-    Bool operator() (DegreeType const& a1, DegreeType const& a2) const;
-    Bool operator() (MultiIndex const& a1, MultiIndex const& a2) const;
+    Bool operator()(const DegreeType& a1, const DegreeType& a2) const;
+    Bool operator()(const MultiIndex& a1, const MultiIndex& a2) const;
 };
-
 
 static const SizeType DEFAULT_CAPACITY = 4u;
 
 struct MultiIndexReference : public MultiIndexData {
     MultiIndexReference(SizeType n, IndexType* p);
-    MultiIndexReference(MultiIndexData const&);
-    MultiIndexReference(MultiIndexReference const&) = default;
-    MultiIndexReference& operator=(MultiIndexReference const&);
-    MultiIndexReference& operator=(MultiIndexData const&);
-    operator MultiIndex& ();
-    operator MultiIndex const& () const;
-    MultiIndexReference& operator+=(MultiIndexData const&);
+    MultiIndexReference(const MultiIndexData&);
+    MultiIndexReference(const MultiIndexReference&) = default;
+    MultiIndexReference& operator=(const MultiIndexReference&);
+    MultiIndexReference& operator=(const MultiIndexData&);
+    operator MultiIndex&();
+    operator const MultiIndex&() const;
+    MultiIndexReference& operator+=(const MultiIndexData&);
     friend Void swap(MultiIndex&, MultiIndex&);
-//    friend Void swap(MultiIndexReference, MultiIndexReference);
+    //    friend Void swap(MultiIndexReference, MultiIndexReference);
 };
 
-
 struct MultiIndexConstReference : public MultiIndexData {
-    MultiIndexConstReference(SizeType n, DegreeType const* p);
-    MultiIndexConstReference(MultiIndexConstReference const&) = default;
-    MultiIndexConstReference& operator=(MultiIndexConstReference const&) = delete;
-    MultiIndexConstReference(MultiIndexReference const&);
-    operator MultiIndex const& () const;
+    MultiIndexConstReference(SizeType n, const DegreeType* p);
+    MultiIndexConstReference(const MultiIndexConstReference&) = default;
+    MultiIndexConstReference& operator=(const MultiIndexConstReference&) = delete;
+    MultiIndexConstReference(const MultiIndexReference&);
+    operator const MultiIndex&() const;
     friend MultiIndex operator+(MultiIndex a1, const MultiIndex& a2);
 };
 
 struct MultiIndexPointer {
     MultiIndexReference _r;
+
   public:
-    MultiIndexPointer(MultiIndexReference* _p) : _r(*_p) { }
+    MultiIndexPointer(MultiIndexReference* _p) : _r(*_p) {}
     MultiIndexReference& operator*() { return _r; }
     MultiIndexReference* operator->() { return &_r; }
-    friend OutputStream& operator<<(OutputStream& os, MultiIndexPointer const&);
+    friend OutputStream& operator<<(OutputStream& os, const MultiIndexPointer&);
 };
 struct MultiIndexConstPointer {
     MultiIndexConstReference _r;
+
   public:
-    MultiIndexConstPointer(MultiIndexConstReference* _p) : _r(*_p) { }
+    MultiIndexConstPointer(MultiIndexConstReference* _p) : _r(*_p) {}
     MultiIndexConstReference& operator*() const { return const_cast<MultiIndexConstReference&>(_r); }
     MultiIndexConstReference* operator->() const { return const_cast<MultiIndexConstReference*>(&_r); }
-    friend OutputStream& operator<<(OutputStream& os, MultiIndexConstPointer const&);
+    friend OutputStream& operator<<(OutputStream& os, const MultiIndexConstPointer&);
 };
-
-
 
 class MultiIndexListIterator;
 class MultiIndexListConstIterator;
 
 class MultiIndexList {
-    SizeType _capacity; SizeType _size; SizeType _argument_size;
+    SizeType _capacity;
+    SizeType _size;
+    SizeType _argument_size;
     DegreeType* _indices;
+
   public:
     typedef MultiIndex ValueType;
     typedef MultiIndexReference Reference;
@@ -207,25 +226,29 @@ class MultiIndexList {
     typedef MultiIndexConstPointer ConstPointer;
     typedef MultiIndexListIterator Iterator;
     typedef MultiIndexListConstIterator ConstIterator;
-  protected: public:
+
+  protected:
+
+  public:
     explicit MultiIndexList(SizeType as);
+
   public:
     ~MultiIndexList();
-//    MultiIndexList(SizeType as, SizeType cap);
-    MultiIndexList(InitializerList<InitializerList<DegreeType>> const& lst);
-    MultiIndexList(InitializerList<MultiIndex> const& lst);
-    MultiIndexList(SizeType n, MultiIndex const& a);
-    MultiIndexList(MultiIndexList const&);
+    //    MultiIndexList(SizeType as, SizeType cap);
+    MultiIndexList(const InitializerList<InitializerList<DegreeType>>& lst);
+    MultiIndexList(const InitializerList<MultiIndex>& lst);
+    MultiIndexList(SizeType n, const MultiIndex& a);
+    MultiIndexList(const MultiIndexList&);
     MultiIndexList(MultiIndexList&&);
-    MultiIndexList& operator=(MultiIndexList const&);
+    MultiIndexList& operator=(const MultiIndexList&);
     MultiIndexList& operator=(MultiIndexList&&);
     Void resize(SizeType n);
     Void reserve(SizeType n);
     SizeType size() const;
     SizeType capacity() const;
     SizeType argument_size() const;
-    Void append(MultiIndexData const& a);
-    Void append_sum(MultiIndexData const& a1, MultiIndexData const& a2);
+    Void append(const MultiIndexData& a);
+    Void append_sum(const MultiIndexData& a1, const MultiIndexData& a2);
     Reference operator[](SizeType i);
     ConstReference operator[](SizeType i) const;
     Reference front();
@@ -238,53 +261,53 @@ class MultiIndexList {
     ConstIterator end() const;
     Iterator erase(Iterator pos);
     Void clear();
-    friend Bool operator==(MultiIndexList const& lst1, MultiIndexList const& lst2);
-    friend OutputStream& operator<<(OutputStream& os, MultiIndexList const& lst);
+    friend Bool operator==(const MultiIndexList& lst1, const MultiIndexList& lst2);
+    friend OutputStream& operator<<(OutputStream& os, const MultiIndexList& lst);
 };
 
 class MultiIndexListIterator {
     friend class MultiIndexListConstIterator;
     MultiIndexReference _r;
+
   public:
     explicit MultiIndexListIterator(SizeType n, DegreeType* p);
-    MultiIndexListIterator(MultiIndexListIterator const&);
-    MultiIndexListIterator& operator=(MultiIndexListIterator const&);
-    Bool operator==(MultiIndexListIterator const& other) const;
-    Bool operator!=(MultiIndexListIterator const& other) const;
+    MultiIndexListIterator(const MultiIndexListIterator&);
+    MultiIndexListIterator& operator=(const MultiIndexListIterator&);
+    Bool operator==(const MultiIndexListIterator& other) const;
+    Bool operator!=(const MultiIndexListIterator& other) const;
     MultiIndexListIterator& operator++();
     MultiIndexListIterator& operator--();
     MultiIndexListIterator& operator+=(PointerDifferenceType k);
     MultiIndexListIterator operator+(PointerDifferenceType k) const;
     MultiIndexReference operator*() const;
     MultiIndexPointer operator->() const;
-    friend OutputStream& operator<<(OutputStream& os, MultiIndexListIterator const&);
+    friend OutputStream& operator<<(OutputStream& os, const MultiIndexListIterator&);
 };
 
 class MultiIndexListConstIterator {
     MultiIndexConstReference _r;
+
   public:
-    explicit MultiIndexListConstIterator(SizeType n, DegreeType const* p);
-    MultiIndexListConstIterator(MultiIndexListIterator const& iter);
-    MultiIndexListConstIterator(MultiIndexListConstIterator const& iter);
-    MultiIndexListConstIterator& operator=(MultiIndexListConstIterator const& iter);
-    Bool operator==(MultiIndexListConstIterator const& other);
-    Bool operator!=(MultiIndexListConstIterator const& other) const;
+    explicit MultiIndexListConstIterator(SizeType n, const DegreeType* p);
+    MultiIndexListConstIterator(const MultiIndexListIterator& iter);
+    MultiIndexListConstIterator(const MultiIndexListConstIterator& iter);
+    MultiIndexListConstIterator& operator=(const MultiIndexListConstIterator& iter);
+    Bool operator==(const MultiIndexListConstIterator& other);
+    Bool operator!=(const MultiIndexListConstIterator& other) const;
     MultiIndexListConstIterator& operator++();
     MultiIndexListConstIterator& operator--();
     MultiIndexListConstIterator& operator+=(PointerDifferenceType k);
     MultiIndexListConstIterator operator+(PointerDifferenceType k) const;
     MultiIndexConstReference operator*() const;
     MultiIndexConstPointer operator->() const;
-    friend OutputStream& operator<<(OutputStream& os, MultiIndexListConstIterator const&);
+    friend OutputStream& operator<<(OutputStream& os, const MultiIndexListConstIterator&);
 };
 
-
-template<> class UniformList<MultiIndex>
-    : public MultiIndexList
-{
+template<>
+class UniformList<MultiIndex>
+    : public MultiIndexList {
     using MultiIndexList::MultiIndexList;
 };
-
 
 } // namespace Ariadne
 

@@ -23,43 +23,37 @@
  */
 
 #include <cassert>
-#include <iostream>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <string>
 
-
-#include "numeric/numeric.hpp"
-#include "interval/interval.hpp"
-#include "algebra/vector.hpp"
 #include "algebra/covector.hpp"
 #include "algebra/differential.hpp"
-
 #include "algebra/expansion.tpl.hpp"
-
+#include "algebra/vector.hpp"
 #include "algebra_testing_context.hpp"
-
+#include "interval/interval.hpp"
+#include "numeric/numeric.hpp"
 
 using namespace Ariadne;
 
 using namespace std;
 
 template<class R, class A, class P>
-Void henon(R& r, const A& x, const P& p)
-{
-    r[0]=p[0]-x[0]*x[0]-p[1]*x[1];
-    r[1]=x[0];
+Void henon(R& r, const A& x, const P& p) {
+    r[0] = p[0] - x[0] * x[0] - p[1] * x[1];
+    r[1] = x[0];
 }
 
 template<class DF>
 Vector<DF>
-henon(const Vector<DF>& x, const Vector<typename DF::NumericType>& p)
-{
-    Vector<DF> r(2,2,x.degree(),p.zero_element()); henon(r,x,p); return r;
+    henon(const Vector<DF>& x, const Vector<typename DF::NumericType>& p) {
+    Vector<DF> r(2, 2, x.degree(), p.zero_element());
+    henon(r, x, p);
+    return r;
 }
-
-
 
 template<class DF>
 class TestDifferential {
@@ -69,18 +63,34 @@ class TestDifferential {
     typedef typename DF::SeriesType SeriesType;
     typedef DF DifferentialType;
     typedef Vector<DF> DifferentialVectorType;
+
   private:
     PR pr;
     X c1;
-    DifferentialType x1,x2,x3;
+    DifferentialType x1, x2, x3;
+
   public:
     TestDifferential()
-        : c1(pr), x1(2,4,pr), x2(2,4,pr), x3(1,4,pr)
-    {
-        c1=ScalarType(3.0_x,pr);
-        x1=DifferentialType(2,4,{{{0,0},2.0_x},{{1,0},1.0_x},{{2,0},0.5_x}},pr);
-        x2=DifferentialType(2,4,{{{0,0},3.0_x},{{1,0},1.0_x},{{2,0},0.25_x}},pr);
-        x3=DifferentialType(1,4,{{{0},2.0_x},{{1},1.0_x},{{2},0.125_x}},pr);
+        : c1(pr), x1(2, 4, pr), x2(2, 4, pr), x3(1, 4, pr) {
+        c1 = ScalarType(3.0_x, pr);
+        x1 = DifferentialType(2, 4, {
+                                        {{0, 0}, 2.0_x},
+                                        {{1, 0}, 1.0_x},
+                                        {{2, 0}, 0.5_x}
+        },
+                              pr);
+        x2 = DifferentialType(2, 4, {
+                                        {{0, 0},  3.0_x},
+                                        {{1, 0},  1.0_x},
+                                        {{2, 0}, 0.25_x}
+        },
+                              pr);
+        x3 = DifferentialType(1, 4, {
+                                        {{0},   2.0_x},
+                                        {{1},   1.0_x},
+                                        {{2}, 0.125_x}
+        },
+                              pr);
 
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "x1", x1);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "x2", x2);
@@ -101,61 +111,121 @@ class TestDifferential {
     }
 
     Void test_degree() {
-        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), x1.degree()==4);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), x1.degree() == 4);
     }
 
     Void test_construct() {
-        DifferentialType x(2,4, { {{0,0},2.0_x}, {{1,0},1.0_x}, {{2,0},0.5_x} }, pr);
+        DifferentialType x(2, 4, {
+                                     {{0, 0}, 2.0_x},
+                                     {{1, 0}, 1.0_x},
+                                     {{2, 0}, 0.5_x}
+        },
+                           pr);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "x", x);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), x.expansion().is_sorted(GradedIndexLess()));
     }
 
     Void test_neg() {
-        DifferentialType nx1(2,4, { {{0,0},-2.0_x}, {{1,0},-1.0_x}, {{2,0},-0.5_x} }, pr);
+        DifferentialType nx1(2, 4, {
+                                       {{0, 0}, -2.0_x},
+                                       {{1, 0}, -1.0_x},
+                                       {{2, 0}, -0.5_x}
+        },
+                             pr);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), -x1, nx1);
     }
 
     Void test_add() {
-        DifferentialType x1px2(2,4, { {{0,0},5.0_x}, {{1,0},2.0_x}, {{2,0},0.75_x} }, pr);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), x1+x2, x1px2);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1+c1);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c1+x1);
-        //assert((x1+x2)==DifferentialType("[3,2,0,0]"));
+        DifferentialType x1px2(2, 4, {
+                                         {{0, 0},  5.0_x},
+                                         {{1, 0},  2.0_x},
+                                         {{2, 0}, 0.75_x}
+        },
+                               pr);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), x1 + x2, x1px2);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1 + c1);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c1 + x1);
+        // assert((x1+x2)==DifferentialType("[3,2,0,0]"));
     }
 
     Void test_sub() {
-        DifferentialType x1mx2(2,4, { {{0,0},-1.0_x}, {{1,0},0.0_x}, {{2,0},0.25_x} }, pr);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), x1-x2, x1mx2);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1-c1);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c1-x1);
-        //assert((x1-x2)==DifferentialType("[-1,0,0,0]"));
+        DifferentialType x1mx2(2, 4, {
+                                         {{0, 0}, -1.0_x},
+                                         {{1, 0},  0.0_x},
+                                         {{2, 0}, 0.25_x}
+        },
+                               pr);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), x1 - x2, x1mx2);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1 - c1);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c1 - x1);
+        // assert((x1-x2)==DifferentialType("[-1,0,0,0]"));
     }
 
     Void test_mul() {
-        DifferentialType y1(2,2,{{{0,0},1.0_x}, {{1,0},2.0_x}, {{0,1},3.0_x}, {{2,0},4.0_x}, {{1,1},5.0_x}, {{0,2},6.0_x}},pr);
-        DifferentialType y2(2,2,{{{0,0},2.0_x}, {{1,0},3.0_x}, {{0,1},5.0_x}, {{2,0},7.0_x}, {{1,1},11.0_x}, {{0,2},13.0_x}},pr);
-        DifferentialType y1my2(2,2,{{{0,0},2.0_x}, {{1,0},7.0_x}, {{0,1},11.0_x}, {{2,0},21.0_x}, {{1,1},40.0_x}, {{0,2},40.0_x}},pr);
-        DifferentialType cmy2(2,2,{{{0,0},10.0_x}, {{1,0},15.0_x}, {{0,1},25.0_x}, {{2,0},35.0_x}, {{1,1},55.0_x}, {{0,2},65.0_x}},pr);
-        X c={5,pr};
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), y1*y2, y1my2);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), c*y2, cmy2);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), y2*c, cmy2);
+        DifferentialType y1(2, 2, {
+                                      {{0, 0}, 1.0_x},
+                                      {{1, 0}, 2.0_x},
+                                      {{0, 1}, 3.0_x},
+                                      {{2, 0}, 4.0_x},
+                                      {{1, 1}, 5.0_x},
+                                      {{0, 2}, 6.0_x}
+        },
+                            pr);
+        DifferentialType y2(2, 2, {
+                                      {{0, 0},  2.0_x},
+                                      {{1, 0},  3.0_x},
+                                      {{0, 1},  5.0_x},
+                                      {{2, 0},  7.0_x},
+                                      {{1, 1}, 11.0_x},
+                                      {{0, 2}, 13.0_x}
+        },
+                            pr);
+        DifferentialType y1my2(2, 2, {
+                                         {{0, 0},  2.0_x},
+                                         {{1, 0},  7.0_x},
+                                         {{0, 1}, 11.0_x},
+                                         {{2, 0}, 21.0_x},
+                                         {{1, 1}, 40.0_x},
+                                         {{0, 2}, 40.0_x}
+        },
+                               pr);
+        DifferentialType cmy2(2, 2, {
+                                        {{0, 0}, 10.0_x},
+                                        {{1, 0}, 15.0_x},
+                                        {{0, 1}, 25.0_x},
+                                        {{2, 0}, 35.0_x},
+                                        {{1, 1}, 55.0_x},
+                                        {{0, 2}, 65.0_x}
+        },
+                              pr);
+        X c = {5, pr};
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), y1 * y2, y1my2);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), c * y2, cmy2);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), y2 * c, cmy2);
     }
 
     Void test_div() {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_rec());
 
-        DifferentialType y2(2,2,{{{0,0},4.0_x}, {{1,0},3.0_x}, {{0,1},5.0_x}, {{2,0},7.0_x}, {{1,1},11.0_x}, {{0,2},13.0_x}},pr);
+        DifferentialType y2(2, 2, {
+                                      {{0, 0},  4.0_x},
+                                      {{1, 0},  3.0_x},
+                                      {{0, 1},  5.0_x},
+                                      {{2, 0},  7.0_x},
+                                      {{1, 1}, 11.0_x},
+                                      {{0, 2}, 13.0_x}
+        },
+                            pr);
 
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "x1", x1);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "y2", y2);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "c1", c1);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1/c1);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c1/x1);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), ((x1/c1)*c1), x1);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), (c1/x1)*x1, DifferentialType::constant(2,4,c1));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1/y2);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), (x1/y2)*y2, x1);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1 / c1);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), c1 / x1);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), ((x1 / c1) * c1), x1);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), (c1 / x1) * x1, DifferentialType::constant(2, 4, c1));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1 / y2);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), (x1 / y2) * y2, x1);
         /*
           DifferentialType x3("[2,3,4]");
           DifferentialType x4("[1,0,0]");
@@ -171,38 +241,65 @@ class TestDifferential {
     }
 
     Void test_rec() {
-        DifferentialType y1(2,2,{{{0,0},1.0_x}, {{1,0},2.0_x}, {{0,1},3.0_x}, {{2,0},4.0_x}, {{1,1},5.0_x}, {{0,2},6.0_x}},pr);
-        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "Series<X>(Rec(),2*y1.value())", Series<X>(Rec(),2*y1.value()));
-        auto drec=UnivariateDifferential<X>(Rec(),y1.degree(),y1.value());
+        DifferentialType y1(2, 2, {
+                                      {{0, 0}, 1.0_x},
+                                      {{1, 0}, 2.0_x},
+                                      {{0, 1}, 3.0_x},
+                                      {{2, 0}, 4.0_x},
+                                      {{1, 1}, 5.0_x},
+                                      {{0, 2}, 6.0_x}
+        },
+                            pr);
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "Series<X>(Rec(),2*y1.value())", Series<X>(Rec(), 2 * y1.value()));
+        auto drec = UnivariateDifferential<X>(Rec(), y1.degree(), y1.value());
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "drec", drec);
-        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "compose(drec,y1)", compose(drec,y1));
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "compose(drec,y1)", compose(drec, y1));
 
-        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "DifferentialType::_compose(Series<X>(Rec(),y1.value()),y1)", DifferentialType::_compose(Series<X>(Rec(),y1.value()),y1));
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "DifferentialType::_compose(Series<X>(Rec(),y1.value()),y1)", DifferentialType::_compose(Series<X>(Rec(), y1.value()), y1));
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "rec(y1)", rec(y1));
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), rec(rec(y1)), y1);
-
     }
 
     Void test_pow() {
-        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x2 << "^5 = " << pow(x2,5));
+        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x2 << "^5 = " << pow(x2, 5));
         //    assert(pow(x2,5)==DifferentialType("[32,80,160,240]"));
     }
 
     Void test_compose() {
-        //double ax[10] = { 3.0_x, 1.0_x, 0.0_x, 0.5_x, 0.0_x, 0.0_x, 0.0_x, 0.0_x, 0.0_x, 0.0_x };
-        DifferentialType x(2,3,{{{0,0},3.0_x},{{1,0},1.0_x},{{0,1},2.0_x},{{2,0},1.0_x},{{1,1},0.5_x},{{0,2},2.0_x}},pr);
-        SeriesType y(3,{1.0_x,2.0_x,-3.0_x,5.0_x},pr);
-        SeriesType id(3,{3.0_x,1.0_x,0.0_x},pr);
-        DifferentialType r(2,3,{{{0,0},1.0_x},{{1,0},2.0_x},{{0,1},4.0_x},{{2,0},-1.0_x},{{1,1},-11.0_x},{{0,2},-8.0_x},{{3,0},-1.0_x},{{2,1},15.0_x},{{1,2},42.0_x},{{0,3},16.0_x}},pr);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(y,x), r);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(id,x), x);
+        // double ax[10] = { 3.0_x, 1.0_x, 0.0_x, 0.5_x, 0.0_x, 0.0_x, 0.0_x, 0.0_x, 0.0_x, 0.0_x };
+        DifferentialType x(2, 3, {
+                                     {{0, 0}, 3.0_x},
+                                     {{1, 0}, 1.0_x},
+                                     {{0, 1}, 2.0_x},
+                                     {{2, 0}, 1.0_x},
+                                     {{1, 1}, 0.5_x},
+                                     {{0, 2}, 2.0_x}
+        },
+                           pr);
+        SeriesType y(3, {1.0_x, 2.0_x, -3.0_x, 5.0_x}, pr);
+        SeriesType id(3, {3.0_x, 1.0_x, 0.0_x}, pr);
+        DifferentialType r(2, 3, {
+                                     {{0, 0},   1.0_x},
+                                     {{1, 0},   2.0_x},
+                                     {{0, 1},   4.0_x},
+                                     {{2, 0},  -1.0_x},
+                                     {{1, 1}, -11.0_x},
+                                     {{0, 2},  -8.0_x},
+                                     {{3, 0},  -1.0_x},
+                                     {{2, 1},  15.0_x},
+                                     {{1, 2},  42.0_x},
+                                     {{0, 3},  16.0_x}
+        },
+                           pr);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(y, x), r);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(id, x), x);
     }
 
     Void test_gradient() {
         // Regression test based on errors in Henon evaluation.
-        Vector<FloatDPApproximation> x({0.875_x,-0.125_x},pr);
-        Vector< Differential<FloatDPApproximation> > dx=Differential<FloatDPApproximation>::variables(1u,x);
-        Differential<FloatDPApproximation> dfx=1.5_x-dx[0]*dx[0]-0.25_x*dx[1];
+        Vector<FloatDPApproximation> x({0.875_x, -0.125_x}, pr);
+        Vector<Differential<FloatDPApproximation> > dx = Differential<FloatDPApproximation>::variables(1u, x);
+        Differential<FloatDPApproximation> dfx = 1.5_x - dx[0] * dx[0] - 0.25_x * dx[1];
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "dfx", dfx);
         Covector<FloatDPApproximation> g = dfx.gradient();
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "g", g);
@@ -212,137 +309,147 @@ class TestDifferential {
 
     Void test_hessian() {
         // Test Hessian matrix of
-        FloatDPApproximation a00={1.5_x,pr}; FloatDPApproximation a01={2.5_x,pr}; FloatDPApproximation a11={3.5_x,pr};
-        ExactDouble y0=0.875_x; ExactDouble y1=-1.25_x;
-        Vector<FloatDPApproximation> x({y0,y1},pr);
-        Vector< Differential<FloatDPApproximation> > dx=Differential<FloatDPApproximation>::variables(2u,x);
-        Differential<FloatDPApproximation> dfx=a00*dx[0]*dx[0]+a01*dx[0]*dx[1]+a11*dx[1]*dx[1];
+        FloatDPApproximation a00 = {1.5_x, pr};
+        FloatDPApproximation a01 = {2.5_x, pr};
+        FloatDPApproximation a11 = {3.5_x, pr};
+        ExactDouble y0 = 0.875_x;
+        ExactDouble y1 = -1.25_x;
+        Vector<FloatDPApproximation> x({y0, y1}, pr);
+        Vector<Differential<FloatDPApproximation> > dx = Differential<FloatDPApproximation>::variables(2u, x);
+        Differential<FloatDPApproximation> dfx = a00 * dx[0] * dx[0] + a01 * dx[0] * dx[1] + a11 * dx[1] * dx[1];
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "dfx", dfx);
         Matrix<FloatDPApproximation> H = dfx.hessian();
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "H", H);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), H[0][1], H[1][0]);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), H[0][0], a00*2);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), H[0][0], a00 * 2);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), H[0][1], a01);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), H[1][1], a11*2);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), H[1][1], a11 * 2);
     }
 
     Void test_tpl_helpers() {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), +x1);
-        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), x1!=x3);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), x1 != x3);
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), x1.coefficient_characteristics());
-        auto created=x1.create();
+        auto created = x1.create();
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), created.argument_size(), x1.argument_size());
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), created.degree(), x1.degree());
 
-        DifferentialType indexed=x1;
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), indexed[0u]=X(7u,pr));
-        DifferentialType const& cindexed=indexed;
+        DifferentialType indexed = x1;
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), indexed[0u] = X(7u, pr));
+        const DifferentialType& cindexed = indexed;
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), cindexed[0u]);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), indexed.set_gradient(1u,X(8u,pr)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), indexed.set_gradient(1u, X(8u, pr)));
 
-        Covector<X> g(2u,pr);
-        g[0u]=X(2u,pr); g[1u]=X(-3,pr);
-        auto affine1=DifferentialType::affine(2u,2u,X(4u,pr),g);
-        auto affine2=DifferentialType::affine(2u,X(4u,pr),g);
+        Covector<X> g(2u, pr);
+        g[0u] = X(2u, pr);
+        g[1u] = X(-3, pr);
+        auto affine1 = DifferentialType::affine(2u, 2u, X(4u, pr), g);
+        auto affine2 = DifferentialType::affine(2u, X(4u, pr), g);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "affine1", affine1);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "affine2", affine2);
-        Covector<X> short_g(1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialType::affine(2u,2u,X(4u,pr),short_g));
+        Covector<X> short_g(1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialType::affine(2u, 2u, X(4u, pr), short_g));
 
-        Vector<X> values({1.0_x,2.0_x},pr);
-        Matrix<X> G({{1.0_x,0.0_x},{0.0_x,2.0_x}},pr);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), DifferentialType::affine(2u,values,G));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), DifferentialType::identity(2u,X(1u,pr)));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), DifferentialType::identity(2u,values));
+        Vector<X> values({1.0_x, 2.0_x}, pr);
+        Matrix<X> G({
+                        {1.0_x, 0.0_x},
+                        {0.0_x, 2.0_x}
+        },
+                    pr);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), DifferentialType::affine(2u, values, G));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), DifferentialType::identity(2u, X(1u, pr)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), DifferentialType::identity(2u, values));
 
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialType::constants(1u,2u,2u,values));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialType::variables(1u,2u,2u,values));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialType::variables(2u,3u,2u,values));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialType::constants(1u, 2u, 2u, values));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialType::variables(1u, 2u, 2u, values));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialType::variables(2u, 3u, 2u, values));
 
-        DifferentialType low=DifferentialType::constant(1u,1u,X(-2,pr));
-        DifferentialType high=DifferentialType::constant(1u,1u,X(3u,pr));
-        DifferentialType zero=DifferentialType::constant(1u,1u,X(0u,pr));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Min(),low,high));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Min(),high,low));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Max(),low,high));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Max(),high,low));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Min(),low,low));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Max(),high,high));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Abs(),low));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Abs(),high));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Abs(),zero));
-        DifferentialType wrong_as=DifferentialType::constant(2u,1u,X(1u,pr));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Min(),low,wrong_as));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Max(),high,wrong_as));
+        DifferentialType low = DifferentialType::constant(1u, 1u, X(-2, pr));
+        DifferentialType high = DifferentialType::constant(1u, 1u, X(3u, pr));
+        DifferentialType zero = DifferentialType::constant(1u, 1u, X(0u, pr));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Min(), low, high));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Min(), high, low));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Max(), low, high));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Max(), high, low));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Min(), low, low));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Max(), high, high));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Abs(), low));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Abs(), high));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Abs(), zero));
+        DifferentialType wrong_as = DifferentialType::constant(2u, 1u, X(1u, pr));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Min(), low, wrong_as));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(Max(), high, wrong_as));
 
-        DifferentialType explicit_values(2u,2u,{{{0u,0u},1.0_x},{{1u,0u},2.0_x}},pr);
+        DifferentialType explicit_values(2u, 2u, {
+                                                     {{0u, 0u}, 1.0_x},
+                                                     {{1u, 0u}, 2.0_x}
+        },
+                                         pr);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "explicit_values", explicit_values);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialType(2u,1u,{{{0u},1.0_x}},pr));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialType(2u, 1u, {
+                                                                                                           {{0u}, 1.0_x}
+        },
+                                                                                               pr));
 
-        DifferentialType degree_one=DifferentialType::constant(1u,1u,X(1u,pr));
+        DifferentialType degree_one = DifferentialType::constant(1u, 1u, X(1u, pr));
         ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)degree_one.half_hessian());
 
-        DifferentialVectorType compose_one(1u,1u,1u,pr);
-        DifferentialType compose_wrong_size=DifferentialType::constant(2u,1u,X(1u,pr));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)compose(compose_wrong_size,compose_one));
-        DifferentialType compose_degree_zero=DifferentialType::constant(1u,0u,X(1u,pr));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)compose(compose_degree_zero,compose_one));
+        DifferentialVectorType compose_one(1u, 1u, 1u, pr);
+        DifferentialType compose_wrong_size = DifferentialType::constant(2u, 1u, X(1u, pr));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)compose(compose_wrong_size, compose_one));
+        DifferentialType compose_degree_zero = DifferentialType::constant(1u, 0u, X(1u, pr));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)compose(compose_degree_zero, compose_one));
 
-        Vector<X> one_value(1u,pr);
-        Vector<X> two_values(2u,pr);
-        Vector<X> one_parameter(1u,pr);
+        Vector<X> one_value(1u, pr);
+        Vector<X> two_values(2u, pr);
+        Vector<X> one_parameter(1u, pr);
 
-        DifferentialVectorType solve_bad_dimension(2u,1u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)solve(solve_bad_dimension,two_values));
-        DifferentialVectorType solve_bad_value_size(1u,1u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)solve(solve_bad_value_size,two_values));
+        DifferentialVectorType solve_bad_dimension(2u, 1u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)solve(solve_bad_dimension, two_values));
+        DifferentialVectorType solve_bad_value_size(1u, 1u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)solve(solve_bad_value_size, two_values));
 
-        DifferentialVectorType autonomous_bad_result(1u,2u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(autonomous_bad_result,two_values));
-        DifferentialVectorType autonomous_bad_initial(1u,1u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(autonomous_bad_initial,two_values));
+        DifferentialVectorType autonomous_bad_result(1u, 2u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(autonomous_bad_result, two_values));
+        DifferentialVectorType autonomous_bad_initial(1u, 1u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(autonomous_bad_initial, two_values));
 
-        DifferentialVectorType timed_bad_result(1u,2u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(timed_bad_result,two_values,X(0u,pr)));
-        DifferentialVectorType timed_bad_arguments(1u,1u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(timed_bad_arguments,one_value,X(0u,pr)));
+        DifferentialVectorType timed_bad_result(1u, 2u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(timed_bad_result, two_values, X(0u, pr)));
+        DifferentialVectorType timed_bad_arguments(1u, 1u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(timed_bad_arguments, one_value, X(0u, pr)));
 
-        DifferentialVectorType parameter_bad_result(1u,2u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(parameter_bad_result,two_values,one_parameter));
-        DifferentialVectorType parameter_bad_arguments(1u,1u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(parameter_bad_arguments,one_value,one_parameter));
+        DifferentialVectorType parameter_bad_result(1u, 2u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(parameter_bad_result, two_values, one_parameter));
+        DifferentialVectorType parameter_bad_arguments(1u, 1u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(parameter_bad_arguments, one_value, one_parameter));
 
-        DifferentialVectorType timed_parameter_bad_result(1u,3u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(timed_parameter_bad_result,two_values,X(0u,pr),one_parameter));
-        DifferentialVectorType timed_parameter_bad_arguments(1u,2u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(timed_parameter_bad_arguments,one_value,X(0u,pr),one_parameter));
+        DifferentialVectorType timed_parameter_bad_result(1u, 3u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(timed_parameter_bad_result, two_values, X(0u, pr), one_parameter));
+        DifferentialVectorType timed_parameter_bad_arguments(1u, 2u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)flow(timed_parameter_bad_arguments, one_value, X(0u, pr), one_parameter));
 
-        DifferentialVectorType internal_df_first(1u,2u,1u,pr);
-        DifferentialVectorType internal_dx_first(2u,2u,1u,pr);
-        DifferentialVectorType internal_dt_first(1u,2u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType::_flow(internal_df_first,internal_dx_first,internal_dt_first));
+        DifferentialVectorType internal_df_first(1u, 2u, 1u, pr);
+        DifferentialVectorType internal_dx_first(2u, 2u, 1u, pr);
+        DifferentialVectorType internal_dt_first(1u, 2u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType::_flow(internal_df_first, internal_dx_first, internal_dt_first));
 
-        DifferentialVectorType internal_df_second(1u,1u,1u,pr);
-        DifferentialVectorType internal_dx_second(1u,2u,1u,pr);
-        DifferentialVectorType internal_dt_second(1u,2u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType::_flow(internal_df_second,internal_dx_second,internal_dt_second));
+        DifferentialVectorType internal_df_second(1u, 1u, 1u, pr);
+        DifferentialVectorType internal_dx_second(1u, 2u, 1u, pr);
+        DifferentialVectorType internal_dt_second(1u, 2u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType::_flow(internal_df_second, internal_dx_second, internal_dt_second));
 
-        DifferentialVectorType internal_df_third(1u,2u,1u,pr);
-        DifferentialVectorType internal_dx_third(1u,2u,1u,pr);
-        DifferentialVectorType internal_dt_third(1u,3u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType::_flow(internal_df_third,internal_dx_third,internal_dt_third));
+        DifferentialVectorType internal_df_third(1u, 2u, 1u, pr);
+        DifferentialVectorType internal_dx_third(1u, 2u, 1u, pr);
+        DifferentialVectorType internal_dt_third(1u, 3u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType::_flow(internal_df_third, internal_dx_third, internal_dt_third));
 
-        DifferentialVectorType internal_df_fourth(1u,2u,1u,pr);
-        DifferentialVectorType internal_dx_fourth(1u,1u,1u,pr);
-        DifferentialVectorType internal_dt_fourth(1u,1u,1u,pr);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType::_flow(internal_df_fourth,internal_dx_fourth,internal_dt_fourth));
+        DifferentialVectorType internal_df_fourth(1u, 2u, 1u, pr);
+        DifferentialVectorType internal_dx_fourth(1u, 1u, 1u, pr);
+        DifferentialVectorType internal_dt_fourth(1u, 1u, 1u, pr);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType::_flow(internal_df_fourth, internal_dx_fourth, internal_dt_fourth));
     }
-
-
-
 };
-
-
 
 template<class DF>
 class TestDifferentialVector {
@@ -353,16 +460,26 @@ class TestDifferentialVector {
     typedef Series<X> SeriesType;
     typedef DF DifferentialType;
     typedef Vector<DF> DifferentialVectorType;
+
   private:
     PrecisionType pr;
-    DifferentialVectorType x1,x2,x3;
+    DifferentialVectorType x1, x2, x3;
+
   public:
     TestDifferentialVector()
-        : x1(1,2,4,pr), x2(1,2,4,pr), x3(1,1,4,pr)
-    {
-        x1=DifferentialVectorType(1,2,4,{{ {{0,0},2.0_x},{{1,0},1.0_x},{{2,0},0.5_x} }},pr);
-        x2=DifferentialVectorType(1,2,4,{{ {{0,0},3.0_x},{{1,0},1.0_x},{{2,0},0.25_x} }},pr);
-        x3=DifferentialVectorType(1,2,4,{{ {{0,0},2.0_x},{{1,0},1.0_x},{{2,0},0.125_x} }},pr);
+        : x1(1, 2, 4, pr), x2(1, 2, 4, pr), x3(1, 1, 4, pr) {
+        x1 = DifferentialVectorType(1, 2, 4, {
+                                                 {{{0, 0}, 2.0_x}, {{1, 0}, 1.0_x}, {{2, 0}, 0.5_x}}
+        },
+                                    pr);
+        x2 = DifferentialVectorType(1, 2, 4, {
+                                                 {{{0, 0}, 3.0_x}, {{1, 0}, 1.0_x}, {{2, 0}, 0.25_x}}
+        },
+                                    pr);
+        x3 = DifferentialVectorType(1, 2, 4, {
+                                                 {{{0, 0}, 2.0_x}, {{1, 0}, 1.0_x}, {{2, 0}, 0.125_x}}
+        },
+                                    pr);
 
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_degree());
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_add());
@@ -384,318 +501,384 @@ class TestDifferentialVector {
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), x1.degree(), 4);
 
         // Regression test to check setting of degree for null vector
-        DifferentialVectorType dx(0u,2u,3u,pr);
+        DifferentialVectorType dx(0u, 2u, 3u, pr);
 
-        if(dx.argument_size()!=2u) {
+        if (dx.argument_size() != 2u) {
             ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), "Vector<Differential<X>>::argument_size() returns 0 if the vector of differentials has no elements.");
         }
-        if(dx.degree()!=3u) {
+        if (dx.degree() != 3u) {
             ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), "Vector<Differential<X>>::degree() returns 0 if the vector of differentials has no elements.");
         }
-
     }
 
     Void test_add() {
-        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x1 << "+" << x2 << " = " << x1+x2);
-        //assert((x1+x2)==DifferentialVectorType("[3,2,0,0]"));
+        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x1 << "+" << x2 << " = " << x1 + x2);
+        // assert((x1+x2)==DifferentialVectorType("[3,2,0,0]"));
     }
 
     Void test_sub() {
-        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x1 << "-" << x2 << " = " << x1-x2);
-        //assert((x1-x2)==DifferentialVectorType("[-1,0,0,0]"));
+        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x1 << "-" << x2 << " = " << x1 - x2);
+        // assert((x1-x2)==DifferentialVectorType("[-1,0,0,0]"));
     }
 
     Void test_mul() {
-        X c={2,pr};
-        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x1 << "*" << c << " = " << x1*c);
-        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), c << "*" << x1 << " = " << c*x1);
-        //assert((x1*x2)==DifferentialVectorType("[2,3,2,0]"));
+        X c = {2, pr};
+        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x1 << "*" << c << " = " << x1 * c);
+        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), c << "*" << x1 << " = " << c * x1);
+        // assert((x1*x2)==DifferentialVectorType("[2,3,2,0]"));
     }
 
     Void test_div() {
-        X c={2,pr};
-        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x1 << "/" << c << " = " << x1/c);
+        X c = {2, pr};
+        ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), x1 << "/" << c << " = " << x1 / c);
     }
 
     Void test_jacobian() {
-        DifferentialVectorType dv(0u,2u,3u,pr);
-        Matrix<FloatDPApproximation> J=dv.jacobian();
+        DifferentialVectorType dv(0u, 2u, 3u, pr);
+        Matrix<FloatDPApproximation> J = dv.jacobian();
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), J.row_size(), dv.result_size());
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), J.column_size(), dv.argument_size());
     }
 
     Void test_differentiate() {
-        DifferentialType x(2,2,{{{0,0},2.0_x}, {{1,0},12.0_x}, {{0,1},7.0_x}, {{2,0},33.0_x}, {{1,1},24.0_x}, {{0,2},13.0_x}},pr);
-        DifferentialType y(2,3,{{{0,0},1.0_x}, {{1,0},2}, {{0,1},3}, {{2,0},6}, {{1,1},7}, {{0,2},9},{{3,0},11},{{2,1},12},{{1,2},13},{{0,3},14}},pr);
-        DifferentialType z(2,4,{ {{1,0},1.0_x}, {{2,0},1},{{1,1},3}, {{3,0},2.0_x},{{2,1},3.5_x},{{1,2},9.0_x}, {{4,0},2.75_x},{{3,1},4.0_x},{{2,2},6.5_x},{{1,3},14.0_x} },pr);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), derivative(y,0), x);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), antiderivative(y,0), z);
+        DifferentialType x(2, 2, {
+                                     {{0, 0},  2.0_x},
+                                     {{1, 0}, 12.0_x},
+                                     {{0, 1},  7.0_x},
+                                     {{2, 0}, 33.0_x},
+                                     {{1, 1}, 24.0_x},
+                                     {{0, 2}, 13.0_x}
+        },
+                           pr);
+        DifferentialType y(2, 3, {
+                                     {{0, 0}, 1.0_x},
+                                     {{1, 0},     2},
+                                     {{0, 1},     3},
+                                     {{2, 0},     6},
+                                     {{1, 1},     7},
+                                     {{0, 2},     9},
+                                     {{3, 0},    11},
+                                     {{2, 1},    12},
+                                     {{1, 2},    13},
+                                     {{0, 3},    14}
+        },
+                           pr);
+        DifferentialType z(2, 4, {
+                                     {{1, 0},  1.0_x},
+                                     {{2, 0},      1},
+                                     {{1, 1},      3},
+                                     {{3, 0},  2.0_x},
+                                     {{2, 1},  3.5_x},
+                                     {{1, 2},  9.0_x},
+                                     {{4, 0}, 2.75_x},
+                                     {{3, 1},  4.0_x},
+                                     {{2, 2},  6.5_x},
+                                     {{1, 3}, 14.0_x}
+        },
+                           pr);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), derivative(y, 0), x);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), antiderivative(y, 0), z);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "y", y);
-        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "antiderivative(y,0)", antiderivative(y,0));
-        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "derivative(antiderivative(y,0),0)", derivative(antiderivative(y,0),0));
-        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "derivative(antiderivative(y,0),0)-y", derivative(antiderivative(y,0),0)-y);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), derivative(antiderivative(y,0),0), y);
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "antiderivative(y,0)", antiderivative(y, 0));
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "derivative(antiderivative(y,0),0)", derivative(antiderivative(y, 0), 0));
+        ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "derivative(antiderivative(y,0),0)-y", derivative(antiderivative(y, 0), 0) - y);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), derivative(antiderivative(y, 0), 0), y);
     }
 
     Void test_compose() {
-        DifferentialVectorType x(1,2,3,{ {{{0,0},3.0_x}, {{1,0},1.0_x}, {{1,1},0.125_x}, {{0,2},0.25_x}} },pr);
-        DifferentialType y(1,3,{{{0},1.0_x},{{1},-1.0_x},{{2},0.5_x},{{3},-0.25_x}},pr);
-        DifferentialType z(2,3,{{{0,0},1.0_x},{{1,0},-1.0_x},{{2,0},0.5_x},{{1,1},-0.125_x},{{0,2},-0.25_x},{{3,0},-0.25_x},{{2,1},0.125_x},{{1,2},0.25_x}},pr);
-        DifferentialVectorType id(1,1,3,{ {{{0},3.0_x},{{1},1.0_x}} },pr);
+        DifferentialVectorType x(1, 2, 3, {
+                                              {{{0, 0}, 3.0_x}, {{1, 0}, 1.0_x}, {{1, 1}, 0.125_x}, {{0, 2}, 0.25_x}}
+        },
+                                 pr);
+        DifferentialType y(1, 3, {
+                                     {{0},   1.0_x},
+                                     {{1},  -1.0_x},
+                                     {{2},   0.5_x},
+                                     {{3}, -0.25_x}
+        },
+                           pr);
+        DifferentialType z(2, 3, {
+                                     {{0, 0},    1.0_x},
+                                     {{1, 0},   -1.0_x},
+                                     {{2, 0},    0.5_x},
+                                     {{1, 1}, -0.125_x},
+                                     {{0, 2},  -0.25_x},
+                                     {{3, 0},  -0.25_x},
+                                     {{2, 1},  0.125_x},
+                                     {{1, 2},   0.25_x}
+        },
+                           pr);
+        DifferentialVectorType id(1, 1, 3, {
+                                               {{{0}, 3.0_x}, {{1}, 1.0_x}}
+        },
+                                  pr);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "x", x);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "y", y);
         ARIADNE_TESTING_INSPECT_CTX(AlgebraTesting::context(), "z", z);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(y,x), z);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(id,x), x);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(y, x), z);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(id, x), x);
     }
 
     Void test_solve() {
-        SizeType m=2;
-        SizeType n=4;
-        DegreeType deg=3;
+        SizeType m = 2;
+        SizeType n = 4;
+        DegreeType deg = 3;
         X z(pr);
-        Vector<X> x0({0,0},pr);
-        Vector<X> y0({0,0},pr);
-        Vector<X> xy0=join(x0,y0);
-        DifferentialVectorType xy=DifferentialType::variables(n,n,deg,xy0);
-        DifferentialVectorType x={xy[0],xy[1]};
-        DifferentialVectorType y={xy[2],xy[3]};
-        DifferentialVectorType f={x[0]+3*y[0]-2*y[1]+x[1]*y[0]*y[1], x[0]-x[1]*x[1]+y[0]+2*y[1]-x[0]*x[1]+x[0]*y[0]*y[0]/2};
-        DifferentialVectorType h=solve(f,y0);
+        Vector<X> x0({0, 0}, pr);
+        Vector<X> y0({0, 0}, pr);
+        Vector<X> xy0 = join(x0, y0);
+        DifferentialVectorType xy = DifferentialType::variables(n, n, deg, xy0);
+        DifferentialVectorType x = {xy[0], xy[1]};
+        DifferentialVectorType y = {xy[2], xy[3]};
+        DifferentialVectorType f = {x[0] + 3 * y[0] - 2 * y[1] + x[1] * y[0] * y[1], x[0] - x[1] * x[1] + y[0] + 2 * y[1] - x[0] * x[1] + x[0] * y[0] * y[0] / 2};
+        DifferentialVectorType h = solve(f, y0);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), h.result_size(), f.result_size());
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), h.argument_size(), f.argument_size()-h.result_size());
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), h.argument_size(), f.argument_size() - h.result_size());
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), h.degree(), f.degree());
 
-        x=DifferentialType::variables(n-m,n-m,deg,x0);
-        DifferentialVectorType zero(m,n-m,deg,z);
+        x = DifferentialType::variables(n - m, n - m, deg, x0);
+        DifferentialVectorType zero(m, n - m, deg, z);
 
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(f,join(x,h)), zero);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), compose(f, join(x, h)), zero);
     }
 
     Void test_autonomous_flow() {
-        SizeType n=2;
-        DegreeType deg=4;
+        SizeType n = 2;
+        DegreeType deg = 4;
         X z(pr);
-        Vector<X> x0={z,z};
-        DifferentialVectorType x=DifferentialType::variables(n,n,deg,x0);
-        DifferentialVectorType f={5+2*x[0]-3*x[1]+x[0]*x[1], 2+x[1]-x[0]*x[1]+x[0]*x[0]*x[0]/2};
-        DifferentialVectorType phi=flow(f,x0);
+        Vector<X> x0 = {z, z};
+        DifferentialVectorType x = DifferentialType::variables(n, n, deg, x0);
+        DifferentialVectorType f = {5 + 2 * x[0] - 3 * x[1] + x[0] * x[1], 2 + x[1] - x[0] * x[1] + x[0] * x[0] * x[0] / 2};
+        DifferentialVectorType phi = flow(f, x0);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.result_size(), f.result_size());
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.argument_size(), f.argument_size()+1u);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.degree(), f.degree()+1u);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), derivative(phi,n), compose(f,phi));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.argument_size(), f.argument_size() + 1u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.degree(), f.degree() + 1u);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), derivative(phi, n), compose(f, phi));
 
-        n=1;
-        x0={z+1}; auto t0=z;
-        x=DifferentialType::variables(n,n,deg,x0);
-        f={x[0]};
-        phi=flow(f,x0);
-        x={DifferentialType::variable(n+1,deg+1,x0[0],0)};
-        DifferentialType t=DifferentialType::variable(n+1,deg+1,t0,1);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi[0], x[0]*exp(t));
+        n = 1;
+        x0 = {z + 1};
+        auto t0 = z;
+        x = DifferentialType::variables(n, n, deg, x0);
+        f = {x[0]};
+        phi = flow(f, x0);
+        x = {DifferentialType::variable(n + 1, deg + 1, x0[0], 0)};
+        DifferentialType t = DifferentialType::variable(n + 1, deg + 1, t0, 1);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi[0], x[0] * exp(t));
     }
 
     Void test_time_dependent_flow() {
-        SizeType n=2;
-        DegreeType deg=4;
+        SizeType n = 2;
+        DegreeType deg = 4;
         X z(pr);
-        Vector<X> x0={z,z}; X t0=z;
-        DifferentialVectorType xt=DifferentialType::variables(n+1,n+1,deg,join(x0,t0));
-        DifferentialVectorType x=project(xt,Range(0,n));
-        DifferentialType t=xt[n];
+        Vector<X> x0 = {z, z};
+        X t0 = z;
+        DifferentialVectorType xt = DifferentialType::variables(n + 1, n + 1, deg, join(x0, t0));
+        DifferentialVectorType x = project(xt, Range(0, n));
+        DifferentialType t = xt[n];
 
-        DifferentialVectorType f={5+2*x[0]-3*x[1]+x[0]*x[1]+t, 2+x[1]-x[0]*x[1]*t+x[0]*x[0]*x[0]/2};
-        DifferentialVectorType phi=flow(f,x0,t0);
+        DifferentialVectorType f = {5 + 2 * x[0] - 3 * x[1] + x[0] * x[1] + t, 2 + x[1] - x[0] * x[1] * t + x[0] * x[0] * x[0] / 2};
+        DifferentialVectorType phi = flow(f, x0, t0);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.result_size(), f.result_size());
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.argument_size(), f.argument_size());
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.degree(), f.degree()+1u);
-        t=DifferentialType::variable(n+1,deg+1,t0,n);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), derivative(phi,n), compose(f,join(phi,t)));
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi.degree(), f.degree() + 1u);
+        t = DifferentialType::variable(n + 1, deg + 1, t0, n);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), derivative(phi, n), compose(f, join(phi, t)));
     }
 
     Void test_linear_flow() {
-        SizeType n=1;
-        DegreeType deg=4;
+        SizeType n = 1;
+        DegreeType deg = 4;
         X z(pr);
-        Vector<X> x0={z+1}; X t0=z;
-        DifferentialVectorType xt=DifferentialType::variables(n+1,n+1,deg,join(x0,t0));
-        DifferentialVectorType x=project(xt,Range(0,n));
-        DifferentialType t=xt[n];
-        DifferentialVectorType f={2*x[0]+12*t};
-        DifferentialVectorType phi=flow(f,x0,t0);
-        xt=DifferentialType::variables(n+1,n+1,deg+1,join(x0,t0));
-        x=static_cast<DifferentialVectorType>(project(xt,Range(0,n)));
-        t=xt[n];
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi[0], (x[0]+3)*exp(2*t)-6*t-3);
+        Vector<X> x0 = {z + 1};
+        X t0 = z;
+        DifferentialVectorType xt = DifferentialType::variables(n + 1, n + 1, deg, join(x0, t0));
+        DifferentialVectorType x = project(xt, Range(0, n));
+        DifferentialType t = xt[n];
+        DifferentialVectorType f = {2 * x[0] + 12 * t};
+        DifferentialVectorType phi = flow(f, x0, t0);
+        xt = DifferentialType::variables(n + 1, n + 1, deg + 1, join(x0, t0));
+        x = static_cast<DifferentialVectorType>(project(xt, Range(0, n)));
+        t = xt[n];
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), phi[0], (x[0] + 3) * exp(2 * t) - 6 * t - 3);
     }
 
     Void test_header_helpers() {
-        DifferentialType delegated(2u,2u,pr);
+        DifferentialType delegated(2u, 2u, pr);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), delegated.argument_size(), 2u);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), delegated.degree(), 2u);
 
-        DifferentialType positive=DifferentialType::constant(1u,2u,X(4u,pr));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(UnaryElementaryOperator(Sqrt()),positive));
+        DifferentialType positive = DifferentialType::constant(1u, 2u, X(4u, pr));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<DifferentialType>::apply(UnaryElementaryOperator(Sqrt()), positive));
 
-        DifferentialVectorType v(2u,2u,2u,pr);
-        v[0]=DifferentialType::variable(2u,2u,X(1u,pr),0u);
-        v[1]=DifferentialType::variable(2u,2u,X(2u,pr),1u);
-        DifferentialVectorType const& cv=v;
-        auto vr=cv[Range(0u,1u)];
+        DifferentialVectorType v(2u, 2u, 2u, pr);
+        v[0] = DifferentialType::variable(2u, 2u, X(1u, pr), 0u);
+        v[1] = DifferentialType::variable(2u, 2u, X(2u, pr), 1u);
+        const DifferentialVectorType& cv = v;
+        auto vr = cv[Range(0u, 1u)];
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), vr.size(), 1u);
-        auto chrs=cv.element_characteristics();
+        auto chrs = cv.element_characteristics();
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), chrs.argument_size(), 2u);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), cv.get(0u), cv[0u]);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), v.set(0u,cv[1u]));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v.set(v.size(),cv[0u]));
-        DifferentialType wrong=DifferentialType::constant(1u,2u,X(0u,pr));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v.set(0u,wrong));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), v.set(0u, cv[1u]));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v.set(v.size(), cv[0u]));
+        DifferentialType wrong = DifferentialType::constant(1u, 2u, X(0u, pr));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v.set(0u, wrong));
 
-        DifferentialType wrong_argument_size=DifferentialType::constant(1u,2u,X(0u,pr));
-        DifferentialType wrong_degree=DifferentialType::constant(2u,1u,X(0u,pr));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v[0u]=wrong_argument_size);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v[0u]=wrong_degree);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (DifferentialType(2u,1u,{{{0u},1.0_x}},pr)));
+        DifferentialType wrong_argument_size = DifferentialType::constant(1u, 2u, X(0u, pr));
+        DifferentialType wrong_degree = DifferentialType::constant(2u, 1u, X(0u, pr));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v[0u] = wrong_argument_size);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v[0u] = wrong_degree);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (DifferentialType(2u, 1u, {
+                                                                                                      {{0u}, 1.0_x}
+        },
+                                                                                          pr)));
 
-        auto generator=[this](SizeType i) {
-            return DifferentialType::constant(1u,1u,X(static_cast<Nat>(i),pr));
+        auto generator = [this](SizeType i) {
+            return DifferentialType::constant(1u, 1u, X(static_cast<Nat>(i), pr));
         };
-        DifferentialVectorType generated(1u,generator);
+        DifferentialVectorType generated(1u, generator);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), generated.size(), 1u);
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialVectorType(0u,generator));
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), DifferentialVectorType(0u, generator));
 
-        auto empty_range=cv[Range(0u,0u)];
+        auto empty_range = cv[Range(0u, 0u)];
         ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)DifferentialVectorType(empty_range));
-        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v=empty_range);
+        ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v = empty_range);
 
-        DifferentialVectorType source=v;
-        DifferentialVectorType const& csource=source;
-        auto source_range=csource[Range(0u,1u)];
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), v=source_range);
+        DifferentialVectorType source = v;
+        const DifferentialVectorType& csource = source;
+        auto source_range = csource[Range(0u, 1u)];
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), v = source_range);
         ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), v.size(), 1u);
 
         X z(pr);
-        DifferentialVectorType df={DifferentialType::constant(2u,1u,z)};
-        DifferentialVectorType dx0={DifferentialType::variable(2u,1u,z,0u)};
-        DifferentialVectorType da={DifferentialType::variable(2u,1u,z,1u)};
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), v.flow(df,dx0,da));
+        DifferentialVectorType df = {DifferentialType::constant(2u, 1u, z)};
+        DifferentialVectorType dx0 = {DifferentialType::variable(2u, 1u, z, 0u)};
+        DifferentialVectorType da = {DifferentialType::variable(2u, 1u, z, 1u)};
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), v.flow(df, dx0, da));
 
-        auto vv=v.value();
+        auto vv = v.value();
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), v.set_value(vv));
-        Vector<X> wrong_values(2u,pr);
+        Vector<X> wrong_values(2u, pr);
         ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), v.set_value(wrong_values));
 
-        DifferentialVectorType compose_source(1u,1u,2u,pr);
-        compose_source[0u]=DifferentialType::variable(1u,2u,X(1u,pr),0u);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), DifferentialType::_compose(compose_source,compose_source));
+        DifferentialVectorType compose_source(1u, 1u, 2u, pr);
+        compose_source[0u] = DifferentialType::variable(1u, 2u, X(1u, pr), 0u);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), DifferentialType::_compose(compose_source, compose_source));
 
-        DifferentialVectorType lie_source(1u,1u,2u,pr);
-        lie_source[0u]=DifferentialType::variable(1u,2u,X(1u,pr),0u);
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), lie_derivative(lie_source,lie_source));
+        DifferentialVectorType lie_source(1u, 1u, 2u, pr);
+        lie_source[0u] = DifferentialType::variable(1u, 2u, X(1u, pr), 0u);
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), lie_derivative(lie_source, lie_source));
 
-        Vector<X> x0({0.0_x},pr);
-        Vector<X> a({0.0_x},pr);
-        DifferentialVectorType autonomous_param_df={DifferentialType::constant(2u,1u,X(0u,pr))};
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), flow(autonomous_param_df,x0,a));
+        Vector<X> x0({0.0_x}, pr);
+        Vector<X> a({0.0_x}, pr);
+        DifferentialVectorType autonomous_param_df = {DifferentialType::constant(2u, 1u, X(0u, pr))};
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), flow(autonomous_param_df, x0, a));
 
-        X t0(0u,pr);
-        DifferentialVectorType timed_param_df={DifferentialType::constant(3u,1u,X(0u,pr))};
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), flow(timed_param_df,x0,t0,a));
+        X t0(0u, pr);
+        DifferentialVectorType timed_param_df = {DifferentialType::constant(3u, 1u, X(0u, pr))};
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), flow(timed_param_df, x0, t0, a));
     }
 
     Void test_mapping() {
-        DifferentialVectorType x(2,2,2,pr);
-        x[0][MultiIndex::unit(2,0)]=1; x[1][MultiIndex::unit(2,1)]=1;
+        DifferentialVectorType x(2, 2, 2, pr);
+        x[0][MultiIndex::unit(2, 0)] = 1;
+        x[1][MultiIndex::unit(2, 1)] = 1;
         ARIADNE_TESTING_NOTE_CTX(AlgebraTesting::context(), "x=" << x);
-        Vector<FloatDPApproximation> p(2,dp); p[0]=1.5_x; p[1]=0.375_x;
-        DifferentialVectorType hxp(2,2,2,{ {{{0,0},1.5_x}, {{0,1},-0.375_x}, {{2,0},-1.0_x}}, {{{1,0},1.0_x}} },pr);
-        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), henon(x,p), hxp);
+        Vector<FloatDPApproximation> p(2, dp);
+        p[0] = 1.5_x;
+        p[1] = 0.375_x;
+        DifferentialVectorType hxp(2, 2, 2, {
+                                                {{{0, 0}, 1.5_x}, {{0, 1}, -0.375_x}, {{2, 0}, -1.0_x}},
+                                                {{{1, 0}, 1.0_x}}
+        },
+                                   pr);
+        ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), henon(x, p), hxp);
     }
 };
 
 template<class X, class PR>
 Void test_differential_tpl_instantiation_branches(PR const& pr) {
-    using D=Differential<X>;
-    X coefficient_zero(0u,pr);
-    X coefficient_one(1u,pr);
-    X coefficient_two(2u,pr);
+    using D = Differential<X>;
+    X coefficient_zero(0u, pr);
+    X coefficient_one(1u, pr);
+    X coefficient_two(2u, pr);
 
-    Expansion<MultiIndex,X> expansion(1u,pr);
-    expansion.append(MultiIndex({0u}),coefficient_one);
-    expansion.append(MultiIndex({2u}),coefficient_two);
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)D(expansion,1u));
+    Expansion<MultiIndex, X> expansion(1u, pr);
+    expansion.append(MultiIndex({0u}), coefficient_one);
+    expansion.append(MultiIndex({2u}), coefficient_two);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)D(expansion, 1u));
 
-    D empty(1u,2u,coefficient_zero);
-    D constant=D::constant(1u,2u,coefficient_one);
-    D high(1u,2u,coefficient_zero);
-    high[MultiIndex({2u})]=coefficient_one;
-    D low(1u,1u,coefficient_zero);
-    low[MultiIndex({0u})]=coefficient_one;
+    D empty(1u, 2u, coefficient_zero);
+    D constant = D::constant(1u, 2u, coefficient_one);
+    D high(1u, 2u, coefficient_zero);
+    high[MultiIndex({2u})] = coefficient_one;
+    D low(1u, 1u, coefficient_zero);
+    low[MultiIndex({0u})] = coefficient_one;
 
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(empty==constant));
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(constant==high));
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(high==constant));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(empty == constant));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(constant == high));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)(high == constant));
 
-    D const_missing(1u,2u,coefficient_zero);
-    D const& const_ref=const_missing;
+    D const_missing(1u, 2u, coefficient_zero);
+    const D& const_ref = const_missing;
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), (void)const_ref[MultiIndex({1u})]);
 
-    D linear_only(1u,2u,coefficient_zero);
-    linear_only.set_gradient(0u,coefficient_one);
+    D linear_only(1u, 2u, coefficient_zero);
+    linear_only.set_gradient(0u, coefficient_one);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), linear_only.half_hessian());
 
-    D cubic_only(1u,3u,coefficient_zero);
-    cubic_only[MultiIndex({3u})]=coefficient_one;
+    D cubic_only(1u, 3u, coefficient_zero);
+    cubic_only[MultiIndex({3u})] = coefficient_one;
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), cubic_only.half_hessian());
 
-    D mixed_gap(3u,2u,coefficient_zero);
-    mixed_gap[MultiIndex({1u,0u,1u})]=coefficient_one;
+    D mixed_gap(3u, 2u, coefficient_zero);
+    mixed_gap[MultiIndex({1u, 0u, 1u})] = coefficient_one;
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), mixed_gap.half_hessian());
 
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Add(),high,low));
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Add(),low,high));
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Sub(),high,low));
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Sub(),low,high));
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Mul(),high,low));
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Mul(),low,high));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Add(), high, low));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Add(), low, high));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Sub(), high, low));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Sub(), low, high));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Mul(), high, low));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Mul(), low, high));
 
-    D degree_zero=D::constant(1u,0u,coefficient_one);
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), derivative(degree_zero,0u));
+    D degree_zero = D::constant(1u, 0u, coefficient_one);
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), derivative(degree_zero, 0u));
 
-    D valid_check=D::constant(1u,1u,coefficient_one);
+    D valid_check = D::constant(1u, 1u, coefficient_one);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), valid_check.check());
-    D empty_check(1u,1u,coefficient_zero);
+    D empty_check(1u, 1u, coefficient_zero);
     ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), empty_check.check());
-    D invalid_check(1u,1u,coefficient_zero);
-    invalid_check.expansion().append(MultiIndex({2u}),coefficient_one);
+    D invalid_check(1u, 1u, coefficient_zero);
+    invalid_check.expansion().append(MultiIndex({2u}), coefficient_one);
     ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), invalid_check.check());
 
-    MultiIndex wrong_index({0u,0u});
+    MultiIndex wrong_index({0u, 0u});
     ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)constant[wrong_index]);
-    D const& constant_ref=constant;
+    const D& constant_ref = constant;
     ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), (void)constant_ref[wrong_index]);
 
-    D wrong_as=D::constant(2u,1u,coefficient_one);
-    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Add(),low,wrong_as));
-    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Sub(),low,wrong_as));
-    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Mul(),low,wrong_as));
+    D wrong_as = D::constant(2u, 1u, coefficient_one);
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Add(), low, wrong_as));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Sub(), low, wrong_as));
+    ARIADNE_TESTING_EXPECT_EXCEPTION_CTX(AlgebraTesting::context(), AlgebraOperations<D>::apply(Mul(), low, wrong_as));
 }
 
 template<class X, class PR>
 Void test_differential_tpl_compose_branch(PR const& pr) {
-    X coefficient_one(1u,pr);
-    Differential<X> linear_only(1u,2u,X(0u,pr));
-    linear_only.set_gradient(0u,coefficient_one);
-    UnivariateDifferential<X> series(2u,pr);
-    series[0u]=coefficient_one;
-    series[1u]=coefficient_one;
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), compose(series,linear_only));
+    X coefficient_one(1u, pr);
+    Differential<X> linear_only(1u, 2u, X(0u, pr));
+    linear_only.set_gradient(0u, coefficient_one);
+    UnivariateDifferential<X> series(2u, pr);
+    series[0u] = coefficient_one;
+    series[1u] = coefficient_one;
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), compose(series, linear_only));
     // Regression: nul() composes through an empty expansion, so exercise
     // it only for the numerical types with a supported univariate differential.
-    Differential<X> empty(1u,2u,X(0u,pr));
-    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), nul(empty).value(), X(0u,pr));
+    Differential<X> empty(1u, 2u, X(0u, pr));
+    ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(AlgebraTesting::context(), nul(empty).value(), X(0u, pr));
     // Nonzero outer constant composed with an empty inner polynomial.
-    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), compose(series,empty));
+    ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), compose(series, empty));
 }
 
 int main(int argc, char** argv) {
@@ -703,26 +886,24 @@ int main(int argc, char** argv) {
     suite.add("legacy tests", [](Ariadne::Testing::Context& ctx) {
         AlgebraTesting::CaseScope capture(ctx);
 
-    MultiplePrecision mp(128);
-    test_differential_tpl_instantiation_branches<RoundedFloatDP>(dp);
-    test_differential_tpl_instantiation_branches<FloatDPApproximation>(dp);
-    test_differential_tpl_instantiation_branches<FloatDPBounds>(dp);
-    test_differential_tpl_instantiation_branches<FloatDPUpperInterval>(dp);
-    test_differential_tpl_instantiation_branches<FloatMPApproximation>(mp);
-    test_differential_tpl_instantiation_branches<FloatMPBounds>(mp);
-    test_differential_tpl_instantiation_branches<FloatMPUpperInterval>(mp);
+        MultiplePrecision mp(128);
+        test_differential_tpl_instantiation_branches<RoundedFloatDP>(dp);
+        test_differential_tpl_instantiation_branches<FloatDPApproximation>(dp);
+        test_differential_tpl_instantiation_branches<FloatDPBounds>(dp);
+        test_differential_tpl_instantiation_branches<FloatDPUpperInterval>(dp);
+        test_differential_tpl_instantiation_branches<FloatMPApproximation>(mp);
+        test_differential_tpl_instantiation_branches<FloatMPBounds>(mp);
+        test_differential_tpl_instantiation_branches<FloatMPUpperInterval>(mp);
 
-    test_differential_tpl_compose_branch<RoundedFloatDP>(dp);
-    test_differential_tpl_compose_branch<FloatDPApproximation>(dp);
-    test_differential_tpl_compose_branch<FloatDPBounds>(dp);
-    test_differential_tpl_compose_branch<FloatDPUpperInterval>(dp);
-    test_differential_tpl_compose_branch<FloatMPApproximation>(mp);
-    test_differential_tpl_compose_branch<FloatMPBounds>(mp);
+        test_differential_tpl_compose_branch<RoundedFloatDP>(dp);
+        test_differential_tpl_compose_branch<FloatDPApproximation>(dp);
+        test_differential_tpl_compose_branch<FloatDPBounds>(dp);
+        test_differential_tpl_compose_branch<FloatDPUpperInterval>(dp);
+        test_differential_tpl_compose_branch<FloatMPApproximation>(mp);
+        test_differential_tpl_compose_branch<FloatMPBounds>(mp);
 
-    TestDifferential< Differential<FloatDPApproximation> > tf;
-    TestDifferentialVector< Differential<FloatDPApproximation> > tfv;
-    
-
+        TestDifferential<Differential<FloatDPApproximation> > tf;
+        TestDifferentialVector<Differential<FloatDPApproximation> > tfv;
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

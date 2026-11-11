@@ -30,102 +30,97 @@
 namespace Ariadne {
 
 template<class F>
-Void SweeperBase<F>::_sweep(Expansion<MultiIndex,Float<PR>>& p, FloatError<PR>& e) const
-{
-    typename Expansion<MultiIndex,Float<PR>>::ConstIterator end=p.end();
-    typename Expansion<MultiIndex,Float<PR>>::ConstIterator adv=p.begin();
-    typename Expansion<MultiIndex,Float<PR>>::Iterator curr=p.begin();
+Void SweeperBase<F>::_sweep(Expansion<MultiIndex, Float<PR>>& p, FloatError<PR>& e) const {
+    typename Expansion<MultiIndex, Float<PR>>::ConstIterator end = p.end();
+    typename Expansion<MultiIndex, Float<PR>>::ConstIterator adv = p.begin();
+    typename Expansion<MultiIndex, Float<PR>>::Iterator curr = p.begin();
 
     F::set_rounding_upward();
-    FloatError<PR> te(0.0_x,e.precision());
-    while(adv!=end) {
-        if(this->_discard(adv->index(),adv->coefficient())) {
-            te+=cast_positive(abs(adv->coefficient()));
+    FloatError<PR> te(0.0_x, e.precision());
+    while (adv != end) {
+        if (this->_discard(adv->index(), adv->coefficient())) {
+            te += cast_positive(abs(adv->coefficient()));
         } else {
-            *curr=*adv;
+            *curr = *adv;
             ++curr;
         }
         ++adv;
     }
-    e+=te;
+    e += te;
 
     F::set_rounding_to_nearest();
-    p.resize(static_cast<SizeType>(curr-p.begin()));
+    p.resize(static_cast<SizeType>(curr - p.begin()));
 }
 
 template<class F>
-Void SweeperBase<F>::_sweep(Expansion<MultiIndex,FloatBounds<PR>>& p, FloatError<PR>& e) const
-{
-    typename Expansion<MultiIndex,FloatBounds<PR>>::ConstIterator end=p.end();
-    typename Expansion<MultiIndex,FloatBounds<PR>>::ConstIterator adv=p.begin();
-    typename Expansion<MultiIndex,FloatBounds<PR>>::Iterator curr=p.begin();
+Void SweeperBase<F>::_sweep(Expansion<MultiIndex, FloatBounds<PR>>& p, FloatError<PR>& e) const {
+    typename Expansion<MultiIndex, FloatBounds<PR>>::ConstIterator end = p.end();
+    typename Expansion<MultiIndex, FloatBounds<PR>>::ConstIterator adv = p.begin();
+    typename Expansion<MultiIndex, FloatBounds<PR>>::Iterator curr = p.begin();
 
     F::set_rounding_upward();
-    FloatError<PR> te(0.0_x,e.precision());
-    while(adv!=end) {
-        if(this->_discard(adv->index(),mag(adv->coefficient()).raw())) {
-            te+=mag(adv->coefficient());
+    FloatError<PR> te(0.0_x, e.precision());
+    while (adv != end) {
+        if (this->_discard(adv->index(), mag(adv->coefficient()).raw())) {
+            te += mag(adv->coefficient());
         } else {
-            *curr=*adv;
+            *curr = *adv;
             ++curr;
         }
         ++adv;
     }
-    e+=te;
+    e += te;
 
     F::set_rounding_to_nearest();
-    p.resize(static_cast<SizeType>(curr-p.begin()));
+    p.resize(static_cast<SizeType>(curr - p.begin()));
 }
 
 template<class F>
-Void SweeperBase<F>::_sweep(Expansion<MultiIndex,FloatApproximation<PR>>& p) const
-{
-    typename Expansion<MultiIndex,FloatApproximation<PR>>::ConstIterator end=p.end();
-    typename Expansion<MultiIndex,FloatApproximation<PR>>::ConstIterator adv=p.begin();
-    typename Expansion<MultiIndex,FloatApproximation<PR>>::Iterator curr=p.begin();
-    while(adv!=end) {
-        if(this->_discard(adv->index(),adv->coefficient().raw())) {
+Void SweeperBase<F>::_sweep(Expansion<MultiIndex, FloatApproximation<PR>>& p) const {
+    typename Expansion<MultiIndex, FloatApproximation<PR>>::ConstIterator end = p.end();
+    typename Expansion<MultiIndex, FloatApproximation<PR>>::ConstIterator adv = p.begin();
+    typename Expansion<MultiIndex, FloatApproximation<PR>>::Iterator curr = p.begin();
+    while (adv != end) {
+        if (this->_discard(adv->index(), adv->coefficient().raw())) {
         } else {
-            *curr=*adv;
+            *curr = *adv;
             ++curr;
         }
         ++adv;
     }
-    p.resize(static_cast<SizeType>(curr-p.begin()));
+    p.resize(static_cast<SizeType>(curr - p.begin()));
 }
 
 template<class F>
-Void SweeperBase<F>::_sweep(Expansion<MultiIndex,FloatUpperInterval<PR>>& p, FloatError<PR>& e) const
-{
-    typename Expansion<MultiIndex,FloatUpperInterval<PR>>::ConstIterator end=p.end();
-    typename Expansion<MultiIndex,FloatUpperInterval<PR>>::ConstIterator adv=p.begin();
-    typename Expansion<MultiIndex,FloatUpperInterval<PR>>::Iterator curr=p.begin();
+Void SweeperBase<F>::_sweep(Expansion<MultiIndex, FloatUpperInterval<PR>>& p, FloatError<PR>& e) const {
+    typename Expansion<MultiIndex, FloatUpperInterval<PR>>::ConstIterator end = p.end();
+    typename Expansion<MultiIndex, FloatUpperInterval<PR>>::ConstIterator adv = p.begin();
+    typename Expansion<MultiIndex, FloatUpperInterval<PR>>::Iterator curr = p.begin();
 
     F::set_rounding_upward();
-    FloatError<PR> te(0.0_x,e.precision());
-    while(adv!=end) {
-        if(this->_discard(adv->index(),mag(adv->coefficient()).raw())) {
-            te+=mag(adv->coefficient());
+    FloatError<PR> te(0.0_x, e.precision());
+    while (adv != end) {
+        if (this->_discard(adv->index(), mag(adv->coefficient()).raw())) {
+            te += mag(adv->coefficient());
         } else {
-            *curr=*adv;
+            *curr = *adv;
             ++curr;
         }
         ++adv;
     }
-    e+=te;
+    e += te;
 
     F::set_rounding_to_nearest();
-    p.resize(static_cast<SizeType>(curr-p.begin()));
+    p.resize(static_cast<SizeType>(curr - p.begin()));
 }
 
 namespace {
 
 template<class I, class X>
-decltype(auto) sweeper_radius(Expansion<I,X> const& p)
-{
+decltype(auto) sweeper_radius(const Expansion<I, X>& p) {
     typedef decltype(mag(declval<X>())) R;
-    R r=mag(p.zero_coefficient());
-    for (auto term : p) {
+    R r = mag(p.zero_coefficient());
+    for (auto term: p) {
         if (term.index().degree() != 0) {
             r += mag(term.coefficient());
         }
@@ -136,101 +131,97 @@ decltype(auto) sweeper_radius(Expansion<I,X> const& p)
 } // namespace
 
 template<class F>
-Void RelativeSweeperBase<F>::_sweep(Expansion<MultiIndex,Float<PR>>& p, FloatError<PR>& e) const
-{
-    typename Expansion<MultiIndex,Float<PR>>::ConstIterator end=p.end();
-    typename Expansion<MultiIndex,Float<PR>>::ConstIterator adv=p.begin();
-    typename Expansion<MultiIndex,Float<PR>>::Iterator curr=p.begin();
+Void RelativeSweeperBase<F>::_sweep(Expansion<MultiIndex, Float<PR>>& p, FloatError<PR>& e) const {
+    typename Expansion<MultiIndex, Float<PR>>::ConstIterator end = p.end();
+    typename Expansion<MultiIndex, Float<PR>>::ConstIterator adv = p.begin();
+    typename Expansion<MultiIndex, Float<PR>>::Iterator curr = p.begin();
 
-    FloatError<PR> nrm=sweeper_radius(p)+e;
-
-    F::set_rounding_upward();
-    FloatError<PR> te(e.precision());
-    while(adv!=end) {
-        if(this->_discard(adv->coefficient(),nrm.raw())) {
-            te+=cast_positive(abs(adv->coefficient()));
-        } else {
-            *curr=*adv;
-            ++curr;
-        }
-        ++adv;
-    }
-    e+=te;
-
-    F::set_rounding_to_nearest();
-    p.resize(static_cast<SizeType>(curr-p.begin()));
-}
-
-template<class F>
-Void RelativeSweeperBase<F>::_sweep(Expansion<MultiIndex,FloatBounds<PR>>& p, FloatError<PR>& e) const
-{
-    typename Expansion<MultiIndex,FloatBounds<PR>>::ConstIterator end=p.end();
-    typename Expansion<MultiIndex,FloatBounds<PR>>::ConstIterator adv=p.begin();
-    typename Expansion<MultiIndex,FloatBounds<PR>>::Iterator curr=p.begin();
-
-    FloatError<PR> nrm=sweeper_radius(p)+e;
+    FloatError<PR> nrm = sweeper_radius(p) + e;
 
     F::set_rounding_upward();
     FloatError<PR> te(e.precision());
-    while(adv!=end) {
-        if(this->_discard(mag(adv->coefficient()).raw(),nrm.raw())) {
-            te+=mag(adv->coefficient());
+    while (adv != end) {
+        if (this->_discard(adv->coefficient(), nrm.raw())) {
+            te += cast_positive(abs(adv->coefficient()));
         } else {
-            *curr=*adv;
+            *curr = *adv;
             ++curr;
         }
         ++adv;
     }
-    e+=te;
+    e += te;
 
     F::set_rounding_to_nearest();
-    p.resize(static_cast<SizeType>(curr-p.begin()));
+    p.resize(static_cast<SizeType>(curr - p.begin()));
 }
 
 template<class F>
-Void RelativeSweeperBase<F>::_sweep(Expansion<MultiIndex,FloatApproximation<PR>>& p) const
-{
-    typename Expansion<MultiIndex,FloatApproximation<PR>>::ConstIterator end=p.end();
-    typename Expansion<MultiIndex,FloatApproximation<PR>>::ConstIterator adv=p.begin();
-    typename Expansion<MultiIndex,FloatApproximation<PR>>::Iterator curr=p.begin();
+Void RelativeSweeperBase<F>::_sweep(Expansion<MultiIndex, FloatBounds<PR>>& p, FloatError<PR>& e) const {
+    typename Expansion<MultiIndex, FloatBounds<PR>>::ConstIterator end = p.end();
+    typename Expansion<MultiIndex, FloatBounds<PR>>::ConstIterator adv = p.begin();
+    typename Expansion<MultiIndex, FloatBounds<PR>>::Iterator curr = p.begin();
 
-    FloatApproximation<PR> nrm=sweeper_radius(p);
-
-    while(adv!=end) {
-        if(this->_discard(adv->coefficient().raw(),nrm.raw())) {
-        } else {
-            *curr=*adv;
-            ++curr;
-        }
-        ++adv;
-    }
-    p.resize(static_cast<SizeType>(curr-p.begin()));
-}
-
-template<class F>
-Void RelativeSweeperBase<F>::_sweep(Expansion<MultiIndex,FloatUpperInterval<PR>>& p, FloatError<PR>& e) const
-{
-    typename Expansion<MultiIndex,FloatUpperInterval<PR>>::ConstIterator end=p.end();
-    typename Expansion<MultiIndex,FloatUpperInterval<PR>>::ConstIterator adv=p.begin();
-    typename Expansion<MultiIndex,FloatUpperInterval<PR>>::Iterator curr=p.begin();
-
-    FloatError<PR> nrm=sweeper_radius(p)+e;
+    FloatError<PR> nrm = sweeper_radius(p) + e;
 
     F::set_rounding_upward();
-    FloatError<PR> te(0u,e.precision());
-    while(adv!=end) {
-        if(this->_discard(mag(adv->coefficient()).raw(),nrm.raw())) {
-            te+=mag(adv->coefficient());
+    FloatError<PR> te(e.precision());
+    while (adv != end) {
+        if (this->_discard(mag(adv->coefficient()).raw(), nrm.raw())) {
+            te += mag(adv->coefficient());
         } else {
-            *curr=*adv;
+            *curr = *adv;
             ++curr;
         }
         ++adv;
     }
-    e+=te;
+    e += te;
 
     F::set_rounding_to_nearest();
-    p.resize(static_cast<SizeType>(curr-p.begin()));
+    p.resize(static_cast<SizeType>(curr - p.begin()));
+}
+
+template<class F>
+Void RelativeSweeperBase<F>::_sweep(Expansion<MultiIndex, FloatApproximation<PR>>& p) const {
+    typename Expansion<MultiIndex, FloatApproximation<PR>>::ConstIterator end = p.end();
+    typename Expansion<MultiIndex, FloatApproximation<PR>>::ConstIterator adv = p.begin();
+    typename Expansion<MultiIndex, FloatApproximation<PR>>::Iterator curr = p.begin();
+
+    FloatApproximation<PR> nrm = sweeper_radius(p);
+
+    while (adv != end) {
+        if (this->_discard(adv->coefficient().raw(), nrm.raw())) {
+        } else {
+            *curr = *adv;
+            ++curr;
+        }
+        ++adv;
+    }
+    p.resize(static_cast<SizeType>(curr - p.begin()));
+}
+
+template<class F>
+Void RelativeSweeperBase<F>::_sweep(Expansion<MultiIndex, FloatUpperInterval<PR>>& p, FloatError<PR>& e) const {
+    typename Expansion<MultiIndex, FloatUpperInterval<PR>>::ConstIterator end = p.end();
+    typename Expansion<MultiIndex, FloatUpperInterval<PR>>::ConstIterator adv = p.begin();
+    typename Expansion<MultiIndex, FloatUpperInterval<PR>>::Iterator curr = p.begin();
+
+    FloatError<PR> nrm = sweeper_radius(p) + e;
+
+    F::set_rounding_upward();
+    FloatError<PR> te(0u, e.precision());
+    while (adv != end) {
+        if (this->_discard(mag(adv->coefficient()).raw(), nrm.raw())) {
+            te += mag(adv->coefficient());
+        } else {
+            *curr = *adv;
+            ++curr;
+        }
+        ++adv;
+    }
+    e += te;
+
+    F::set_rounding_to_nearest();
+    p.resize(static_cast<SizeType>(curr - p.begin()));
 }
 
 } // namespace Ariadne

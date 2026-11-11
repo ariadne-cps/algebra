@@ -21,7 +21,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with Ariadne Algebra.  If not, see <https://www.gnu.org/licenses/>.
  */
- 
+
 /** @file algebra/vector_interface.hpp
  *  @brief Abstract interfaces for vector algebra.
  */
@@ -33,19 +33,22 @@
 
 namespace Ariadne {
 
-template<class X, class I=Void> class VectorInterface;
+template<class X, class I = Void>
+class VectorInterface;
 
-template<class X, class I> class VectorInterface {
+template<class X, class I>
+class VectorInterface {
     typedef I ScalarInterface;
     typedef X ScalarType;
     typedef typename ScalarType::NumericType NumericType;
+
   public:
     virtual ScalarInterface* _get(SizeType i) const = 0;
-    virtual Void _set(SizeType i, ScalarType const& x) const = 0;
-    virtual VectorInterface* _add(VectorInterface const*) const = 0;
-    virtual VectorInterface* _sub(VectorInterface const*) const = 0;
-    virtual VectorInterface* _mul(ScalarType const&) const = 0;
-    virtual VectorInterface* _mul(NumericType const&) const = 0;
+    virtual Void _set(SizeType i, const ScalarType& x) const = 0;
+    virtual VectorInterface* _add(const VectorInterface*) const = 0;
+    virtual VectorInterface* _sub(const VectorInterface*) const = 0;
+    virtual VectorInterface* _mul(const ScalarType&) const = 0;
+    virtual VectorInterface* _mul(const NumericType&) const = 0;
 };
 
 } // namespace Ariadne

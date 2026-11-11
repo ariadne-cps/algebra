@@ -32,27 +32,36 @@
 #include <iosfwd>
 #include <iostream>
 
-#include "utility/writable.hpp"
-#include "numeric/numeric.hpp"
-#include "utility/pointer.hpp"
-#include "numeric/operators.hpp"
 #include "interval/interval.decl.hpp"
+#include "numeric/numeric.hpp"
+#include "numeric/operators.hpp"
+#include "utility/pointer.hpp"
+#include "utility/writable.hpp"
 
 namespace Ariadne {
 
+template<class X>
+class AlgebraInterface;
+template<class X>
+class Algebra;
+template<class X>
+class NormedAlgebra;
+template<class X>
+class GradedAlgebra;
+template<class X>
+class SymbolicAlgebra;
+template<class X>
+class TranscendentalAlgebra;
+template<class X>
+class ElementaryAlgebra;
+template<class X>
+class Series;
 
-template<class X> class AlgebraInterface;
-template<class X> class Algebra;
-template<class X> class NormedAlgebra;
-template<class X> class GradedAlgebra;
-template<class X> class SymbolicAlgebra;
-template<class X> class TranscendentalAlgebra;
-template<class X> class ElementaryAlgebra;
-template<class X> class Series;
+template<class X>
+struct AlgebraTraits;
 
-template<class X> struct AlgebraTraits;
-
-template<> struct AlgebraTraits<ApproximateNumber> {
+template<>
+struct AlgebraTraits<ApproximateNumber> {
     typedef ApproximateNumber ValueType;
     typedef PositiveApproximateNumber ErrorType;
     typedef Interval<ApproximateNumber> RangeType;
@@ -60,7 +69,8 @@ template<> struct AlgebraTraits<ApproximateNumber> {
     typedef ApproximateNumber NumericType;
 };
 
-template<> struct AlgebraTraits<ValidatedNumber> {
+template<>
+struct AlgebraTraits<ValidatedNumber> {
     typedef ExactNumber ValueType;
     typedef ValidatedErrorNumber ErrorType;
     typedef Interval<ValidatedUpperNumber> RangeType;
@@ -68,7 +78,8 @@ template<> struct AlgebraTraits<ValidatedNumber> {
     typedef ValidatedNumber NumericType;
 };
 
-template<> struct AlgebraTraits<EffectiveNumber> {
+template<>
+struct AlgebraTraits<EffectiveNumber> {
     typedef EffectiveNumber ValueType;
     typedef ValidatedErrorNumber ErrorType;
     typedef Interval<EffectiveUpperNumber> RangeType;
@@ -76,7 +87,8 @@ template<> struct AlgebraTraits<EffectiveNumber> {
     typedef EffectiveNumber NumericType;
 };
 
-template<class F> struct AlgebraTraits<Approximation<F>> {
+template<class F>
+struct AlgebraTraits<Approximation<F>> {
     typedef Approximation<F> ValueType;
     typedef PositiveApproximation<F> ErrorType;
     typedef Interval<Approximation<F>> RangeType;
@@ -84,7 +96,8 @@ template<class F> struct AlgebraTraits<Approximation<F>> {
     typedef Approximation<F> NumericType;
 };
 
-template<class F> struct AlgebraTraits<Bounds<F>> {
+template<class F>
+struct AlgebraTraits<Bounds<F>> {
     typedef F ValueType;
     typedef Error<F> ErrorType;
     typedef Interval<UpperBound<F>> RangeType;
@@ -92,21 +105,23 @@ template<class F> struct AlgebraTraits<Bounds<F>> {
     typedef Bounds<F> NumericType;
 };
 
-template<> struct AlgebraTraits<Real> {
+template<>
+struct AlgebraTraits<Real> {
     typedef FloatDP ValueType;
     typedef Interval<FloatDPUpperBound> RangeType;
     typedef FloatDPError NormType;
     typedef Real NumericType;
 };
 
-
 //! \brief Interface for a unital algebra over a field \a X.
-template<class X> class AlgebraInterface
-    : public virtual WritableInterface
-{
+template<class X>
+class AlgebraInterface
+    : public virtual WritableInterface {
     friend class Algebra<X>;
+
   public:
     typedef X NumericType;
+
   public:
     //! \brief Virtual destructor.
     virtual ~AlgebraInterface() = default;
@@ -117,7 +132,7 @@ template<class X> class AlgebraInterface
     //! \brief Create the zero element in the same algebra as the current object.
     virtual AlgebraInterface<X>* _create_zero() const = 0;
     //! \brief Create a constant multiple of the unit element in the same algebra as the current object.
-    virtual AlgebraInterface<X>* _create_constant(X const& c) const = 0;
+    virtual AlgebraInterface<X>* _create_constant(const X& c) const = 0;
 
     //! \brief Add a constant numerical scalar \c r+=c .
     virtual Void _iadd(const X& c) = 0;
@@ -129,78 +144,81 @@ template<class X> class AlgebraInterface
     virtual Void _ifma(const AlgebraInterface<X>& x1, const AlgebraInterface<X>& x2) = 0;
 
     virtual AlgebraInterface<X>* _apply(UnaryRingOperator) const = 0;
-    virtual AlgebraInterface<X>* _apply(BinaryRingOperator,AlgebraInterface<X>const&) const = 0;
-    virtual AlgebraInterface<X>* _apply(BinaryFieldOperator,X const&) const = 0;
-    virtual AlgebraInterface<X>* _rapply(BinaryRingOperator,X const&) const = 0;
+    virtual AlgebraInterface<X>* _apply(BinaryRingOperator, const AlgebraInterface<X>&) const = 0;
+    virtual AlgebraInterface<X>* _apply(BinaryFieldOperator, const X&) const = 0;
+    virtual AlgebraInterface<X>* _rapply(BinaryRingOperator, const X&) const = 0;
     virtual AlgebraInterface<X>* _apply(GradedRingOperator, Nat m) const = 0;
-
 };
 
 //! \brief Interface for a normed unital algebra over a field \a X.
-template<class X> class ElementaryAlgebraInterface
-    : public virtual WritableInterface
-{
+template<class X>
+class ElementaryAlgebraInterface
+    : public virtual WritableInterface {
   public:
     typedef X NumericType;
+
   public:
     // Overrides for AlgebraInterface operations
     virtual ElementaryAlgebraInterface<X>* _create_copy() const = 0;
     virtual ElementaryAlgebraInterface<X>* _create_zero() const = 0;
-    virtual ElementaryAlgebraInterface<X>* _create_constant(X const& c) const = 0;
+    virtual ElementaryAlgebraInterface<X>* _create_constant(const X& c) const = 0;
 
     //! FIXME: Remove this; currently used to allow copy of Handle
     virtual ElementaryAlgebraInterface<X>* _copy() const { return this->_create_copy(); }
 
-    virtual ElementaryAlgebraInterface<X>* _apply(BinaryElementaryOperator, ElementaryAlgebraInterface<X> const&) const = 0;
-    virtual ElementaryAlgebraInterface<X>* _apply(BinaryElementaryOperator, X const&) const = 0;
-    virtual ElementaryAlgebraInterface<X>* _rapply(BinaryElementaryOperator, X const&) const = 0;
+    virtual ElementaryAlgebraInterface<X>* _apply(BinaryElementaryOperator, const ElementaryAlgebraInterface<X>&) const = 0;
+    virtual ElementaryAlgebraInterface<X>* _apply(BinaryElementaryOperator, const X&) const = 0;
+    virtual ElementaryAlgebraInterface<X>* _rapply(BinaryElementaryOperator, const X&) const = 0;
     virtual ElementaryAlgebraInterface<X>* _apply(UnaryElementaryOperator) const = 0;
     virtual ElementaryAlgebraInterface<X>* _apply(GradedElementaryOperator, Int) const = 0;
 };
 
 //! \brief Interface for a normed unital algebra over a field \a X.
-template<class X> class TranscendentalAlgebraInterface
-    : public virtual WritableInterface
-{
+template<class X>
+class TranscendentalAlgebraInterface
+    : public virtual WritableInterface {
   public:
     typedef X NumericType;
     typedef typename AlgebraTraits<X>::ValueType ValueType;
     typedef typename AlgebraTraits<X>::NormType NormType;
     typedef typename AlgebraTraits<X>::RangeType RangeType;
+
   public:
     // Overrides for AlgebraInterface operations
     virtual TranscendentalAlgebraInterface<X>* _create_copy() const = 0;
     virtual TranscendentalAlgebraInterface<X>* _create_zero() const = 0;
-    virtual TranscendentalAlgebraInterface<X>* _create_constant(X const& c) const = 0;
+    virtual TranscendentalAlgebraInterface<X>* _create_constant(const X& c) const = 0;
 
     //! FIXME: Remove this; currently used to allow copy of Handle
     virtual TranscendentalAlgebraInterface<X>* _copy() const { return this->_create_copy(); }
 
-    virtual TranscendentalAlgebraInterface<X>* _apply(BinaryFieldOperator, TranscendentalAlgebraInterface<X> const&) const = 0;
-    virtual TranscendentalAlgebraInterface<X>* _apply(BinaryFieldOperator, X const&) const = 0;
-    virtual TranscendentalAlgebraInterface<X>* _rapply(BinaryFieldOperator, X const&) const = 0;
+    virtual TranscendentalAlgebraInterface<X>* _apply(BinaryFieldOperator, const TranscendentalAlgebraInterface<X>&) const = 0;
+    virtual TranscendentalAlgebraInterface<X>* _apply(BinaryFieldOperator, const X&) const = 0;
+    virtual TranscendentalAlgebraInterface<X>* _rapply(BinaryFieldOperator, const X&) const = 0;
     virtual TranscendentalAlgebraInterface<X>* _apply(UnaryTranscendentalOperator) const = 0;
     virtual TranscendentalAlgebraInterface<X>* _apply(GradedFieldOperator, Int) const = 0;
 };
 
 //! \brief Interface for a normed unital algebra over a field \a X.
-template<class X> class NormedAlgebraInterface
-    : public virtual AlgebraInterface<X>
-{
+template<class X>
+class NormedAlgebraInterface
+    : public virtual AlgebraInterface<X> {
   public:
     typedef typename AlgebraTraits<X>::ValueType ValueType;
     typedef typename AlgebraTraits<X>::ErrorType ErrorType;
     typedef typename AlgebraTraits<X>::NormType NormType;
     typedef typename AlgebraTraits<X>::RangeType RangeType;
+
   public:
     NormedAlgebra<X> create() const;
     NormedAlgebra<X> clone() const;
+
   public:
     // Overrides for AlgebraInterface operations
     virtual NormedAlgebraInterface<X>* _create_copy() const = 0;
     virtual NormedAlgebraInterface<X>* _create_zero() const = 0;
-    virtual NormedAlgebraInterface<X>* _create_constant(X const& c) const = 0;
-    virtual NormedAlgebraInterface<X>* _create_ball(ErrorType const& r) const = 0;
+    virtual NormedAlgebraInterface<X>* _create_constant(const X& c) const = 0;
+    virtual NormedAlgebraInterface<X>* _create_ball(const ErrorType& r) const = 0;
 
     //! \brief A value \c e such that analytic functions are evaluated to a tolerance of \c e.
     virtual RawFloatDP tolerance() const = 0;
@@ -215,12 +233,13 @@ template<class X> class NormedAlgebraInterface
 };
 
 //! \brief Interface for a unital algebra over a field with support for composition with a power series.
-template<class X> class GradedAlgebraInterface
-    : public virtual AlgebraInterface<X>
-{
+template<class X>
+class GradedAlgebraInterface
+    : public virtual AlgebraInterface<X> {
   public:
     GradedAlgebra<X> create() const;
     GradedAlgebra<X> clone() const;
+
   public:
     // Overrides for AlgebraInterface operations
     virtual GradedAlgebraInterface<X>* _create_copy() const = 0;
@@ -231,12 +250,13 @@ template<class X> class GradedAlgebraInterface
 };
 
 //! \brief Interface for a unital algebra over a field \a X.
-template<class X> class SymbolicAlgebraInterface
-    : public virtual AlgebraInterface<X>
-{
+template<class X>
+class SymbolicAlgebraInterface
+    : public virtual AlgebraInterface<X> {
   public:
     SymbolicAlgebra<X> create() const;
     SymbolicAlgebra<X> clone() const;
+
   public:
     // Overrides for AlgebraInterface operations
     virtual SymbolicAlgebraInterface<X>* _create_copy() const = 0;
@@ -246,17 +266,15 @@ template<class X> class SymbolicAlgebraInterface
     virtual SymbolicAlgebraInterface<X>* _apply(UnaryElementaryOperator op) = 0;
 };
 
-
-template<class X> class VectorAlgebraInterface
-    : public virtual WritableInterface
-{
+template<class X>
+class VectorAlgebraInterface
+    : public virtual WritableInterface {
   public:
     virtual AlgebraInterface<X>* get_ptr(Nat i) const = 0;
     virtual Void set_ptr(Nat i, AlgebraInterface<X>*) = 0;
 
     Algebra<X> operator[](Nat i) const;
 };
-
 
 } // namespace Ariadne
 

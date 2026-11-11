@@ -22,50 +22,49 @@
  *  along with Ariadne Algebra.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "numeric/numeric.hpp"
-
-#include "interval/interval.hpp"
 #include "algebra/polynomial.hpp"
+
 #include "algebra/polynomial.tpl.hpp"
+#include "interval/interval.hpp"
+#include "numeric/numeric.hpp"
 
 namespace Ariadne {
 
-template class Polynomial<UniIndex,RoundedFloatDP>;
-template class Polynomial<UniIndex,FloatDPApproximation>;
-template class Polynomial<UniIndex,FloatDPBounds>;
-template class Polynomial<UniIndex,FloatMPApproximation>;
-template class Polynomial<UniIndex,FloatMPBounds>;
+template class Polynomial<UniIndex, RoundedFloatDP>;
+template class Polynomial<UniIndex, FloatDPApproximation>;
+template class Polynomial<UniIndex, FloatDPBounds>;
+template class Polynomial<UniIndex, FloatMPApproximation>;
+template class Polynomial<UniIndex, FloatMPBounds>;
 
-template struct AlgebraOperations<Polynomial<UniIndex,RoundedFloatDP>>;
-template struct AlgebraOperations<Polynomial<UniIndex,FloatDPApproximation>>;
-template struct AlgebraOperations<Polynomial<UniIndex,FloatDPBounds>>;
-template struct AlgebraOperations<Polynomial<UniIndex,FloatMPApproximation>>;
-template struct AlgebraOperations<Polynomial<UniIndex,FloatMPBounds>>;
+template struct AlgebraOperations<Polynomial<UniIndex, RoundedFloatDP>>;
+template struct AlgebraOperations<Polynomial<UniIndex, FloatDPApproximation>>;
+template struct AlgebraOperations<Polynomial<UniIndex, FloatDPBounds>>;
+template struct AlgebraOperations<Polynomial<UniIndex, FloatMPApproximation>>;
+template struct AlgebraOperations<Polynomial<UniIndex, FloatMPBounds>>;
 
-template class Polynomial<MultiIndex,RoundedFloatDP>;
-template class Polynomial<MultiIndex,FloatDPApproximation>;
-template class Polynomial<MultiIndex,FloatDPBounds>;
-template class Polynomial<MultiIndex,FloatDPUpperInterval>;
+template class Polynomial<MultiIndex, RoundedFloatDP>;
+template class Polynomial<MultiIndex, FloatDPApproximation>;
+template class Polynomial<MultiIndex, FloatDPBounds>;
+template class Polynomial<MultiIndex, FloatDPUpperInterval>;
 
-template struct AlgebraOperations<Polynomial<MultiIndex,RoundedFloatDP>>;
-template struct AlgebraOperations<Polynomial<MultiIndex,FloatDPApproximation>>;
-template struct AlgebraOperations<Polynomial<MultiIndex,FloatDPBounds>>;
-template struct AlgebraOperations<Polynomial<MultiIndex,FloatDPUpperInterval>>;
+template struct AlgebraOperations<Polynomial<MultiIndex, RoundedFloatDP>>;
+template struct AlgebraOperations<Polynomial<MultiIndex, FloatDPApproximation>>;
+template struct AlgebraOperations<Polynomial<MultiIndex, FloatDPBounds>>;
+template struct AlgebraOperations<Polynomial<MultiIndex, FloatDPUpperInterval>>;
 
-template<> Void Polynomial<MultiIndex,FloatDP>::cleanup() { }
+template<>
+Void Polynomial<MultiIndex, FloatDP>::cleanup() {}
 
-template Expansion<MultiIndex,FloatDP>& MultivariatePolynomial<FloatDP>::expansion();
-template OutputStream& Polynomial<MultiIndex,FloatDP>::_write(OutputStream&) const;
-template OutputStream& Polynomial<MultiIndex,FloatDP>::_write(OutputStream&, Array<String> const&) const;
+template Expansion<MultiIndex, FloatDP>& MultivariatePolynomial<FloatDP>::expansion();
+template OutputStream& Polynomial<MultiIndex, FloatDP>::_write(OutputStream&) const;
+template OutputStream& Polynomial<MultiIndex, FloatDP>::_write(OutputStream&, const Array<String>&) const;
 
+template class Polynomial<MultiIndex, FloatMPApproximation>;
+template class Polynomial<MultiIndex, FloatMPBounds>;
+template class Polynomial<MultiIndex, FloatMPUpperInterval>;
+template struct AlgebraOperations<Polynomial<MultiIndex, FloatMPApproximation>>;
+template struct AlgebraOperations<Polynomial<MultiIndex, FloatMPBounds>>;
+template struct AlgebraOperations<Polynomial<MultiIndex, FloatMPUpperInterval>>;
 
-template class Polynomial<MultiIndex,FloatMPApproximation>;
-template class Polynomial<MultiIndex,FloatMPBounds>;
-template class Polynomial<MultiIndex,FloatMPUpperInterval>;
-template struct AlgebraOperations<Polynomial<MultiIndex,FloatMPApproximation>>;
-template struct AlgebraOperations<Polynomial<MultiIndex,FloatMPBounds>>;
-template struct AlgebraOperations<Polynomial<MultiIndex,FloatMPUpperInterval>>;
-
-} //namespace Ariadne
-
+} // namespace Ariadne
 

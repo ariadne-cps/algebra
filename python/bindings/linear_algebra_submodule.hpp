@@ -25,74 +25,75 @@
 /** @file python/bindings/linear_algebra_submodule.hpp
  *  @brief Declarations for the Python linear algebra submodule.
  */
-#include "pybind11.hpp"
-
-#include "algebra/vector.hpp"
 #include "algebra/covector.hpp"
 #include "algebra/matrix.hpp"
+#include "algebra/vector.hpp"
+#include "pybind11.hpp"
 
 using namespace Ariadne;
 
 namespace Ariadne {
 
 template<class X>
-X __vgetitem__(const Vector<X>& v, Nat i)
-{
-    if(i<0) { i+=static_cast<Nat>(v.size()); }
-    ARIADNE_ASSERT_MSG(0<=i && Nat(i)<v.size(),"v="<<v<<" i="<<i);
+X __vgetitem__(const Vector<X>& v, Nat i) {
+    if (i < 0) {
+        i += static_cast<Nat>(v.size());
+    }
+    ARIADNE_ASSERT_MSG(0 <= i && Nat(i) < v.size(), "v=" << v << " i=" << i);
     return v[static_cast<Nat>(i)];
 }
 
-
 template<class X>
-Vector<X> __vgetslice__(const Vector<X>& v, Nat start, Nat stop)
-{
-    if(start<0) { start+=static_cast<Nat>(v.size()); }
-    if(stop<0) { stop+=static_cast<Nat>(v.size()); }
-    ARIADNE_ASSERT(0<=start && start<=stop && Nat(stop)<=v.size());
-    return project(v,range(static_cast<Nat>(start),static_cast<Nat>(stop)));
+Vector<X> __vgetslice__(const Vector<X>& v, Nat start, Nat stop) {
+    if (start < 0) {
+        start += static_cast<Nat>(v.size());
+    }
+    if (stop < 0) {
+        stop += static_cast<Nat>(v.size());
+    }
+    ARIADNE_ASSERT(0 <= start && start <= stop && Nat(stop) <= v.size());
+    return project(v, range(static_cast<Nat>(start), static_cast<Nat>(stop)));
 }
 
-
 template<class X>
-Void __vsetitem__(Vector<X>& v, Nat i, const X& x)
-{
-    if(i<0) { i+=static_cast<Nat>(v.size()); }
-    ARIADNE_ASSERT(0<=i && Nat(i)<v.size());
-    v[static_cast<Nat>(i)]=x;
+Void __vsetitem__(Vector<X>& v, Nat i, const X& x) {
+    if (i < 0) {
+        i += static_cast<Nat>(v.size());
+    }
+    ARIADNE_ASSERT(0 <= i && Nat(i) < v.size());
+    v[static_cast<Nat>(i)] = x;
 }
 
-
 template<class X>
-X __cvgetitem__(const Covector<X>& u, Nat i)
-{
-    if(i<0) { i+=static_cast<Nat>(u.size()); }
-    ARIADNE_ASSERT_MSG(0<=i && Nat(i)<u.size(),"v="<<u<<" i="<<i);
+X __cvgetitem__(const Covector<X>& u, Nat i) {
+    if (i < 0) {
+        i += static_cast<Nat>(u.size());
+    }
+    ARIADNE_ASSERT_MSG(0 <= i && Nat(i) < u.size(), "v=" << u << " i=" << i);
     return u[static_cast<Nat>(i)];
 }
 
 template<class X>
-Void __cvsetitem__(Covector<X>& u, Nat i, const X& x)
-{
-    if(i<0) { i+=static_cast<Nat>(u.size()); }
-    ARIADNE_ASSERT(0<=i && Nat(i)<u.size());
-    u[static_cast<Nat>(i)]=x;
+Void __cvsetitem__(Covector<X>& u, Nat i, const X& x) {
+    if (i < 0) {
+        i += static_cast<Nat>(u.size());
+    }
+    ARIADNE_ASSERT(0 <= i && Nat(i) < u.size());
+    u[static_cast<Nat>(i)] = x;
 }
 
 template<class X>
-X __mgetitem__(const Matrix<X>& A, const std::tuple<Nat,Nat>& ind)
-{
-    Nat i=std::get<0>(ind);
-    Nat j=std::get<1>(ind);
+X __mgetitem__(const Matrix<X>& A, const std::tuple<Nat, Nat>& ind) {
+    Nat i = std::get<0>(ind);
+    Nat j = std::get<1>(ind);
     return A[i][j];
 }
 
 template<class X>
-Void __msetitem__(Matrix<X>& A, const std::tuple<Nat,Nat>& ind, const X& x)
-{
-    Nat i=std::get<0>(ind);
-    Nat j=std::get<1>(ind);
-    A[i][j]=x;
+Void __msetitem__(Matrix<X>& A, const std::tuple<Nat, Nat>& ind, const X& x) {
+    Nat i = std::get<0>(ind);
+    Nat j = std::get<1>(ind);
+    A[i][j] = x;
 }
 
 } // namespace Ariadne

@@ -27,17 +27,19 @@
  */
 #ifndef ARIADNE_ALGEBRA_TESTING_CONTEXT_HPP
 #define ARIADNE_ALGEBRA_TESTING_CONTEXT_HPP
-#include "ariadne-testing.hpp"
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
+
+#include "ariadne-testing.hpp"
 namespace AlgebraTesting {
 inline thread_local Ariadne::Testing::Context* active = nullptr;
 inline Ariadne::Testing::Context& context() {
-    if (!active) throw std::logic_error("No active algebra testing context");
+    if (!active)
+        throw std::logic_error("No active algebra testing context");
     return *active;
 }
 struct CaseScope {
@@ -50,16 +52,19 @@ struct CaseScope {
         : ctx(c), previous(active),
           oldout(std::cout.rdbuf(output.rdbuf())),
           olderr(std::cerr.rdbuf(errors.rdbuf())) { active = &c; }
-    CaseScope(CaseScope const&) = delete;
-    CaseScope& operator=(CaseScope const&) = delete;
+    CaseScope(const CaseScope&) = delete;
+    CaseScope& operator=(const CaseScope&) = delete;
     ~CaseScope() noexcept {
         std::cout.rdbuf(oldout);
         std::cerr.rdbuf(olderr);
         active = previous;
         try {
-            if (!output.str().empty()) ctx.note("stdout: " + output.str());
-            if (!errors.str().empty()) ctx.note("stderr: " + errors.str());
-        } catch (...) {}
+            if (!output.str().empty())
+                ctx.note("stdout: " + output.str());
+            if (!errors.str().empty())
+                ctx.note("stderr: " + errors.str());
+        } catch (...) {
+        }
     }
 };
 
@@ -68,20 +73,20 @@ struct CaseScope {
 // "decide" is an approximate/domain decision, NOT a mathematical proof.
 // Use the standard Ariadne::Testing evidence macros for new tests instead.
 template<class T>
-bool legacy_decision(T const& value) {
-    if constexpr (requires(T const& v) { decide(v); })
+bool legacy_decision(const T& value) {
+    if constexpr (requires(const T& v) { decide(v); })
         return static_cast<bool>(decide(value));
     else
         return static_cast<bool>(value);
 }
 
 template<class A, class B>
-void decided_equal(Ariadne::Testing::Context& context, A const& actual,
-                   B const& expected, char const* description,
-                   char const* actual_name, char const* expected_name) {
+void decided_equal(Ariadne::Testing::Context& context, const A& actual,
+                   const B& expected, const char* description,
+                   const char* actual_name, const char* expected_name) {
     // For built-in integers, compare values without signed/unsigned promotion.
     // Keep legacy domain decisions for Ariadne numeric and logical types.
-    bool const decision = [&] {
+    const bool decision = [&] {
         if constexpr (std::is_integral_v<A> && std::is_integral_v<B> &&
                       !std::is_same_v<A, bool> && !std::is_same_v<B, bool>) {
             return std::cmp_equal(actual, expected);
@@ -97,10 +102,10 @@ void decided_equal(Ariadne::Testing::Context& context, A const& actual,
 }
 
 template<class A, class B>
-void decided_same(Ariadne::Testing::Context& context, A const& actual,
-                  B const& expected, char const* description,
-                  char const* actual_name, char const* expected_name) {
-    bool const decision = legacy_decision(same(actual, expected));
+void decided_same(Ariadne::Testing::Context& context, const A& actual,
+                  const B& expected, const char* description,
+                  const char* actual_name, const char* expected_name) {
+    const bool decision = legacy_decision(same(actual, expected));
     if (!decision) {
         context.inspect(actual_name, actual);
         context.inspect(expected_name, expected);
@@ -109,11 +114,11 @@ void decided_same(Ariadne::Testing::Context& context, A const& actual,
 }
 
 template<class T>
-void legacy_assert(Ariadne::Testing::Context& context, T const& proposition,
-                   char const* expression) {
+void legacy_assert(Ariadne::Testing::Context& context, const T& proposition,
+                   const char* expression) {
     using Ariadne::Testing::Detail::evidence;
     using Ariadne::Testing::Evidence;
-    auto const observed = evidence(proposition);
+    const auto observed = evidence(proposition);
     if (observed == Evidence::Indeterminate)
         context.warning(std::string("Legacy assertion indeterminate: ") + expression);
     context.expect_evidence(
@@ -127,48 +132,48 @@ void legacy_assert(Ariadne::Testing::Context& context, T const& proposition,
 // Keep operands in the same full-expression as their comparison and diagnostics:
 // an expression such as Series(...).coefficients(n) returns a reference to a
 // subobject of a temporary, which would dangle after an auto&& declaration.
-#define ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(context, actual, expected) \
-    do { \
-        ::AlgebraTesting::decided_equal((context), (actual), (expected), \
-            #actual " == " #expected, #actual, #expected); \
+#define ARIADNE_ALGEBRA_DECIDED_EQUAL_CTX(context, actual, expected)                   \
+    do {                                                                               \
+        ::AlgebraTesting::decided_equal((context), (actual), (expected),               \
+                                        #actual " == " #expected, #actual, #expected); \
     } while (false)
 
-#define ARIADNE_ALGEBRA_DECIDED_SAME_CTX(context, actual, expected) \
-    do { \
-        ::AlgebraTesting::decided_same((context), (actual), (expected), \
-            #actual " same " #expected, #actual, #expected); \
+#define ARIADNE_ALGEBRA_DECIDED_SAME_CTX(context, actual, expected)                     \
+    do {                                                                                \
+        ::AlgebraTesting::decided_same((context), (actual), (expected),                 \
+                                       #actual " same " #expected, #actual, #expected); \
     } while (false)
 
-#define ARIADNE_ALGEBRA_DECIDED_REL_CTX(context, actual, op, expected) \
-    do { \
-        [&](auto&& a_ariadne, auto&& b_ariadne) { \
+#define ARIADNE_ALGEBRA_DECIDED_REL_CTX(context, actual, op, expected)                             \
+    do {                                                                                           \
+        [&](auto&& a_ariadne, auto&& b_ariadne) {                                                  \
             bool const result_ariadne = ::AlgebraTesting::legacy_decision(a_ariadne op b_ariadne); \
-            if (!result_ariadne) { \
-                (context).inspect(#actual, a_ariadne); \
-                (context).inspect(#expected, b_ariadne); \
-            } \
-            (context).check([&] { return result_ariadne; }, \
-                            #actual " " #op " " #expected); \
-        }((actual), (expected)); \
+            if (!result_ariadne) {                                                                 \
+                (context).inspect(#actual, a_ariadne);                                             \
+                (context).inspect(#expected, b_ariadne);                                           \
+            }                                                                                      \
+            (context).check([&] { return result_ariadne; },                                        \
+                            #actual " " #op " " #expected);                                        \
+        }((actual), (expected));                                                                   \
     } while (false)
 
 #define ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(context, expression) \
     ::AlgebraTesting::legacy_assert((context), (expression), #expression)
 
-#define ARIADNE_ALGEBRA_DECIDED_BINARY_CTX(context, predicate, left, right) \
-    do { \
-        [&](auto&& a_ariadne, auto&& b_ariadne) { \
+#define ARIADNE_ALGEBRA_DECIDED_BINARY_CTX(context, predicate, left, right)                                 \
+    do {                                                                                                    \
+        [&](auto&& a_ariadne, auto&& b_ariadne) {                                                           \
             bool const result_ariadne = ::AlgebraTesting::legacy_decision(predicate(a_ariadne, b_ariadne)); \
-            (context).check([&] { return result_ariadne; }, #predicate "(" #left ", " #right ")"); \
-        }((left), (right)); \
+            (context).check([&] { return result_ariadne; }, #predicate "(" #left ", " #right ")");          \
+        }((left), (right));                                                                                 \
     } while (false)
 
-#define ARIADNE_ALGEBRA_DECIDED_NOT_BINARY_CTX(context, predicate, left, right) \
-    do { \
-        [&](auto&& a_ariadne, auto&& b_ariadne) { \
+#define ARIADNE_ALGEBRA_DECIDED_NOT_BINARY_CTX(context, predicate, left, right)                              \
+    do {                                                                                                     \
+        [&](auto&& a_ariadne, auto&& b_ariadne) {                                                            \
             bool const result_ariadne = ::AlgebraTesting::legacy_decision(!predicate(a_ariadne, b_ariadne)); \
-            (context).check([&] { return result_ariadne; }, "!" #predicate "(" #left ", " #right ")"); \
-        }((left), (right)); \
+            (context).check([&] { return result_ariadne; }, "!" #predicate "(" #left ", " #right ")");       \
+        }((left), (right));                                                                                  \
     } while (false)
 
 #endif

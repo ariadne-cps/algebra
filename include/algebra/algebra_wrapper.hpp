@@ -35,136 +35,164 @@
 
 namespace Ariadne {
 
-template<class A, class X=NumericType<A>> class AlgebraWrapper;
+template<class A, class X = NumericType<A>>
+class AlgebraWrapper;
 
-template<class A, class X> requires AnAlgebraOver<A,X> class AlgebraWrapper<A,X>
-    : public virtual AlgebraInterface<X>
-    , public A
-{
-    static AlgebraInterface<X>* heap_move(A&& a) { return new AlgebraWrapper<A,X>(std::forward<A>(a)); }
+template<class A, class X>
+    requires AnAlgebraOver<A, X>
+class AlgebraWrapper<A, X>
+    : public virtual AlgebraInterface<X>,
+      public A {
+    static AlgebraInterface<X>* heap_move(A&& a) { return new AlgebraWrapper<A, X>(std::forward<A>(a)); }
+
   public:
     typedef X NumericType;
 
-    AlgebraWrapper(A&& a) : A(std::move(a)) { }
-    AlgebraWrapper(A const& a) : A(a) { }
+    AlgebraWrapper(A&& a) : A(std::move(a)) {}
+    AlgebraWrapper(const A& a) : A(a) {}
     virtual AlgebraInterface<X>* _copy() const override { return new AlgebraWrapper<A>(*this); }
     virtual AlgebraInterface<X>* _create_zero() const override { return heap_move(nul(*this)); }
-    virtual AlgebraInterface<X>* _create_constant(X const& c) const override { A a=nul(*this); a=c; return heap_move(std::move(a)); }
+    virtual AlgebraInterface<X>* _create_constant(const X& c) const override {
+        A a = nul(*this);
+        a = c;
+        return heap_move(std::move(a));
+    }
     virtual AlgebraInterface<X>* _create_copy() const override { return new AlgebraWrapper<A>(*this); }
-    virtual Void _iadd(const X& c) override{
-        static_cast<A&>(*this)+=c; }
-    virtual Void _imul(const X& c) override{
-        static_cast<A&>(*this)*=c; }
+    virtual Void _iadd(const X& c) override {
+        static_cast<A&>(*this) += c;
+    }
+    virtual Void _imul(const X& c) override {
+        static_cast<A&>(*this) *= c;
+    }
     virtual Void _isma(const X& c, const AlgebraInterface<X>& a) override {
-        static_cast<A&>(*this)+=c*dynamic_cast<const A&>(a); }
+        static_cast<A&>(*this) += c * dynamic_cast<const A&>(a);
+    }
     virtual Void _ifma(const AlgebraInterface<X>& a1, const AlgebraInterface<X>& a2) override {
-        static_cast<A&>(*this)+=dynamic_cast<const A&>(a1)*dynamic_cast<const A&>(a2); }
+        static_cast<A&>(*this) += dynamic_cast<const A&>(a1) * dynamic_cast<const A&>(a2);
+    }
     virtual AlgebraInterface<X>* _apply(UnaryRingOperator op) const override {
-        return heap_move(op(static_cast<const A&>(*this))); }
-    virtual AlgebraInterface<X>* _apply(BinaryRingOperator op, AlgebraInterface<X> const& a) const override {
-        return heap_move(op(static_cast<const A&>(*this),dynamic_cast<AlgebraWrapper<A,X>const&>(a))); }
-    virtual AlgebraInterface<X>* _apply(BinaryFieldOperator op, X const& c) const override {
-        return heap_move(op(static_cast<const A&>(*this),c)); }
-    virtual AlgebraInterface<X>* _rapply(BinaryRingOperator op, X const& c) const override {
-        return heap_move(op(c,static_cast<const A&>(*this))); };
+        return heap_move(op(static_cast<const A&>(*this)));
+    }
+    virtual AlgebraInterface<X>* _apply(BinaryRingOperator op, const AlgebraInterface<X>& a) const override {
+        return heap_move(op(static_cast<const A&>(*this), dynamic_cast<const AlgebraWrapper<A, X>&>(a)));
+    }
+    virtual AlgebraInterface<X>* _apply(BinaryFieldOperator op, const X& c) const override {
+        return heap_move(op(static_cast<const A&>(*this), c));
+    }
+    virtual AlgebraInterface<X>* _rapply(BinaryRingOperator op, const X& c) const override {
+        return heap_move(op(c, static_cast<const A&>(*this)));
+    };
     virtual AlgebraInterface<X>* _apply(GradedRingOperator op, Nat m) const override {
-        return heap_move(op(static_cast<const A&>(*this),m)); };
-    virtual OutputStream& _write(OutputStream& os) const override { os << static_cast<const A&>(*this); return os; }
+        return heap_move(op(static_cast<const A&>(*this), m));
+    };
+    virtual OutputStream& _write(OutputStream& os) const override {
+        os << static_cast<const A&>(*this);
+        return os;
+    }
 };
 
-template<class A, class X> requires AnInplaceAlgebraOver<A,X> class AlgebraWrapper<A,X>
-    : public virtual AlgebraInterface<X>
-    , public A
-{
-    static AlgebraInterface<X>* heap_move(A&& a) { return new AlgebraWrapper<A,X>(std::forward<A>(a)); }
+template<class A, class X>
+    requires AnInplaceAlgebraOver<A, X>
+class AlgebraWrapper<A, X>
+    : public virtual AlgebraInterface<X>,
+      public A {
+    static AlgebraInterface<X>* heap_move(A&& a) { return new AlgebraWrapper<A, X>(std::forward<A>(a)); }
+
   public:
     typedef X NumericType;
 
-    AlgebraWrapper(A&& a) : A(std::move(a)) { }
-    AlgebraWrapper(A const& a) : A(a) { }
+    AlgebraWrapper(A&& a) : A(std::move(a)) {}
+    AlgebraWrapper(const A& a) : A(a) {}
     virtual AlgebraInterface<X>* _copy() const override { return new AlgebraWrapper<A>(*this); }
     virtual AlgebraInterface<X>* _create_zero() const override { return heap_move(this->A::create()); }
-    virtual AlgebraInterface<X>* _create_constant(X const& c) const override { return heap_move(this->A::create_constant(c)); }
+    virtual AlgebraInterface<X>* _create_constant(const X& c) const override { return heap_move(this->A::create_constant(c)); }
     virtual AlgebraInterface<X>* _create_copy() const override { return new AlgebraWrapper<A>(*this); }
-    virtual Void _iadd(const X& c) override{ static_cast<A*>(this)->A::iadd(c); }
-    virtual Void _imul(const X& c) override{ static_cast<A*>(this)->A::imul(c); }
+    virtual Void _iadd(const X& c) override { static_cast<A*>(this)->A::iadd(c); }
+    virtual Void _imul(const X& c) override { static_cast<A*>(this)->A::imul(c); }
     virtual Void _isma(const X& c, const AlgebraInterface<X>& x) override {
-        static_cast<A*>(this)->A::isma(c,dynamic_cast<const A&>(x)); }
+        static_cast<A*>(this)->A::isma(c, dynamic_cast<const A&>(x));
+    }
     virtual Void _ifma(const AlgebraInterface<X>& x1, const AlgebraInterface<X>& x2) override {
-        static_cast<A*>(this)->A::ifma(dynamic_cast<const A&>(x1),dynamic_cast<const A&>(x2)); }
+        static_cast<A*>(this)->A::ifma(dynamic_cast<const A&>(x1), dynamic_cast<const A&>(x2));
+    }
     virtual AlgebraInterface<X>* _apply(Neg) const override {
-        ARIADNE_NOT_IMPLEMENTED; }
-    virtual AlgebraInterface<X>* _apply(BinaryRingOperator, AlgebraInterface<X> const&) const override {
-        ARIADNE_NOT_IMPLEMENTED; }
-    virtual AlgebraInterface<X>* _apply(BinaryFieldOperator, X const&) const override {
-        ARIADNE_NOT_IMPLEMENTED; }
-    virtual AlgebraInterface<X>* _rapply(BinaryRingOperator, X const&) const override {
-        ARIADNE_NOT_IMPLEMENTED; }
+        ARIADNE_NOT_IMPLEMENTED;
+    }
+    virtual AlgebraInterface<X>* _apply(BinaryRingOperator, const AlgebraInterface<X>&) const override {
+        ARIADNE_NOT_IMPLEMENTED;
+    }
+    virtual AlgebraInterface<X>* _apply(BinaryFieldOperator, const X&) const override {
+        ARIADNE_NOT_IMPLEMENTED;
+    }
+    virtual AlgebraInterface<X>* _rapply(BinaryRingOperator, const X&) const override {
+        ARIADNE_NOT_IMPLEMENTED;
+    }
     virtual AlgebraInterface<X>* _apply(GradedRingOperator, Nat) const override {
-        ARIADNE_NOT_IMPLEMENTED; }
-    virtual OutputStream& _write(OutputStream& os) const override { os << static_cast<const A&>(*this); return os; }
+        ARIADNE_NOT_IMPLEMENTED;
+    }
+    virtual OutputStream& _write(OutputStream& os) const override {
+        os << static_cast<const A&>(*this);
+        return os;
+    }
 };
 
-
-template<class A, class X=NumericType<A>> class NormedAlgebraWrapper
-    : public virtual NormedAlgebraInterface<X>
-    , public AlgebraWrapper<A,X>
-{
+template<class A, class X = NumericType<A>>
+class NormedAlgebraWrapper
+    : public virtual NormedAlgebraInterface<X>,
+      public AlgebraWrapper<A, X> {
     using typename AlgebraInterface<X>::ErrorType;
-    using AlgebraWrapper<A,X>::AlgebraWrapper;
+    using AlgebraWrapper<A, X>::AlgebraWrapper;
     virtual NormedAlgebraInterface<X>* _create_ball(ErrorType r) const { return new A(static_cast<const A&>(*this).A::create_ball(r)); }
     virtual NormedAlgebraInterface<X>* _create_constant(X c) const { return new A(static_cast<const A&>(*this).A::create_constant(c)); }
     virtual NormedAlgebraInterface<X>* _create_zero() const { return new A(static_cast<const A&>(*this).A::create()); }
     virtual NormedAlgebraInterface<X>* _create_copy() const { return new A(static_cast<const A&>(*this)); }
 };
 
-template<class A, class X=NumericType<A>> class GradedAlgebraWrapper
-    : public virtual GradedAlgebraInterface<X>
-    , public AlgebraWrapper<A,X>
-{
-    using AlgebraWrapper<A,X>::AlgebraWrapper;
+template<class A, class X = NumericType<A>>
+class GradedAlgebraWrapper
+    : public virtual GradedAlgebraInterface<X>,
+      public AlgebraWrapper<A, X> {
+    using AlgebraWrapper<A, X>::AlgebraWrapper;
     virtual GradedAlgebraInterface<X>* _create_zero() const { return new A(static_cast<const A&>(*this).A::create()); }
     virtual GradedAlgebraInterface<X>* _create_copy() const { return new A(static_cast<const A&>(*this)); }
-    virtual GradedAlgebraInterface<X>* _apply(const Series<X>& f) const { return new A(compose(f,static_cast<const A&>(*this))); }
+    virtual GradedAlgebraInterface<X>* _apply(const Series<X>& f) const { return new A(compose(f, static_cast<const A&>(*this))); }
 };
 
-template<class A, class X=NumericType<A>> class SymbolicAlgebraWrapper
-    : public virtual SymbolicAlgebraInterface<X>
-    , public AlgebraWrapper<A,X>
-{
-    using AlgebraWrapper<A,X>::AlgebraWrapper;
+template<class A, class X = NumericType<A>>
+class SymbolicAlgebraWrapper
+    : public virtual SymbolicAlgebraInterface<X>,
+      public AlgebraWrapper<A, X> {
+    using AlgebraWrapper<A, X>::AlgebraWrapper;
     using SymbolicAlgebraInterface<X>::_apply;
-    using AlgebraWrapper<A,X>::_apply;
+    using AlgebraWrapper<A, X>::_apply;
     virtual SymbolicAlgebraInterface<X>* _create_zero() const { return new A(static_cast<const A&>(*this).A::create()); }
     virtual SymbolicAlgebraInterface<X>* _create_copy() const { return new SymbolicAlgebraWrapper<A>(*this); }
-    virtual SymbolicAlgebraInterface<X>* _apply(UnaryElementaryOperator op) { return new A(op,static_cast<const A&>(*this)); }
+    virtual SymbolicAlgebraInterface<X>* _apply(UnaryElementaryOperator op) { return new A(op, static_cast<const A&>(*this)); }
 };
 
-
-template<class A, class X> class TranscendentalAlgebraWrapper
-    : public TranscendentalAlgebraMixin<TranscendentalAlgebraWrapper<A,X>,X>
-    , public A
-{
+template<class A, class X>
+class TranscendentalAlgebraWrapper
+    : public TranscendentalAlgebraMixin<TranscendentalAlgebraWrapper<A, X>, X>,
+      public A {
   public:
     using A::A;
-    using TranscendentalAlgebraMixin<TranscendentalAlgebraWrapper<A,X>,X>::_apply;
-    using TranscendentalAlgebraMixin<TranscendentalAlgebraWrapper<A,X>,X>::_rapply;
-    TranscendentalAlgebraWrapper(A const& a) : A(a) { }
-    friend OutputStream& operator<<(OutputStream& os, TranscendentalAlgebraWrapper<A,X> const& a) { return os << static_cast<A const&>(a); }
+    using TranscendentalAlgebraMixin<TranscendentalAlgebraWrapper<A, X>, X>::_apply;
+    using TranscendentalAlgebraMixin<TranscendentalAlgebraWrapper<A, X>, X>::_rapply;
+    TranscendentalAlgebraWrapper(const A& a) : A(a) {}
+    friend OutputStream& operator<<(OutputStream& os, const TranscendentalAlgebraWrapper<A, X>& a) { return os << static_cast<const A&>(a); }
 };
 
-template<class A, class X> class ElementaryAlgebraWrapper
-    : public ElementaryAlgebraMixin<ElementaryAlgebraWrapper<A,X>,X>
-    , public A
-{
+template<class A, class X>
+class ElementaryAlgebraWrapper
+    : public ElementaryAlgebraMixin<ElementaryAlgebraWrapper<A, X>, X>,
+      public A {
   public:
     using A::A;
-    using ElementaryAlgebraMixin<ElementaryAlgebraWrapper<A,X>,X>::_apply;
-    using ElementaryAlgebraMixin<ElementaryAlgebraWrapper<A,X>,X>::_rapply;
-    ElementaryAlgebraWrapper(A const& a) : A(a) { }
-    friend OutputStream& operator<<(OutputStream& os, ElementaryAlgebraWrapper<A,X> const& a) { return os << static_cast<A const&>(a); }
+    using ElementaryAlgebraMixin<ElementaryAlgebraWrapper<A, X>, X>::_apply;
+    using ElementaryAlgebraMixin<ElementaryAlgebraWrapper<A, X>, X>::_rapply;
+    ElementaryAlgebraWrapper(const A& a) : A(a) {}
+    friend OutputStream& operator<<(OutputStream& os, const ElementaryAlgebraWrapper<A, X>& a) { return os << static_cast<const A&>(a); }
 };
-
 
 } // namespace Ariadne
 

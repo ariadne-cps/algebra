@@ -29,105 +29,112 @@
 #ifndef ARIADNE_ALGEBRA_CONCEPTS_HPP
 #define ARIADNE_ALGEBRA_CONCEPTS_HPP
 
-#include "utility/metaprogramming.hpp"
 #include "numeric/concepts.hpp"
+#include "utility/metaprogramming.hpp"
 
 namespace Ariadne {
 
 //! \brief Concept for a vector over a ring or field \a X.
-template<class V, class X> concept AVectorOver = Ring<X> and requires (V const& v, X x, typename V::IndexType i) {
-  { declval<V>()[declval<typename V::IndexType>] = declval<X>() };
-  { v[i] } -> ConvertibleTo<X>;
-  { +v } -> ConvertibleTo<V>;
-  { -v } -> ConvertibleTo<V>;
-  { v+v } -> ConvertibleTo<V>;
-  { v-v } -> ConvertibleTo<V>;
-  { x*v } -> ConvertibleTo<V>;
-  { v*x } -> ConvertibleTo<V>;
-  { v/x } -> ConvertibleTo<V>;
+template<class V, class X>
+concept AVectorOver = Ring<X> and requires(const V& v, X x, typename V::IndexType i) {
+    { declval<V>()[declval<typename V::IndexType>] = declval<X>() };
+    { v[i] } -> ConvertibleTo<X>;
+    { +v } -> ConvertibleTo<V>;
+    { -v } -> ConvertibleTo<V>;
+    { v + v } -> ConvertibleTo<V>;
+    { v - v } -> ConvertibleTo<V>;
+    { x * v } -> ConvertibleTo<V>;
+    { v * x } -> ConvertibleTo<V>;
+    { v / x } -> ConvertibleTo<V>;
 };
 
 //! \brief Concept for a unital algebra over a field \a X.
-template<class A, class X> concept AnAlgebraOver = Field<X> and Assignable<A,X> and requires (A const& a, X const& x, Nat m) {
+template<class A, class X>
+concept AnAlgebraOver = Field<X> and Assignable<A, X> and requires(const A& a, const X& x, Nat m) {
     { operator+(a) } -> SameAsOrConvertibleTo<A>;
     { operator-(a) } -> SameAsOrConvertibleTo<A>;
-    { operator+(a,a) } -> SameAsOrConvertibleTo<A>;
-    { operator-(a,a) } -> SameAsOrConvertibleTo<A>;
-    { operator*(a,a) } -> SameAsOrConvertibleTo<A>;
-    { operator+(x,a) } -> SameAsOrConvertibleTo<A>;
-    { operator-(x,a) } -> SameAsOrConvertibleTo<A>;
-    { operator*(x,a) } -> SameAsOrConvertibleTo<A>;
-    { operator+(a,x) } -> SameAsOrConvertibleTo<A>;
-    { operator-(a,x) } -> SameAsOrConvertibleTo<A>;
-    { operator*(a,x) } -> SameAsOrConvertibleTo<A>;
-    { operator/(a,x) } -> SameAsOrConvertibleTo<A>;
-    { operator+=(declval<A&>(),a) } -> SameAs<A&>;
-    { operator-=(declval<A&>(),a) } -> SameAs<A&>;
-    { operator+=(declval<A&>(),x) } -> SameAs<A&>;
-    { operator-=(declval<A&>(),x) } -> SameAs<A&>;
-    { operator*=(declval<A&>(),x) } -> SameAs<A&>;
-    { operator/=(declval<A&>(),x) } -> SameAs<A&>;
+    { operator+(a, a) } -> SameAsOrConvertibleTo<A>;
+    { operator-(a, a) } -> SameAsOrConvertibleTo<A>;
+    { operator*(a, a) } -> SameAsOrConvertibleTo<A>;
+    { operator+(x, a) } -> SameAsOrConvertibleTo<A>;
+    { operator-(x, a) } -> SameAsOrConvertibleTo<A>;
+    { operator*(x, a) } -> SameAsOrConvertibleTo<A>;
+    { operator+(a, x) } -> SameAsOrConvertibleTo<A>;
+    { operator-(a, x) } -> SameAsOrConvertibleTo<A>;
+    { operator*(a, x) } -> SameAsOrConvertibleTo<A>;
+    { operator/(a, x) } -> SameAsOrConvertibleTo<A>;
+    { operator+=(declval<A&>(), a) } -> SameAs<A&>;
+    { operator-=(declval<A&>(), a) } -> SameAs<A&>;
+    { operator+=(declval<A&>(), x) } -> SameAs<A&>;
+    { operator-=(declval<A&>(), x) } -> SameAs<A&>;
+    { operator*=(declval<A&>(), x) } -> SameAs<A&>;
+    { operator/=(declval<A&>(), x) } -> SameAs<A&>;
 
     { nul(a) } -> SameAsOrConvertibleTo<A>;
     { pos(a) } -> SameAsOrConvertibleTo<A>;
     { neg(a) } -> SameAsOrConvertibleTo<A>;
     { sqr(a) } -> SameAsOrConvertibleTo<A>;
     { hlf(a) } -> SameAsOrConvertibleTo<A>;
-    { add(a,a) } -> SameAsOrConvertibleTo<A>;
-    { sub(a,a) } -> SameAsOrConvertibleTo<A>;
-    { mul(a,a) } -> SameAsOrConvertibleTo<A>;
-    { add(a,x) } -> SameAsOrConvertibleTo<A>;
-    { mul(a,x) } -> SameAsOrConvertibleTo<A>;
-    { pow(a,m) } -> SameAsOrConvertibleTo<A>;
+    { add(a, a) } -> SameAsOrConvertibleTo<A>;
+    { sub(a, a) } -> SameAsOrConvertibleTo<A>;
+    { mul(a, a) } -> SameAsOrConvertibleTo<A>;
+    { add(a, x) } -> SameAsOrConvertibleTo<A>;
+    { mul(a, x) } -> SameAsOrConvertibleTo<A>;
+    { pow(a, m) } -> SameAsOrConvertibleTo<A>;
 };
 
-template<class A, class X> concept ATranscendentalAlgebraOver = AnAlgebraOver<A,X> and Transcendental<A>;
+template<class A, class X>
+concept ATranscendentalAlgebraOver = AnAlgebraOver<A, X> and Transcendental<A>;
 
-template<class A, class X> concept AnElementaryAlgebraOver = AnAlgebraOver<A,X> and Transcendental<A> and requires(A a, X x) {
-    { max(a,a) } -> SameAsOrConvertibleTo<A>;
-    { min(a,a) } -> SameAsOrConvertibleTo<A>;
-    { max(a,x) } -> SameAsOrConvertibleTo<A>;
-    { min(a,x) } -> SameAsOrConvertibleTo<A>;
-    { max(x,a) } -> SameAsOrConvertibleTo<A>;
-    { min(x,a) } -> SameAsOrConvertibleTo<A>;
+template<class A, class X>
+concept AnElementaryAlgebraOver = AnAlgebraOver<A, X> and Transcendental<A> and requires(A a, X x) {
+    { max(a, a) } -> SameAsOrConvertibleTo<A>;
+    { min(a, a) } -> SameAsOrConvertibleTo<A>;
+    { max(a, x) } -> SameAsOrConvertibleTo<A>;
+    { min(a, x) } -> SameAsOrConvertibleTo<A>;
+    { max(x, a) } -> SameAsOrConvertibleTo<A>;
+    { min(x, a) } -> SameAsOrConvertibleTo<A>;
 };
 
 //! \brief Concept for a unital algebra over a field \a X supporting inplace operations.
-template<class A, class X> concept AnInplaceAlgebraOver = Field<X> and requires (A& r, X const& c, A const& a) {
-  { r.iadd(c) };
-  { r.imul(c) };
-  { r.isma(c,a) };
-  { r.ifma(a,a) };
+template<class A, class X>
+concept AnInplaceAlgebraOver = Field<X> and requires(A& r, const X& c, const A& a) {
+    { r.iadd(c) };
+    { r.imul(c) };
+    { r.isma(c, a) };
+    { r.ifma(a, a) };
 };
 
 //! \brief Concept for a unital algebra.
-template<class A> concept AnAlgebra = requires { typename A::NumericType; } and AnAlgebraOver<A,typename A::NumericType>;
+template<class A>
+concept AnAlgebra = requires { typename A::NumericType; } and AnAlgebraOver<A, typename A::NumericType>;
 
-
-template<class X> class AlgebraArchetype {
+template<class X>
+class AlgebraArchetype {
     using ALG = AlgebraArchetype<X>;
+
   public:
     typedef X NumericType;
-    ALG& operator=(X const&);
+    ALG& operator=(const X&);
     friend ALG operator+(ALG const&);
     friend ALG operator-(ALG const&);
     friend ALG operator+(ALG const&, ALG const&);
     friend ALG operator-(ALG const&, ALG const&);
     friend ALG operator*(ALG const&, ALG const&);
-    friend ALG operator+(X const&, ALG const&);
-    friend ALG operator-(X const&, ALG const&);
-    friend ALG operator*(X const&, ALG const&);
-    friend ALG operator+(ALG const&, X const&);
-    friend ALG operator-(ALG const&, X const&);
-    friend ALG operator*(ALG const&, X const&);
-    friend ALG operator/(ALG const&, X const&);
+    friend ALG operator+(const X&, ALG const&);
+    friend ALG operator-(const X&, ALG const&);
+    friend ALG operator*(const X&, ALG const&);
+    friend ALG operator+(ALG const&, const X&);
+    friend ALG operator-(ALG const&, const X&);
+    friend ALG operator*(ALG const&, const X&);
+    friend ALG operator/(ALG const&, const X&);
 
     friend ALG& operator+=(ALG&, ALG const&);
     friend ALG& operator-=(ALG&, ALG const&);
-    friend ALG& operator+=(ALG&, X const&);
-    friend ALG& operator-=(ALG&, X const&);
-    friend ALG& operator*=(ALG&, X const&);
-    friend ALG& operator/=(ALG&, X const&);
+    friend ALG& operator+=(ALG&, const X&);
+    friend ALG& operator-=(ALG&, const X&);
+    friend ALG& operator*=(ALG&, const X&);
+    friend ALG& operator/=(ALG&, const X&);
 
     friend ALG nul(ALG const&);
     friend ALG pos(ALG const&);
@@ -137,32 +144,33 @@ template<class X> class AlgebraArchetype {
     friend ALG add(ALG const&, ALG const&);
     friend ALG sub(ALG const&, ALG const&);
     friend ALG mul(ALG const&, ALG const&);
-    friend ALG add(X const&, ALG const&);
-    friend ALG sub(X const&, ALG const&);
-    friend ALG mul(X const&, ALG const&);
-    friend ALG add(ALG const&, X const&);
-    friend ALG sub(ALG const&, X const&);
-    friend ALG mul(ALG const&, X const&);
-    friend ALG div(ALG const&, X const&);
-    friend ALG pow(ALG const&, Nat const&);
+    friend ALG add(const X&, ALG const&);
+    friend ALG sub(const X&, ALG const&);
+    friend ALG mul(const X&, ALG const&);
+    friend ALG add(ALG const&, const X&);
+    friend ALG sub(ALG const&, const X&);
+    friend ALG mul(ALG const&, const X&);
+    friend ALG div(ALG const&, const X&);
+    friend ALG pow(ALG const&, const Nat&);
 
-    friend OutputStream& operator<<(OutputStream& os, AlgebraArchetype<X> const&);
+    friend OutputStream& operator<<(OutputStream& os, const AlgebraArchetype<X>&);
 };
 
-template<class X> class InplaceAlgebraArchetype {
+template<class X>
+class InplaceAlgebraArchetype {
     using ALG = InplaceAlgebraArchetype<X>;
+
   public:
     typedef X NumericType;
-    ALG& operator=(X const&);
+    ALG& operator=(const X&);
     ALG create() const;
-    ALG create_constant(X const&) const;
-    ALG& iadd(X const&);
-    ALG& imul(X const&);
-    ALG& isma(X const&, ALG const&);
+    ALG create_constant(const X&) const;
+    ALG& iadd(const X&);
+    ALG& imul(const X&);
+    ALG& isma(const X&, ALG const&);
     ALG& ifma(ALG const&, ALG const&);
     friend OutputStream& operator<<(OutputStream& os, ALG const& a);
 };
-
 
 } // namespace Ariadne
 

@@ -22,9 +22,9 @@
  *  along with Ariadne Algebra.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "numeric/numeric.hpp"
-
 #include "series.hpp"
+
+#include "numeric/numeric.hpp"
 
 namespace Ariadne {
 

@@ -29,168 +29,279 @@
 #ifndef ARIADNE_SERIES_HPP
 #define ARIADNE_SERIES_HPP
 
+#include "numeric/operators.hpp"
 #include "utility/array.hpp"
 #include "utility/container.hpp"
-#include "numeric/operators.hpp"
 
 namespace Ariadne {
 
-template<class X> class Series;
+template<class X>
+class Series;
 
 //! \brief Algorithm for computing a power series.
-template<class X> class SeriesGeneratorInterface {
+template<class X>
+class SeriesGeneratorInterface {
   public:
     virtual ~SeriesGeneratorInterface() = default;
     //! \brief Compute the \a d-th term of a power series, given centering at \a x and previous terms \a s.
-    virtual X _next(DegreeType d, X const& x, List<X>& s) const = 0;
+    virtual X _next(DegreeType d, const X& x, List<X>& s) const = 0;
 };
 
-template<class OP, class X> class SeriesGenerator : public SeriesGeneratorInterface<X> {
-    virtual X _next(DegreeType d, X const& c, List<X>& y) const final {
-        OP op; const X* yp=y.data(); return next_series_coefficient(op, d, c, yp); }
+template<class OP, class X>
+class SeriesGenerator : public SeriesGeneratorInterface<X> {
+    virtual X _next(DegreeType d, const X& c, List<X>& y) const final {
+        OP op;
+        const X* yp = y.data();
+        return next_series_coefficient(op, d, c, yp);
+    }
 };
 
-template<class X> inline X next_series_coefficient(Pow, DegreeType d, X const& c, DegreeType n, X const* y) {
-    return (d==0) ? pow(c,n) : (d>n) ? nul(c) : y[d-1]/c*(n-d+1)/d; }
-
-template<class X> inline X next_series_coefficient(Pos, DegreeType d, X const& c, X const*) {
-    return (d==0) ? c : (d==1) ? nul(c)+1 : nul(c); }
-
-template<class X> inline X next_series_coefficient(Nul, DegreeType, X const& c, X const*) {
-    return nul(c); }
-
-template<class X> inline X next_series_coefficient(Neg, DegreeType d, X const& c, X const*) {
-    return (d==0) ? -c : (d==1) ? nul(c)-1 : nul(c); }
-
-template<class X> inline X next_series_coefficient(Hlf, DegreeType d, X const& c, X const*) {
-    return (d==0) ? hlf(c) : (d==1) ? hlf(nul(c)+1) : nul(c); }
-
-template<class X> inline X next_series_coefficient(Sqr, DegreeType d, X const& c, X const*) {
-    switch(d) { case 0: return sqr(c); case 1: return 2*c; case 2: return nul(c)+1; default: return nul(c); } }
-
-template<class X> inline X next_series_coefficient(Rec, DegreeType d, X const& c, X const* y) {
-    return (d==0) ? rec(c) : y[d-1]*(-y[0]); }
-
-template<class X> inline X next_series_coefficient(Sqrt, DegreeType d, X const& c, X const* y) {
-    return (d==0) ? sqrt(c) : ((2*(Int)d-3)*(-1/c)/2)/d*y[d-1]; }
-
-template<class X> inline X next_series_coefficient(Exp, DegreeType d, X const& c, X const* y) {
-    return (d==0) ? exp(c) : y[d-1]/d; }
-
-template<class X> inline X next_series_coefficient(Log, DegreeType d, X const& c, X const* y) {
-    return (d==0) ? log(c) : (d==1) ? 1/c : -y[d-1]*y[1]*(d-1)/d; }
-
-template<class X> inline X next_series_coefficient(Sin, DegreeType d, X const& c, X const* y) {
-    return (d==0) ? sin(c) : (d==1) ? cos(c) : -y[d-2]/(d*(d-1)); }
-
-template<class X> inline X next_series_coefficient(Cos, DegreeType d, X const& c, X const* y) {
-    return (d==0) ? cos(c) : (d==1) ? -sin(c) : -y[d-2]/(d*(d-1)); }
-
-template<class X> inline X next_series_coefficient(Tan, DegreeType d, X const& c, X const* y) {
-    switch(d) { case 0: return tan(c); case 1: return 1+sqr(y[0]); case 2: return y[0]*y[1];
-        default: { X r=y[0]*y[d-1]; for(DegreeType i=1; i!=d; ++i) { r+=y[i]*y[d-1-i]; } return r/d; } } }
-
-template<class X> inline X next_series_coefficient(Asin, DegreeType, X const&, X const*) {
-    ARIADNE_NOT_IMPLEMENTED; }
-
-template<class X> inline X next_series_coefficient(Acos, DegreeType, X const&, X const*) {
-    ARIADNE_NOT_IMPLEMENTED; }
-
-template<class X> inline X next_series_coefficient(Tanh, DegreeType d, X const& c, X const* y) {
-    if(d==0) { return tanh(c); }
-    X convolution=y[0]*y[d-1];
-    for(DegreeType i=1; i!=d; ++i) { convolution+=y[i]*y[d-1-i]; }
-    return d==1 ? 1-convolution : -convolution/d;
+template<class X>
+inline X next_series_coefficient(Pow, DegreeType d, const X& c, DegreeType n, const X* y) {
+    return (d == 0) ? pow(c, n) : (d > n) ? nul(c)
+                                          : y[d - 1] / c * (n - d + 1) / d;
 }
 
-template<class X> inline X next_series_coefficient(Atan, DegreeType d, X const& c, X const* y) {
-    switch(d) { case 0: return atan(c); case 1: return rec(1+sqr(c)); case 2: return -c*sqr(y[1]);
-        default: return -y[1]*((d-2)*y[d-2]+2*(d-1)*c*y[d-1])/d; } }
+template<class X>
+inline X next_series_coefficient(Pos, DegreeType d, const X& c, const X*) {
+    return (d == 0) ? c : (d == 1) ? nul(c) + 1
+                                   : nul(c);
+}
 
-template<class X> inline X next_series_coefficient(Abs, DegreeType, X const&, X const*) {
-    ARIADNE_NOT_IMPLEMENTED; }
+template<class X>
+inline X next_series_coefficient(Nul, DegreeType, const X& c, const X*) {
+    return nul(c);
+}
 
+template<class X>
+inline X next_series_coefficient(Neg, DegreeType d, const X& c, const X*) {
+    return (d == 0) ? -c : (d == 1) ? nul(c) - 1
+                                    : nul(c);
+}
+
+template<class X>
+inline X next_series_coefficient(Hlf, DegreeType d, const X& c, const X*) {
+    return (d == 0) ? hlf(c) : (d == 1) ? hlf(nul(c) + 1)
+                                        : nul(c);
+}
+
+template<class X>
+inline X next_series_coefficient(Sqr, DegreeType d, const X& c, const X*) {
+    switch (d) {
+        case 0:
+            return sqr(c);
+        case 1:
+            return 2 * c;
+        case 2:
+            return nul(c) + 1;
+        default:
+            return nul(c);
+    }
+}
+
+template<class X>
+inline X next_series_coefficient(Rec, DegreeType d, const X& c, const X* y) {
+    return (d == 0) ? rec(c) : y[d - 1] * (-y[0]);
+}
+
+template<class X>
+inline X next_series_coefficient(Sqrt, DegreeType d, const X& c, const X* y) {
+    return (d == 0) ? sqrt(c) : ((2 * (Int)d - 3) * (-1 / c) / 2) / d * y[d - 1];
+}
+
+template<class X>
+inline X next_series_coefficient(Exp, DegreeType d, const X& c, const X* y) {
+    return (d == 0) ? exp(c) : y[d - 1] / d;
+}
+
+template<class X>
+inline X next_series_coefficient(Log, DegreeType d, const X& c, const X* y) {
+    return (d == 0) ? log(c) : (d == 1) ? 1 / c
+                                        : -y[d - 1] * y[1] * (d - 1) / d;
+}
+
+template<class X>
+inline X next_series_coefficient(Sin, DegreeType d, const X& c, const X* y) {
+    return (d == 0) ? sin(c) : (d == 1) ? cos(c)
+                                        : -y[d - 2] / (d * (d - 1));
+}
+
+template<class X>
+inline X next_series_coefficient(Cos, DegreeType d, const X& c, const X* y) {
+    return (d == 0) ? cos(c) : (d == 1) ? -sin(c)
+                                        : -y[d - 2] / (d * (d - 1));
+}
+
+template<class X>
+inline X next_series_coefficient(Tan, DegreeType d, const X& c, const X* y) {
+    switch (d) {
+        case 0:
+            return tan(c);
+        case 1:
+            return 1 + sqr(y[0]);
+        case 2:
+            return y[0] * y[1];
+        default: {
+            X r = y[0] * y[d - 1];
+            for (DegreeType i = 1; i != d; ++i) {
+                r += y[i] * y[d - 1 - i];
+            }
+            return r / d;
+        }
+    }
+}
+
+template<class X>
+inline X next_series_coefficient(Asin, DegreeType, const X&, const X*) {
+    ARIADNE_NOT_IMPLEMENTED;
+}
+
+template<class X>
+inline X next_series_coefficient(Acos, DegreeType, const X&, const X*) {
+    ARIADNE_NOT_IMPLEMENTED;
+}
+
+template<class X>
+inline X next_series_coefficient(Tanh, DegreeType d, const X& c, const X* y) {
+    if (d == 0) {
+        return tanh(c);
+    }
+    X convolution = y[0] * y[d - 1];
+    for (DegreeType i = 1; i != d; ++i) {
+        convolution += y[i] * y[d - 1 - i];
+    }
+    return d == 1 ? 1 - convolution : -convolution / d;
+}
+
+template<class X>
+inline X next_series_coefficient(Atan, DegreeType d, const X& c, const X* y) {
+    switch (d) {
+        case 0:
+            return atan(c);
+        case 1:
+            return rec(1 + sqr(c));
+        case 2:
+            return -c * sqr(y[1]);
+        default:
+            return -y[1] * ((d - 2) * y[d - 2] + 2 * (d - 1) * c * y[d - 1]) / d;
+    }
+}
+
+template<class X>
+inline X next_series_coefficient(Abs, DegreeType, const X&, const X*) {
+    ARIADNE_NOT_IMPLEMENTED;
+}
 
 //! \brief A power series, centred on a value, with unlimited many coefficients.
 template<class X>
-class Series
-{
+class Series {
     std::shared_ptr<const SeriesGeneratorInterface<X>> _ptr;
     X _centre;
     mutable List<X> _data;
+
   private:
     friend class AnalyticFunction;
-    Series(std::shared_ptr<const SeriesGeneratorInterface<X>> p, X const& c, std::nullptr_t dummy);
+    Series(std::shared_ptr<const SeriesGeneratorInterface<X>> p, const X& c, std::nullptr_t dummy);
     Void _compute(DegreeType n) const;
     OutputStream& _write(OutputStream& os) const;
+
   public:
-    template<class OP> Series(OP, X const& x);
-    template<class OP, class XX> requires Constructible<X,XX> Series(OP op, XX const& x) : Series(op,X(x)) { }
+    template<class OP>
+    Series(OP, const X& x);
+    template<class OP, class XX>
+        requires Constructible<X, XX>
+    Series(OP op, XX const& x) : Series(op, X(x)) {}
     const X& operator[](DegreeType n) const;
     const List<X>& coefficients(DegreeType n) const;
-    friend OutputStream& operator<<(OutputStream& os, Series<X> const& s) { return s._write(os); }
+    friend OutputStream& operator<<(OutputStream& os, const Series<X>& s) { return s._write(os); }
 };
 
-template<class X, DegreeType D> class FiniteSeries {
-    X _data[D+1u];
+template<class X, DegreeType D>
+class FiniteSeries {
+    X _data[D + 1u];
+
   private:
     OutputStream& _write(OutputStream& os) const;
+
   public:
-    template<class OP> FiniteSeries(OP op, X const& c) {
-        for(DegreeType d=0; d<=D; ++d) { next_series_coefficient(op,d,c,_data); } }
+    template<class OP>
+    FiniteSeries(OP op, const X& c) {
+        for (DegreeType d = 0; d <= D; ++d) {
+            next_series_coefficient(op, d, c, _data);
+        }
+    }
     const X& operator[](DegreeType n) const { return _data[n]; }
-    friend OutputStream& operator<<(OutputStream& os, FiniteSeries<X,D> const& s) { return s._write(os); }
+    friend OutputStream& operator<<(OutputStream& os, const FiniteSeries<X, D>& s) { return s._write(os); }
 };
 
-template<class X> template<class OP> Series<X>::Series(OP, X const& x)
-    : Series(std::make_shared<SeriesGenerator<OP,X>>(),x, nullptr) {
+template<class X>
+template<class OP>
+Series<X>::Series(OP, const X& x)
+    : Series(std::make_shared<SeriesGenerator<OP, X>>(), x, nullptr) {
 }
 
-template<class X> inline List<X> const& Series<X>::coefficients(DegreeType n) const {
-    this->_compute(n); return this->_data;
+template<class X>
+inline const List<X>& Series<X>::coefficients(DegreeType n) const {
+    this->_compute(n);
+    return this->_data;
 }
 
-template<class X> inline X const& Series<X>::operator[] (DegreeType n) const {
-    this->_compute(n); return this->_data[n];
+template<class X>
+inline const X& Series<X>::operator[](DegreeType n) const {
+    this->_compute(n);
+    return this->_data[n];
 }
 
-
-template<class X> inline Series<X>::Series(std::shared_ptr<const SeriesGeneratorInterface<X>> p, X const& c, std::nullptr_t)
+template<class X>
+inline Series<X>::Series(std::shared_ptr<const SeriesGeneratorInterface<X>> p, const X& c, std::nullptr_t)
     : _ptr(p), _centre(c), _data() {
 }
 
-template<class X> inline Void Series<X>::_compute(DegreeType n) const {
-    while(_data.size()<=n) { _data.append(_ptr->_next(static_cast<DegreeType>(_data.size()),_centre,_data)); }
+template<class X>
+inline Void Series<X>::_compute(DegreeType n) const {
+    while (_data.size() <= n) {
+        _data.append(_ptr->_next(static_cast<DegreeType>(_data.size()), _centre, _data));
+    }
 }
 
-template<class X> inline OutputStream& Series<X>::_write(OutputStream& os) const {
-    this->_compute(2); return os << "Series( centre=" << this->_centre << ", terms=" << this->_data << " )"; }
+template<class X>
+inline OutputStream& Series<X>::_write(OutputStream& os) const {
+    this->_compute(2);
+    return os << "Series( centre=" << this->_centre << ", terms=" << this->_data << " )";
+}
 
-template<class OP, class X> inline Series<X> make_series(OP op, DegreeType, const X& x) { return Series<X>(op,x); }
-template<class OP, class X> inline Series<X> make_series(OP op, const X& x) { return Series<X>(op,x); }
-
+template<class OP, class X>
+inline Series<X> make_series(OP op, DegreeType, const X& x) { return Series<X>(op, x); }
+template<class OP, class X>
+inline Series<X> make_series(OP op, const X& x) { return Series<X>(op, x); }
 
 class AnalyticFunction {
     typedef FloatDPApproximation ApproximateNumericType; // [[deprecated]]
-    typedef FloatDPBounds ValidatedNumericType; // [[deprecated]]
-    typedef FloatDP ExactNumericType; // [[deprecated]]
+    typedef FloatDPBounds ValidatedNumericType;          // [[deprecated]]
+    typedef FloatDP ExactNumericType;                    // [[deprecated]]
+
   private:
     UnaryTranscendentalOperator _op;
     std::shared_ptr<const SeriesGeneratorInterface<ApproximateNumericType>> _asg_ptr;
     std::shared_ptr<const SeriesGeneratorInterface<ValidatedNumericType>> _vsg_ptr;
-  public:
-    template<class OP> explicit AnalyticFunction(OP op)
-        : _op(op), _asg_ptr(new SeriesGenerator<OP,ApproximateNumericType>()), _vsg_ptr(new SeriesGenerator<OP,ValidatedNumericType>()) { }
-    Series<ApproximateNumericType> series(ApproximateNumericType c) const {
-        return Series<ApproximateNumericType>(_asg_ptr,c,nullptr); }
-    Series<ValidatedNumericType> series(ValidatedNumericType c) const {
-        return Series<ValidatedNumericType>(_vsg_ptr,c,nullptr); }
-    Series<ValidatedNumericType> series(ExactNumericType c) const {
-        return Series<ValidatedNumericType>(_vsg_ptr,c,nullptr); }
-    friend OutputStream& operator<<(OutputStream& os, AnalyticFunction const& af) {
-        return os << "AnalyticFunction( " << af._op << " )"; }
-};
 
+  public:
+    template<class OP>
+    explicit AnalyticFunction(OP op)
+        : _op(op), _asg_ptr(new SeriesGenerator<OP, ApproximateNumericType>()), _vsg_ptr(new SeriesGenerator<OP, ValidatedNumericType>()) {}
+    Series<ApproximateNumericType> series(ApproximateNumericType c) const {
+        return Series<ApproximateNumericType>(_asg_ptr, c, nullptr);
+    }
+    Series<ValidatedNumericType> series(ValidatedNumericType c) const {
+        return Series<ValidatedNumericType>(_vsg_ptr, c, nullptr);
+    }
+    Series<ValidatedNumericType> series(ExactNumericType c) const {
+        return Series<ValidatedNumericType>(_vsg_ptr, c, nullptr);
+    }
+    friend OutputStream& operator<<(OutputStream& os, const AnalyticFunction& af) {
+        return os << "AnalyticFunction( " << af._op << " )";
+    }
+};
 
 // Code below is for missing functions
 /*
@@ -217,9 +328,7 @@ template<class X> Series<X> antiderivative(const Series<X>& x, const X& c) {
 
 */
 
-
 } // namespace Ariadne
-
 
 #endif // ARIADNE_SERIES_HPP
 

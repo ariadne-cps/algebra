@@ -34,16 +34,19 @@
 namespace Ariadne {
 
 class Slice {
-    SizeType _size; SizeType _start; SizeType _stride;
+    SizeType _size;
+    SizeType _start;
+    SizeType _stride;
+
   public:
-    Slice(SizeType size, SizeType start, SizeType stride) : _size(size), _start(start), _stride(stride) { }
-    SizeType operator[](SizeType i) { return _start+i*_stride; }
+    Slice(SizeType size, SizeType start, SizeType stride) : _size(size), _start(start), _stride(stride) {}
+    SizeType operator[](SizeType i) { return _start + i * _stride; }
     SizeType size() const { return this->_size; }
     SizeType start() const { return this->_start; }
     SizeType stride() const { return this->_stride; }
-    SizeType stop() const { return this->_start+this->_size*this->_stride; }
+    SizeType stop() const { return this->_start + this->_size * this->_stride; }
 };
-inline Slice slice(SizeType size_, SizeType start, SizeType stride) { return Slice(size_,start,stride); }
+inline Slice slice(SizeType size_, SizeType start, SizeType stride) { return Slice(size_, start, stride); }
 
 } // namespace Ariadne
 

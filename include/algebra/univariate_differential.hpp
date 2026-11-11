@@ -29,25 +29,27 @@
 #ifndef ARIADNE_UNIVARIATE_DIFFERENTIAL_HPP
 #define ARIADNE_UNIVARIATE_DIFFERENTIAL_HPP
 
-#include "utility/macros.hpp"
-#include "utility/array.hpp"
 #include "algebra/series.hpp"
 #include "numeric/numeric.hpp"
+#include "utility/array.hpp"
+#include "utility/macros.hpp"
 
 namespace Ariadne {
 
-
-template<class X> class Series;
-template<class X> class UnivariateDifferential;
+template<class X>
+class Series;
+template<class X>
+class UnivariateDifferential;
 
 //! \ingroup DifferentiationSubModule
 //! \brief Arbitrary-order derivatives with respect to a single argument.
-template<class X> class UnivariateDifferential
-    : public DispatchTranscendentalAlgebraOperations<UnivariateDifferential<X>,X>
-    , public DispatchLatticeAlgebraOperations<UnivariateDifferential<X>,X>
-    , public ProvideConcreteGenericArithmeticOperations<UnivariateDifferential<X>>
-{
+template<class X>
+class UnivariateDifferential
+    : public DispatchTranscendentalAlgebraOperations<UnivariateDifferential<X>, X>,
+      public DispatchLatticeAlgebraOperations<UnivariateDifferential<X>, X>,
+      public ProvideConcreteGenericArithmeticOperations<UnivariateDifferential<X>> {
     Array<X> _ary;
+
   public:
     typedef X NumericType;
     typedef X ValueType;
@@ -58,25 +60,32 @@ template<class X> class UnivariateDifferential
 
     UnivariateDifferential() = delete;
     explicit UnivariateDifferential(DegreeType d, const NumericType& c);
-    template<class... PRS> requires Constructible<X,Nat,PRS...>
-        explicit UnivariateDifferential(DegreeType d, PRS... prs) : UnivariateDifferential(d,X(0u,prs...)) { }
+    template<class... PRS>
+        requires Constructible<X, Nat, PRS...>
+    explicit UnivariateDifferential(DegreeType d, PRS... prs) : UnivariateDifferential(d, X(0u, prs...)) {}
     UnivariateDifferential(DegreeType d, InitializerList<X> e);
-    UnivariateDifferential(Array<X> ary) : _ary(ary) { }
-    template<class... PRS> requires Constructible<X,ExactDouble,PRS...>
-        explicit UnivariateDifferential(DegreeType deg, InitializerList<ExactDouble> lst, PRS... prs);
-    UnivariateDifferential(DegreeType d, Series<X> const& s); // explicit
+    UnivariateDifferential(Array<X> ary) : _ary(ary) {}
+    template<class... PRS>
+        requires Constructible<X, ExactDouble, PRS...>
+    explicit UnivariateDifferential(DegreeType deg, InitializerList<ExactDouble> lst, PRS... prs);
+    UnivariateDifferential(DegreeType d, const Series<X>& s); // explicit
 
-    template<class OP> UnivariateDifferential(OP op, DegreeType d, X const& c);
+    template<class OP>
+    UnivariateDifferential(OP op, DegreeType d, const X& c);
 
     static SelfType constant(DegreeType d, const NumericType& c);
     static SelfType variable(DegreeType d, const NumericType& c);
 
-    template<class Y, class... PRS> requires Constructible<X,Y,PRS...>
+    template<class Y, class... PRS>
+        requires Constructible<X, Y, PRS...>
     static SelfType constant(DegreeType deg, const Y& c, const PRS&... prs) {
-        return constant(deg,X(c,prs...)); }
-    template<class Y, class... PRS> requires Constructible<X,Y,PRS...>
+        return constant(deg, X(c, prs...));
+    }
+    template<class Y, class... PRS>
+        requires Constructible<X, Y, PRS...>
     static SelfType variable(DegreeType deg, const Y& v, const PRS&... prs) {
-        return variable(deg,X(v,prs...)); }
+        return variable(deg, X(v, prs...));
+    }
 
     SelfType create_zero() const;
     SelfType create_constant(const NumericType& c) const;
@@ -92,7 +101,11 @@ template<class X> class UnivariateDifferential
 
     SelfType& operator=(const NumericType& c);
     template<AssignableTo<X> W>
-        SelfType& operator=(const W& c) { X xc=nul(this->value()); xc=c; return (*this)=xc; }
+    SelfType& operator=(const W& c) {
+        X xc = nul(this->value());
+        xc = c;
+        return (*this) = xc;
+    }
 
     SelfType apply(Rec) const;
 
@@ -104,98 +117,146 @@ template<class X> class UnivariateDifferential
     Void clear();
     OutputStream& _write(OutputStream& os) const;
 
-    friend UnivariateDifferential<X> compose(Series<X> const& f, UnivariateDifferential<X> const& dx) {
-        return UnivariateDifferential<X>::_compose(f,dx); }
-    friend UnivariateDifferential<X> compose(UnivariateDifferential<X> const& f, UnivariateDifferential<X> const& dx) {
-        return UnivariateDifferential<X>::_compose(f,dx); }
-    friend UnivariateDifferential<X> derivative(UnivariateDifferential<X> const& dx) {
-        return UnivariateDifferential<X>::_derivative(dx); }
-    friend UnivariateDifferential<X> antiderivative(UnivariateDifferential<X> const& dx) {
-        return UnivariateDifferential<X>::_antiderivative(dx); }
-    friend UnivariateDifferential<X> antiderivative(UnivariateDifferential<X> const& dx, X const& c) {
-        return UnivariateDifferential<X>::_antiderivative(dx,c); }
+    friend UnivariateDifferential<X> compose(const Series<X>& f, const UnivariateDifferential<X>& dx) {
+        return UnivariateDifferential<X>::_compose(f, dx);
+    }
+    friend UnivariateDifferential<X> compose(const UnivariateDifferential<X>& f, const UnivariateDifferential<X>& dx) {
+        return UnivariateDifferential<X>::_compose(f, dx);
+    }
+    friend UnivariateDifferential<X> derivative(const UnivariateDifferential<X>& dx) {
+        return UnivariateDifferential<X>::_derivative(dx);
+    }
+    friend UnivariateDifferential<X> antiderivative(const UnivariateDifferential<X>& dx) {
+        return UnivariateDifferential<X>::_antiderivative(dx);
+    }
+    friend UnivariateDifferential<X> antiderivative(const UnivariateDifferential<X>& dx, const X& c) {
+        return UnivariateDifferential<X>::_antiderivative(dx, c);
+    }
 
-    friend OutputStream& operator<<(OutputStream& os, UnivariateDifferential<X> const& dx) {
-        return dx._write(os); }
+    friend OutputStream& operator<<(OutputStream& os, const UnivariateDifferential<X>& dx) {
+        return dx._write(os);
+    }
+
   public:
-    static Differential<X> _compose(Series<X> const& f, Differential<X> const& dx);
+    static Differential<X> _compose(const Series<X>& f, const Differential<X>& dx);
+
   private:
-    static UnivariateDifferential<X> _compose(Series<X> const& f, UnivariateDifferential<X> const& dx);
-    static UnivariateDifferential<X> _compose(UnivariateDifferential<X> const& f, UnivariateDifferential<X> const& dx);
-    static UnivariateDifferential<X> _derivative(UnivariateDifferential<X> const& dx);
-    static UnivariateDifferential<X> _antiderivative(UnivariateDifferential<X> const& dx);
-    static UnivariateDifferential<X> _antiderivative(UnivariateDifferential<X> const& dx, X const& c);
+    static UnivariateDifferential<X> _compose(const Series<X>& f, const UnivariateDifferential<X>& dx);
+    static UnivariateDifferential<X> _compose(const UnivariateDifferential<X>& f, const UnivariateDifferential<X>& dx);
+    static UnivariateDifferential<X> _derivative(const UnivariateDifferential<X>& dx);
+    static UnivariateDifferential<X> _antiderivative(const UnivariateDifferential<X>& dx);
+    static UnivariateDifferential<X> _antiderivative(const UnivariateDifferential<X>& dx, const X& c);
 };
 
-template<class X> template<class OP> UnivariateDifferential<X>::UnivariateDifferential(OP op, DegreeType d, X const& c)
-    : UnivariateDifferential(d,Series<X>(op,c)) { }
+template<class X>
+template<class OP>
+UnivariateDifferential<X>::UnivariateDifferential(OP op, DegreeType d, const X& c)
+    : UnivariateDifferential(d, Series<X>(op, c)) {}
 
-template<class X> inline const X& UnivariateDifferential<X>::value() const { return _ary[0]; }
-template<class X> inline const X& UnivariateDifferential<X>::gradient() const { ARIADNE_PRECONDITION(this->degree()>=1); return _ary[1]; }
-template<class X> inline const X& UnivariateDifferential<X>::half_hessian() const { ARIADNE_PRECONDITION(this->degree()>=2); return _ary[2]; }
-template<class X> inline const X UnivariateDifferential<X>::hessian() const { ARIADNE_PRECONDITION(this->degree()>=2); return _ary[2]*2; }
-
-template<class X> template<class... PRS> requires Constructible<X,ExactDouble,PRS...>
-UnivariateDifferential<X>::UnivariateDifferential(DegreeType d, InitializerList<ExactDouble> lst, PRS... prs)
-    : _ary(d+1u,X(0,prs...))
-{
-    auto iter=lst.begin();
-    for(SizeType i=0; iter!=lst.end(); ++i, ++iter) { _ary[i]=X(*iter,prs...); }
+template<class X>
+inline const X& UnivariateDifferential<X>::value() const { return _ary[0]; }
+template<class X>
+inline const X& UnivariateDifferential<X>::gradient() const {
+    ARIADNE_PRECONDITION(this->degree() >= 1);
+    return _ary[1];
+}
+template<class X>
+inline const X& UnivariateDifferential<X>::half_hessian() const {
+    ARIADNE_PRECONDITION(this->degree() >= 2);
+    return _ary[2];
+}
+template<class X>
+inline const X UnivariateDifferential<X>::hessian() const {
+    ARIADNE_PRECONDITION(this->degree() >= 2);
+    return _ary[2] * 2;
 }
 
+template<class X>
+template<class... PRS>
+    requires Constructible<X, ExactDouble, PRS...>
+UnivariateDifferential<X>::UnivariateDifferential(DegreeType d, InitializerList<ExactDouble> lst, PRS... prs)
+    : _ary(d + 1u, X(0, prs...)) {
+    auto iter = lst.begin();
+    for (SizeType i = 0; iter != lst.end(); ++i, ++iter) {
+        _ary[i] = X(*iter, prs...);
+    }
+}
 
+template<class X>
+UnivariateDifferential<X> create_zero(const UnivariateDifferential<X>& c) {
+    return UnivariateDifferential<X>(c.degree(), create_zero(c[0]));
+}
 
-template<class X> UnivariateDifferential<X> create_zero(const UnivariateDifferential<X>& c) {
-    return UnivariateDifferential<X>(c.degree(),create_zero(c[0])); }
-
-template<class X> struct AlgebraOperations<UnivariateDifferential<X>,X> {
+template<class X>
+struct AlgebraOperations<UnivariateDifferential<X>, X> {
     static UnivariateDifferential<X> apply(Pos, UnivariateDifferential<X> x) {
-        return x; }
+        return x;
+    }
 
     static UnivariateDifferential<X> apply(Neg, UnivariateDifferential<X> x) {
-        for(DegreeType i=0; i<=x.degree(); ++i) { x[i]=-x[i]; } return x; }
+        for (DegreeType i = 0; i <= x.degree(); ++i) {
+            x[i] = -x[i];
+        }
+        return x;
+    }
 
     static UnivariateDifferential<X> apply(Sqr, const UnivariateDifferential<X>& dx) {
-        return apply(Mul(),dx,dx); }
+        return apply(Mul(), dx, dx);
+    }
 
     static UnivariateDifferential<X> apply(Add, const UnivariateDifferential<X>& x1, const UnivariateDifferential<X>& x2) {
-        UnivariateDifferential<X> r(std::min(x1.degree(),x2.degree()),nul(x1[0]+x2[0]));
-        for(DegreeType i=0; i<=r.degree(); ++i) { r[i]=x1[i]+x2[i]; } return r; }
+        UnivariateDifferential<X> r(std::min(x1.degree(), x2.degree()), nul(x1[0] + x2[0]));
+        for (DegreeType i = 0; i <= r.degree(); ++i) {
+            r[i] = x1[i] + x2[i];
+        }
+        return r;
+    }
 
     static UnivariateDifferential<X> apply(Sub, const UnivariateDifferential<X>& x1, const UnivariateDifferential<X>& x2) {
-        UnivariateDifferential<X> r(std::min(x1.degree(),x2.degree()),nul(x1[0]-x2[0]));
-        for(DegreeType i=0; i<=r.degree(); ++i) { r[i]=x1[i]-x2[i]; } return r; }
+        UnivariateDifferential<X> r(std::min(x1.degree(), x2.degree()), nul(x1[0] - x2[0]));
+        for (DegreeType i = 0; i <= r.degree(); ++i) {
+            r[i] = x1[i] - x2[i];
+        }
+        return r;
+    }
 
     static UnivariateDifferential<X> apply(Mul, const UnivariateDifferential<X>& x1, const UnivariateDifferential<X>& x2) {
-        UnivariateDifferential<X> r(std::min(x1.degree(),x2.degree()),nul(x1[0]*x2[0]));
-        for(DegreeType i1=0; i1<=r.degree(); ++i1) {
-            for(DegreeType i2=0; i2<=r.degree()-i1; ++i2) {
-                r[static_cast<DegreeType>(i1+i2)]+=x1[i1]*x2[i2];
+        UnivariateDifferential<X> r(std::min(x1.degree(), x2.degree()), nul(x1[0] * x2[0]));
+        for (DegreeType i1 = 0; i1 <= r.degree(); ++i1) {
+            for (DegreeType i2 = 0; i2 <= r.degree() - i1; ++i2) {
+                r[static_cast<DegreeType>(i1 + i2)] += x1[i1] * x2[i2];
             }
         }
         return r;
     }
 
     static UnivariateDifferential<X> apply(Div, const UnivariateDifferential<X>& x1, const UnivariateDifferential<X>& x2) {
-        return x1*rec(x2); }
+        return x1 * rec(x2);
+    }
 
-    static UnivariateDifferential<X> apply(Add, UnivariateDifferential<X> x, X const& c) {
-        x[0]+=c; return x; }
+    static UnivariateDifferential<X> apply(Add, UnivariateDifferential<X> x, const X& c) {
+        x[0] += c;
+        return x;
+    }
 
-    static UnivariateDifferential<X> apply(Mul, UnivariateDifferential<X> x, X const& c) {
-        for(DegreeType i=0; i<=x.degree(); ++i) { x[i]*=c; } return x; }
+    static UnivariateDifferential<X> apply(Mul, UnivariateDifferential<X> x, const X& c) {
+        for (DegreeType i = 0; i <= x.degree(); ++i) {
+            x[i] *= c;
+        }
+        return x;
+    }
 
-    template<class OP> static UnivariateDifferential<X> apply(OP op, const UnivariateDifferential<X>& dx) {
-        return compose(UnivariateDifferential<X>(op,dx.degree(),dx[0]),dx); }
+    template<class OP>
+    static UnivariateDifferential<X> apply(OP op, const UnivariateDifferential<X>& dx) {
+        return compose(UnivariateDifferential<X>(op, dx.degree(), dx[0]), dx);
+    }
 
     static UnivariateDifferential<X> apply(Pow, UnivariateDifferential<X> x, Int n) {
-        return generic_pow(x,n); }
-
+        return generic_pow(x, n);
+    }
 };
 
-
 } // namespace Ariadne
-
 
 #endif // ARIADNE_UNIVARIATE_DIFFERENTIAL_HPP
 
