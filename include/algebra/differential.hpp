@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/differential.hpp
- *  \brief Differential algebra variables with a sparse representation.
+/** @file algebra/differential.hpp
+ *  @brief Sparse differential algebra representations and operations.
  */
 
 #ifndef ARIADNE_DIFFERENTIAL_HPP

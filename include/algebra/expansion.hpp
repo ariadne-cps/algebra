@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/expansion.hpp
- *  \brief
+/** @file algebra/expansion.hpp
+ *  @brief Sparse expansions in multivariate monomials.
  */
 
 

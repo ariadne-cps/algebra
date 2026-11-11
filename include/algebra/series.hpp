@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/series.hpp
- *  \brief Taylor series in a single variable.
+/** @file algebra/series.hpp
+ *  @brief Univariate Taylor series and their operations.
  */
 
 #ifndef ARIADNE_SERIES_HPP

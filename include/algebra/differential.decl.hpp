@@ -1,5 +1,5 @@
 /***************************************************************************
- *            differential.decl.hpp
+ *            algebra/differential.decl.hpp
  *
  *  Copyright  2008-20  Pieter Collins
  *
@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file differential.decl.hpp
- *  \brief Class declarations and type synonyms for differential classes
+/** @file algebra/differential.decl.hpp
+ *  @brief Declarations and aliases for differential algebra types.
  */
 
 #ifndef ARIADNE_DIFFERENTIAL_DECL_HPP

@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/linear_algebra.decl.hpp
- *  \brief
+/** @file algebra/linear_algebra.decl.hpp
+ *  @brief Forward declarations and aliases for vectors and matrices.
  */
 
 #include "numeric/number.decl.hpp"

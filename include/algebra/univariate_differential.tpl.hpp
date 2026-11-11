@@ -1,5 +1,5 @@
 /***************************************************************************
- *            univariate_differential.tpl.hpp
+ *            algebra/univariate_differential.tpl.hpp
  *
  *  Copyright  2008-20  Pieter Collins
  *
@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file univariate_differential.tpl.hpp
- *  \brief Differentials with respect to a single variable.
+/** @file algebra/univariate_differential.tpl.hpp
+ *  @brief Template implementations for univariate differentials.
  */
 
 #include "algebra/univariate_differential.hpp"

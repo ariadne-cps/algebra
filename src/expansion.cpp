@@ -1,5 +1,5 @@
 /***************************************************************************
- *            algebra/expansion.cpp
+ *            expansion.cpp
  *
  *  Copyright  2008-20  Pieter Collins
  *

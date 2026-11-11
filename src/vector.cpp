@@ -1,5 +1,5 @@
 /***************************************************************************
- *            algebra/vector.cpp
+ *            vector.cpp
  *
  *  Copyright  2013-20  Pieter Collins
  *

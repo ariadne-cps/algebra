@@ -22,6 +22,9 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file algebra/expansion.inl.hpp
+ *  @brief Inline operations and helpers for sparse expansions.
+ */
 #ifndef ARIADNE_EXPANSION_INL_HPP
 #define ARIADNE_EXPANSION_INL_HPP
 

@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/algebra.hpp
- *  \brief Algebras and normed algebras.
+/** @file algebra/algebra.hpp
+ *  @brief Algebraic structures and normed algebra operations.
  */
 #ifndef ARIADNE_ALGEBRA_HPP
 #define ARIADNE_ALGEBRA_HPP

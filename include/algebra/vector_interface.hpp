@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
  
-/*! \file algebra/vector_interface.hpp
- *  \brief Interface for vectors.
+/** @file algebra/vector_interface.hpp
+ *  @brief Abstract interfaces for vector algebra.
  */
 
 #ifndef ARIADNE_VECTOR_INTERFACE_HPP

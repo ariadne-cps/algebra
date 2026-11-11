@@ -1,5 +1,5 @@
 /***************************************************************************
- *            algebra_operations.tpl.hpp
+ *            algebra/algebra_operations.tpl.hpp
  *
  *  Copyright  2011-20  Pieter Collins
  *
@@ -22,6 +22,9 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file algebra/algebra_operations.tpl.hpp
+ *  @brief Template implementations of common algebra operations.
+ */
 #include "utility/exceptions.hpp"
 #include "algebra/operations.hpp"
 

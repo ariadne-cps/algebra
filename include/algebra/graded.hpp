@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/graded.hpp
- *  \brief Graded algebras.
+/** @file algebra/graded.hpp
+ *  @brief Graded algebra types and operations.
  */
 
 #ifndef ARIADNE_GRADED_HPP

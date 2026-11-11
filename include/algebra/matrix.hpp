@@ -23,8 +23,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/matrix.hpp
- *  \brief
+/** @file algebra/matrix.hpp
+ *  @brief Matrix storage, arithmetic, and linear algebra algorithms.
  */
 
 #ifndef ARIADNE_MATRIX_HPP

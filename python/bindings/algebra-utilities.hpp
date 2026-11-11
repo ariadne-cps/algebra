@@ -1,5 +1,5 @@
 /***************************************************************************
- *            utilities.hpp
+ *            python/bindings/algebra-utilities.hpp
  *
  *  Copyright  2005-20  Alberto Casagrande, Pieter Collins
  *
@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file utilities.hpp
- *  Commonly used inline methods for the Python interface.
+/** @file python/bindings/algebra-utilities.hpp
+ *  @brief Python binding utilities for algebraic objects.
  */
 
 #ifndef ARIADNE_PYTHON_ALGEBRA_UTILITIES_HPP

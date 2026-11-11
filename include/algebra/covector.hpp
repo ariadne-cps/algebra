@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/covector.hpp
- *  \brief
+/** @file algebra/covector.hpp
+ *  @brief Covectors and their linear algebra operations.
  */
 
 

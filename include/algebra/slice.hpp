@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/slice.hpp
- *  \brief Slices.
+/** @file algebra/slice.hpp
+ *  @brief Slice views and indexing helpers.
  */
 
 #ifndef ARIADNE_SLICE_HPP

@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/fixed_univariate_differential.hpp
- *  \brief First- and second-order univariate differentials.
+/** @file algebra/fixed_univariate_differential.hpp
+ *  @brief Fixed-order univariate differential arithmetic.
  */
 
 #ifndef ARIADNE_FIXED_UNIVARIATE_DIFFERENTIAL_HPP

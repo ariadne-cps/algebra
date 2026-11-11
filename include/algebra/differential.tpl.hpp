@@ -1,5 +1,5 @@
 /***************************************************************************
- *            differential.tpl.hpp
+ *            algebra/differential.tpl.hpp
  *
  *  Copyright  2008-20  Pieter Collins
  *
@@ -22,6 +22,9 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file algebra/differential.tpl.hpp
+ *  @brief Template implementations of differential algebra operations.
+ */
 #include <map>
 
 #include "utility/macros.hpp"

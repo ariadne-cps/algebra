@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/polynomial.hpp
- *  \brief Base class for polynomial rings.
+/** @file algebra/polynomial.hpp
+ *  @brief Polynomial representations and arithmetic over scalar types.
  */
 
 #ifndef ARIADNE_POLYNOMIAL_HPP

@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/sweeper.hpp
- *  \brief Classes for simplifying the representation of a polynomial expansion.
+/** @file algebra/sweeper.hpp
+ *  @brief Sweepers for simplifying polynomial expansions.
  */
 
 #ifndef ARIADNE_SWEEPER_HPP

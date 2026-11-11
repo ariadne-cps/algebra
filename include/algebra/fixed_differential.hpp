@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/fixed_differential.hpp
- *  \brief First- and second-order multivariate differentials.
+/** @file algebra/fixed_differential.hpp
+ *  @brief Fixed-order multivariate differential arithmetic.
  */
 
 #ifndef ARIADNE_FIXED_DIFFERENTIAL_HPP

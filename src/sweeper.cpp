@@ -1,5 +1,5 @@
 /***************************************************************************
- *            algebra/sweeper.cpp
+ *            sweeper.cpp
  *
  *  Copyright  2010-20  Pieter Collins
  *

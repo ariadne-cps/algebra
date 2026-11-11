@@ -1,5 +1,5 @@
 /***************************************************************************
- *            algebra/matrix.cpp
+ *            matrix.cpp
  *
  *  Copyright  2008-20  Alberto Casagrande, Pieter Collins
  *  Copyright  2026  Luca Geretti

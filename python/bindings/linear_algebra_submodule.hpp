@@ -1,5 +1,5 @@
 /***************************************************************************
- *            linear_algebra_submodule.hpp
+ *            python/bindings/linear_algebra_submodule.hpp
  *
  *  Copyright  2008-22  Pieter Collins
  *
@@ -22,6 +22,9 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file python/bindings/linear_algebra_submodule.hpp
+ *  @brief Declarations for the Python linear algebra submodule.
+ */
 #include "pybind11.hpp"
 
 #include "algebra/vector.hpp"

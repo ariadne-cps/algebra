@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/vector-sfinae.hpp
- *  \brief
+/** @file algebra/vector-sfinae.hpp
+ *  @brief SFINAE constraints for vector operations.
  */
 
 

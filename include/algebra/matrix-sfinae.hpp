@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/matrix-sfinae.hpp
- *  \brief 
+/** @file algebra/matrix-sfinae.hpp
+ *  @brief SFINAE constraints for matrix operations.
  */
 
 

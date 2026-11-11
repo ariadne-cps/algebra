@@ -1,5 +1,5 @@
 /***************************************************************************
- *            multi_index.inl.hpp
+ *            algebra/multi_index.inl.hpp
  *
  *  Copyright  2008-20  Pieter Collins
  *
@@ -22,6 +22,9 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file algebra/multi_index.inl.hpp
+ *  @brief Inline operations for multi-indices.
+ */
 #include "utility/iterator.hpp"
 
 namespace Ariadne {

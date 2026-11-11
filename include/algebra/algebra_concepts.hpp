@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/algebra_concepts.hpp
- *  \brief Concepts for algebraic structures.
+/** @file algebra/algebra_concepts.hpp
+ *  @brief C++ concepts for algebraic structures and vector spaces.
  */
 
 #ifndef ARIADNE_ALGEBRA_CONCEPTS_HPP

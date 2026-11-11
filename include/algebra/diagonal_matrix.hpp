@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/diagonal_matrix.hpp
- *  \brief
+/** @file algebra/diagonal_matrix.hpp
+ *  @brief Diagonal matrices and related linear algebra operations.
  */
 
 

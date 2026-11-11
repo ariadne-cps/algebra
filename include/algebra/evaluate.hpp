@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/evaluate.hpp
- *  \brief Functions for evaluating polynomial expansions.
+/** @file algebra/evaluate.hpp
+ *  @brief Evaluation of polynomials and algebraic expansions.
  */
 
 #ifndef ARIADNE_EVALUATE_HPP

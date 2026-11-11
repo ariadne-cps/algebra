@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/univariate_differential.hpp
- *  \brief Differentials with respect to a single variable.
+/** @file algebra/univariate_differential.hpp
+ *  @brief Univariate differential representations and operations.
  */
 
 #ifndef ARIADNE_UNIVARIATE_DIFFERENTIAL_HPP

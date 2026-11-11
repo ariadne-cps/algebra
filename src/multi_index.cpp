@@ -1,5 +1,5 @@
 /***************************************************************************
- *            algebra/multi_index.cpp
+ *            multi_index.cpp
  *
  *  Copyright  2008-20  Pieter Collins
  *

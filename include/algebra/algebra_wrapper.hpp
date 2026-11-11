@@ -1,5 +1,5 @@
 /***************************************************************************
- *            algebra/algebra_mixin.hpp
+ *            algebra/algebra_wrapper.hpp
  *
  *  Copyright  2010-20  Pieter Collins
  *
@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/algebra_wrapper.hpp
- *  \brief Mixin class providing operations for (Banach) algebras.
+/** @file algebra/algebra_wrapper.hpp
+ *  @brief Wrappers adapting concrete types to the algebra interfaces.
  */
 
 #ifndef ARIADNE_ALGEBRA_WRAPPER_HPP

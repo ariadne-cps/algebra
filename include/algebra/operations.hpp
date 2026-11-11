@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/operations.hpp
- *  \brief Provide common algebra operations automatically.
+/** @file algebra/operations.hpp
+ *  @brief Generic operations shared across algebra types.
  */
 
 #ifndef ARIADNE_ALGEBRA_OPERATIONS_HPP

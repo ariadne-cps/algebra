@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/matrix-crtp.hpp
- *  \brief
+/** @file algebra/matrix-crtp.hpp
+ *  @brief CRTP helpers for matrix expression implementations.
  */
 
 

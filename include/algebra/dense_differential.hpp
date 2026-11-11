@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/dense_differential.hpp
- *  \brief Differential algebra variables with a dense representation.
+/** @file algebra/dense_differential.hpp
+ *  @brief Dense multivariate differential representations and operations.
  */
 #ifndef ARIADNE_DENSE_DIFFERENTIAL_HPP
 #define ARIADNE_DENSE_DIFFERENTIAL_HPP

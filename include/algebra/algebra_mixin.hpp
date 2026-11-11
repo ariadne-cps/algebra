@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/algebra_mixin.hpp
- *  \brief Mixin class providing operations for (Banach) algebras.
+/** @file algebra/algebra_mixin.hpp
+ *  @brief Mixin operations shared by algebra implementations.
  */
 
 #ifndef ARIADNE_ALGEBRA_MIXIN_HPP

@@ -1,5 +1,5 @@
 /***************************************************************************
- *            evaluate.tpl.hpp
+ *            algebra/evaluate.tpl.hpp
  *
  *  Copyright  2008-20  Pieter Collins
  *
@@ -22,6 +22,9 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file algebra/evaluate.tpl.hpp
+ *  @brief Template definitions for evaluating algebraic expansions.
+ */
 #ifndef ARIADNE_EVALUATE_TPL_HPP
 #define ARIADNE_EVALUATE_TPL_HPP
 

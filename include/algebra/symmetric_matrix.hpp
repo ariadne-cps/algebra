@@ -23,8 +23,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/symmetric_matrix.hpp
- *  \brief Symmetric matrices
+/** @file algebra/symmetric_matrix.hpp
+ *  @brief Symmetric matrices and associated linear algebra operations.
  */
 
 #ifndef ARIADNE_SYMMETRIC_MATRIX_HPP

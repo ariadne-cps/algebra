@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/vector-crtp.hpp
- *  \brief
+/** @file algebra/vector-crtp.hpp
+ *  @brief CRTP helpers for vector implementations.
  */
 
 

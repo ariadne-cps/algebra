@@ -22,6 +22,9 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file algebra/sweeper.tpl.hpp
+ *  @brief Template implementations of polynomial expansion sweepers.
+ */
 #include "algebra/sweeper.hpp"
 
 namespace Ariadne {

@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/vector.hpp
- *  \brief Vectors over a scalar (number or algebra).
+/** @file algebra/vector.hpp
+ *  @brief Vectors and generic vector arithmetic.
  */
 
 #ifndef ARIADNE_VECTOR_HPP

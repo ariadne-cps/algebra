@@ -1,6 +1,6 @@
 
 /***************************************************************************
- *            algebra/multi_index.hpp
+ *            algebra/multi_index-noaliasing.hpp
  *
  *  Copyright  2008-20  Pieter Collins
  *

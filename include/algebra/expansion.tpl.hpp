@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/expansion.tpl.hpp
- *  \brief
+/** @file algebra/expansion.tpl.hpp
+ *  @brief Template definitions for sparse expansion arithmetic.
  */
 
 #include <algorithm>

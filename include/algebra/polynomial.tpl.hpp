@@ -1,5 +1,5 @@
 /***************************************************************************
- *            polynomial.tpl.hpp
+ *            algebra/polynomial.tpl.hpp
  *
  *  Copyright  2008-20  Pieter Collins
  *
@@ -22,6 +22,9 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/** @file algebra/polynomial.tpl.hpp
+ *  @brief Template implementations of polynomial operations.
+ */
 #include "algebra/evaluate.tpl.hpp"
 #include "algebra/expansion.inl.hpp"
 #include "algebra/expansion.tpl.hpp"

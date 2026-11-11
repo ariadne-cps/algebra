@@ -22,8 +22,8 @@
  *  along with Ariadne.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*! \file algebra/algebra_interface.hpp
- *  \brief Interface for function algebras.
+/** @file algebra/algebra_interface.hpp
+ *  @brief Abstract interfaces for algebraic objects and operations.
  */
 
 #ifndef ARIADNE_ALGEBRA_INTERFACE_HPP
