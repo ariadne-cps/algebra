@@ -30,6 +30,8 @@
 #define ARIADNE_GRADED_HPP
 
 #include "algebra/vector.hpp"
+#include "numeric/numeric.hpp"
+#include "numeric/operators.hpp"
 #include "utility/uniform_list.hpp"
 
 namespace Ariadne {
