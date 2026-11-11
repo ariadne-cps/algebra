@@ -54,6 +54,7 @@ class UnivariateFirstDifferential
     //! \brief The type of used to represent the coefficients.
     typedef X ValueType;
 
+    /** @brief Construct a \c UnivariateFirstDifferential from prs. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     explicit UnivariateFirstDifferential(PRS... prs) : _value(X(0u, prs...)), _gradient(_value) {}
@@ -73,6 +74,7 @@ class UnivariateFirstDifferential
     UnivariateFirstDifferential(const Series<X>& x)
         : _value(x[0]), _gradient(x[1]) {}
 
+    /** @brief Construct a \c UnivariateFirstDifferential from op, c. */
     template<class OP>
     UnivariateFirstDifferential(OP op, const X& c)
         : _value(op(c)), _gradient(next_series_coefficient(op, 1u, c, &_value)) {}
@@ -96,6 +98,7 @@ class UnivariateFirstDifferential
         return r;
     }
 
+    /** @brief Construct a zero object with compatible characteristics. */
     UnivariateFirstDifferential<X> create_zero() const {
         return UnivariateFirstDifferential(nul(this->_value));
     }
@@ -129,12 +132,15 @@ class UnivariateFirstDifferential
     }
 
   public:
+    /** @brief Return the characteristics required to construct compatible values. */
     friend CharacteristicsType<X> characteristics(const UnivariateFirstDifferential<X>& dx) {
         return characteristics(dx._value);
     }
+    /** @brief Return a factory for compatible objects. */
     friend DifferentialFactory<X> factory(const UnivariateFirstDifferential<X>& dx) {
         return DifferentialFactory<X>(dx.value().precision());
     }
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const UnivariateFirstDifferential<X>& x) {
         os << "D<R" << x.argument_size() << "," << x.degree() << ">{ ";
         os << x._value << "; " << x._gradient;
@@ -142,80 +148,100 @@ class UnivariateFirstDifferential
     }
 
   public:
+    /** @brief Test whether the first operand is greater than or equal to the second. */
     friend decltype(auto) operator>=(const UnivariateFirstDifferential<X>& x, const UnivariateFirstDifferential<X>& y) {
         return x._value >= y._value;
     }
+    /** @brief Test whether the first operand is less than or equal to the second. */
     friend decltype(auto) operator<=(const UnivariateFirstDifferential<X>& x, const UnivariateFirstDifferential<X>& y) {
         return x._value <= y._value;
     }
+    /** @brief Test whether the first operand is greater than or equal to the second. */
     friend decltype(auto) operator>=(const UnivariateFirstDifferential<X>& x, const X& c) {
         return x._value >= c;
     }
+    /** @brief Test whether the first operand is less than or equal to the second. */
     friend decltype(auto) operator<=(const UnivariateFirstDifferential<X>& x, const X& c) {
         return x._value <= c;
     }
+    /** @brief Test whether the first operand is greater than the second. */
     friend decltype(auto) operator>(const UnivariateFirstDifferential<X>& x, const X& c) {
         return x._value > c;
     }
+    /** @brief Test whether the first operand is less than the second. */
     friend decltype(auto) operator<(const UnivariateFirstDifferential<X>& x, const X& c) {
         return x._value < c;
     }
+    /** @brief Test whether the first operand is greater than or equal to the second. */
     friend decltype(auto) operator>=(const X& c, const UnivariateFirstDifferential<X>& x) {
         return c >= x._value;
     }
+    /** @brief Test whether the first operand is less than or equal to the second. */
     friend decltype(auto) operator<=(const X& c, const UnivariateFirstDifferential<X>& x) {
         return c <= x._value;
     }
+    /** @brief Test whether the first operand is less than the second. */
     friend decltype(auto) operator<(const X& c, const UnivariateFirstDifferential<X>& x) {
         return c < x._value;
     }
+    /** @brief Test whether the first operand is greater than the second. */
     friend decltype(auto) operator>(const X& c, const UnivariateFirstDifferential<X>& x) {
         return c > x._value;
     }
 };
 
+/** @brief Construct a zero object with compatible characteristics. */
 template<class X>
 UnivariateFirstDifferential<X> create_zero(const UnivariateFirstDifferential<X>& c) {
     return UnivariateFirstDifferential<X>(create_zero(c.value()));
 }
 
+/** @brief Operations supported by algebra objects. */
 template<class X>
 struct AlgebraOperations<UnivariateFirstDifferential<X>, X> {
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Add, UnivariateFirstDifferential<X> x, const X& c) {
         x._value += c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Sub, UnivariateFirstDifferential<X> x, const X& c) {
         x._value -= c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Mul, UnivariateFirstDifferential<X> x, const X& c) {
         x._value *= c;
         x._gradient *= c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Div, UnivariateFirstDifferential<X> x, const X& c) {
         x._value /= c;
         x._gradient /= c;
         return x;
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Add, UnivariateFirstDifferential<X> x, const UnivariateFirstDifferential<X>& y) {
         x._value += y._value;
         x._gradient += y._gradient;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Sub, UnivariateFirstDifferential<X> x, const UnivariateFirstDifferential<X>& y) {
         x._value -= y._value;
         x._gradient -= y._gradient;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Mul, UnivariateFirstDifferential<X> x, const UnivariateFirstDifferential<X>& y) {
         x._gradient *= y._value;
         x._gradient += x._value * y._gradient;
         x._value *= y._value;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Div, UnivariateFirstDifferential<X> x, const UnivariateFirstDifferential<X>& y) {
         x._value /= y._value;
         x._gradient -= x._value * y._gradient;
@@ -223,13 +249,16 @@ struct AlgebraOperations<UnivariateFirstDifferential<X>, X> {
         return x;
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Pos, const UnivariateFirstDifferential<X>& x) {
         return UnivariateFirstDifferential<X>(+x._value, +x._gradient);
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Neg, const UnivariateFirstDifferential<X>& x) {
         return UnivariateFirstDifferential<X>(-x._value, -x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Min, const UnivariateFirstDifferential<X>& x1, const UnivariateFirstDifferential<X>& x2) {
         ARIADNE_ASSERT_MSG(x1.argument_size() == x2.argument_size(), "x1=" << x1 << " x2=" << x2);
         if (x1.value() == x2.value()) {
@@ -237,6 +266,7 @@ struct AlgebraOperations<UnivariateFirstDifferential<X>, X> {
         }
         return x1.value() < x2.value() ? x1 : x2;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Max, const UnivariateFirstDifferential<X>& x1, const UnivariateFirstDifferential<X>& x2) {
         ARIADNE_ASSERT_MSG(x1.argument_size() == x2.argument_size(), "x1=" << x1 << " x2=" << x2);
         if (x1.value() == x2.value()) {
@@ -244,6 +274,7 @@ struct AlgebraOperations<UnivariateFirstDifferential<X>, X> {
         }
         return x1.value() > x2.value() ? x1 : x2;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Abs, const UnivariateFirstDifferential<X>& x) {
         if (x.value() == 0) {
             ARIADNE_THROW(std::runtime_error, "abs(UnivariateFirstDifferential<X> x)", "x[0]==0");
@@ -251,61 +282,72 @@ struct AlgebraOperations<UnivariateFirstDifferential<X>, X> {
         return x.value() > 0 ? pos(x) : neg(x);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Pow, const UnivariateFirstDifferential<X>& x, Int n) {
         return UnivariateFirstDifferential<X>(pow(x._value, n), (n * pow(x._value, n - 1)) * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     template<class OP>
     static UnivariateFirstDifferential<X> apply(OP op, const UnivariateFirstDifferential<X>& x) {
         return compose(UnivariateFirstDifferential<X>(op, x.value()), x);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Sqrt, const UnivariateFirstDifferential<X>& x) {
         X sqrt_val = sqrt(x._value);
         return UnivariateFirstDifferential<X>(sqrt_val, rec(2 * sqrt_val) * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Exp, const UnivariateFirstDifferential<X>& x) {
         X exp_val = exp(x._value);
         return UnivariateFirstDifferential<X>(exp_val, exp_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Log, const UnivariateFirstDifferential<X>& x) {
         X log_val = log(x._value);
         X rec_val = rec(x._value);
         return UnivariateFirstDifferential<X>(log_val, rec_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Sin, const UnivariateFirstDifferential<X>& x) {
         X sin_val = sin(x._value);
         X cos_val = cos(x._value);
         return UnivariateFirstDifferential<X>(sin_val, cos_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Cos, const UnivariateFirstDifferential<X>& x) {
         X cos_val = cos(x._value);
         X neg_sin_val = neg(sin(x._value));
         return UnivariateFirstDifferential<X>(cos_val, neg_sin_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Tan, const UnivariateFirstDifferential<X>& x) {
         X tan_val = tan(x._value);
         X sqr_sec_val = sqr(rec(cos(x._value)));
         return UnivariateFirstDifferential<X>(tan_val, sqr_sec_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Asin, const UnivariateFirstDifferential<X>& x) {
         X asin_val = asin(x._value);
         X d_asin_val = rec(sqrt(1.0 - sqr(x._value)));
         return UnivariateFirstDifferential<X>(asin_val, d_asin_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Acos, const UnivariateFirstDifferential<X>& x) {
         X acos_val = acos(x._value);
         X d_acos_val = neg(rec(sqrt(1.0 - sqr(x._value))));
         return UnivariateFirstDifferential<X>(acos_val, d_acos_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateFirstDifferential<X> apply(Atan, const UnivariateFirstDifferential<X>& x) {
         X atan_val = atan(x._value);
         X d_atan_val = rec(1 + sqr(x._value));
@@ -332,6 +374,7 @@ class UnivariateSecondDifferential
     //! \brief The type of used to represent the coefficients.
     typedef X ValueType;
 
+    /** @brief Construct a \c UnivariateSecondDifferential from prs. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     explicit UnivariateSecondDifferential(PRS... prs) : _value(X(0u, prs...)), _gradient(_value), _half_hessian(_value) {}
@@ -349,6 +392,7 @@ class UnivariateSecondDifferential
     UnivariateSecondDifferential(const Series<X>& x)
         : _value(x[0]), _gradient(x[1]), _half_hessian(x[2]) {}
 
+    /** @brief Construct a \c UnivariateSecondDifferential from op, c. */
     template<class OP>
     UnivariateSecondDifferential(OP op, const X& c)
         : _value(op(c)), _gradient(next_series_coefficient(op, 1u, c, &_value)), _half_hessian(next_series_coefficient(op, 2u, c, &_value)) {}
@@ -365,6 +409,7 @@ class UnivariateSecondDifferential
         _half_hessian = nul(c);
         return *this;
     }
+    /** @brief Assign the supplied value and return this object. */
     template<AssignableTo<X> W>
     UnivariateSecondDifferential<X>& operator=(const W& c) {
         X xc = nul(this->value());
@@ -384,6 +429,7 @@ class UnivariateSecondDifferential
         return r;
     }
 
+    /** @brief Construct a zero object with compatible characteristics. */
     UnivariateSecondDifferential<X> create_zero() const {
         return UnivariateSecondDifferential(nul(this->_value));
     }
@@ -418,14 +464,17 @@ class UnivariateSecondDifferential
     Void clear() { (*this) = nul(this->_value); }
 
   public:
+    /** @brief Return the characteristics required to construct compatible values. */
     friend CharacteristicsType<X> characteristics(const UnivariateSecondDifferential<X>& dx) {
         return characteristics(dx._value);
     }
 
+    /** @brief Return a factory for compatible objects. */
     friend DifferentialFactory<X> factory(const UnivariateSecondDifferential<X>& dx) {
         return DifferentialFactory<X>(dx.value().precision());
     }
 
+    /** @brief Compose the outer object with the inner object. */
     friend UnivariateSecondDifferential<X> compose(const UnivariateSecondDifferential<X>& df, UnivariateSecondDifferential<X> dg) {
         dg._half_hessian *= df._gradient;
         dg._half_hessian += df._half_hessian * sqr(dg._gradient);
@@ -433,6 +482,7 @@ class UnivariateSecondDifferential
         dg._value = df._value;
         return dg;
     }
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const UnivariateSecondDifferential<X>& x) {
         os << "D<R" << x.argument_size() << "," << x.degree() << ">{";
         os << x._value << ";" << x._gradient << ";" << x._half_hessian;
@@ -441,46 +491,66 @@ class UnivariateSecondDifferential
 
   public:
     typedef Number<Paradigm<X>> Y;
+    /** @brief Return the maximum of the operands. */
     friend UnivariateSecondDifferential<X> max(const UnivariateSecondDifferential<X>&, const Y&) { ARIADNE_NOT_IMPLEMENTED; }
+    /** @brief Return the minimum of the operands. */
     friend UnivariateSecondDifferential<X> min(const UnivariateSecondDifferential<X>&, const Y&) { ARIADNE_NOT_IMPLEMENTED; }
+    /** @brief Return the maximum of the operands. */
     friend UnivariateSecondDifferential<X> max(const Y&, const UnivariateSecondDifferential<X>&) { ARIADNE_NOT_IMPLEMENTED; }
+    /** @brief Return the minimum of the operands. */
     friend UnivariateSecondDifferential<X> min(const Y&, const UnivariateSecondDifferential<X>&) { ARIADNE_NOT_IMPLEMENTED; }
 
+    /** @brief Test whether the first operand is greater than or equal to the second. */
     friend decltype(auto) operator>=(const UnivariateSecondDifferential<X>& x, const UnivariateSecondDifferential<X>& y) {
         return x._value >= y._value;
     }
+    /** @brief Test whether the first operand is less than or equal to the second. */
     friend decltype(auto) operator<=(const UnivariateSecondDifferential<X>& x, const UnivariateSecondDifferential<X>& y) {
         return x._value <= y._value;
     }
+    /** @brief Test whether the first operand is greater than or equal to the second. */
     friend decltype(auto) operator>=(const UnivariateSecondDifferential<X>& x, const X& c) { return x._value >= c; }
+    /** @brief Test whether the first operand is less than or equal to the second. */
     friend decltype(auto) operator<=(const UnivariateSecondDifferential<X>& x, const X& c) { return x._value <= c; }
+    /** @brief Test whether the first operand is greater than the second. */
     friend decltype(auto) operator>(const UnivariateSecondDifferential<X>& x, const X& c) { return x._value > c; }
+    /** @brief Test whether the first operand is less than the second. */
     friend decltype(auto) operator<(const UnivariateSecondDifferential<X>& x, const X& c) { return x._value < c; }
+    /** @brief Test whether the first operand is greater than or equal to the second. */
     friend decltype(auto) operator>=(const X& c, const UnivariateSecondDifferential<X>& x) { return c >= x._value; }
+    /** @brief Test whether the first operand is less than or equal to the second. */
     friend decltype(auto) operator<=(const X& c, const UnivariateSecondDifferential<X>& x) { return c <= x._value; }
+    /** @brief Test whether the first operand is greater than the second. */
     friend decltype(auto) operator>(const X& c, const UnivariateSecondDifferential<X>& x) { return c > x._value; }
+    /** @brief Test whether the first operand is less than the second. */
     friend decltype(auto) operator<(const X& c, const UnivariateSecondDifferential<X>& x) { return c < x._value; }
 
   public:
+    /** @brief Construct a \c UnivariateSecondDifferential from v, g, half_h. */
     explicit UnivariateSecondDifferential(const X& v, const X& g, const X& half_h) : _value(v), _gradient(g), _half_hessian(half_h) {}
 };
 
+/** @brief Operations supported by algebra objects. */
 template<class X>
 struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Add, UnivariateSecondDifferential<X> x, const X& c) {
         x._value += c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Sub, UnivariateSecondDifferential<X> x, const X& c) {
         x._value -= c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Mul, UnivariateSecondDifferential<X> x, const X& c) {
         x._value *= c;
         x._gradient *= c;
         x._half_hessian *= c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Div, UnivariateSecondDifferential<X> x, const X& c) {
         x._value /= c;
         x._gradient /= c;
@@ -488,6 +558,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return x;
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Add, UnivariateSecondDifferential<X> x, const UnivariateSecondDifferential<X>& y) {
         x._value += y._value;
         x._gradient += y._gradient;
@@ -495,6 +566,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return x;
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Sub, UnivariateSecondDifferential<X> x, const UnivariateSecondDifferential<X>& y) {
         x._value -= y._value;
         x._gradient -= y._gradient;
@@ -502,6 +574,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return x;
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Mul, UnivariateSecondDifferential<X> x, const UnivariateSecondDifferential<X>& y) {
         x._half_hessian *= y._value;
         x._half_hessian += x._gradient * y._gradient;
@@ -511,18 +584,22 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         x._value *= y._value;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Div, const UnivariateSecondDifferential<X>& x, const UnivariateSecondDifferential<X>& y) {
         return UnivariateSecondDifferential<X>(x._value / y._value, (x._gradient - (x._value / y._value) * y._gradient) / y._value,
                                                (x._half_hessian / y._value) - (x._value / y._value) * (y._half_hessian / y._value) - (x._gradient / y._value) * (y._gradient / y._value) + (x._value / y._value) * sqr(y._gradient / y._value));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Pos, const UnivariateSecondDifferential<X>& x) {
         return UnivariateSecondDifferential<X>(+x._value, +x._gradient, +x._half_hessian);
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Neg, const UnivariateSecondDifferential<X>& x) {
         return UnivariateSecondDifferential<X>(-x._value, -x._gradient, -x._half_hessian);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Min, const UnivariateSecondDifferential<X>& x1, const UnivariateSecondDifferential<X>& x2) {
         ARIADNE_ASSERT_MSG(x1.argument_size() == x2.argument_size(), "x1=" << x1 << " x2=" << x2);
         if (decide(x1.value() == x2.value())) {
@@ -530,6 +607,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         }
         return decide(x1.value() < x2.value()) ? x1 : x2;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Max, const UnivariateSecondDifferential<X>& x1, const UnivariateSecondDifferential<X>& x2) {
         ARIADNE_ASSERT_MSG(x1.argument_size() == x2.argument_size(), "x1=" << x1 << " x2=" << x2);
         if (decide(x1.value() == x2.value())) {
@@ -537,6 +615,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         }
         return decide(x1.value() > x2.value()) ? x1 : x2;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Abs, const UnivariateSecondDifferential<X>& x) {
         if (decide(x.value() == 0)) {
             ARIADNE_THROW(std::runtime_error, "abs(UnivariateSecondDifferential<X> x)", "x[0]==0");
@@ -544,6 +623,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return decide(x.value() > 0) ? pos(x) : neg(x);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Rec, const UnivariateSecondDifferential<X>& x) {
         X rec_val = rec(x._value);
         X neg_sqr_rec_val = neg(sqr(rec_val));
@@ -551,21 +631,25 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return UnivariateSecondDifferential<X>(rec_val, neg_sqr_rec_val * x._gradient, neg_sqr_rec_val * x._half_hessian + cub_rec_val * sqr(x._gradient));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     template<class OP>
     static UnivariateSecondDifferential<X> apply(OP op, const UnivariateSecondDifferential<X>& x) {
         return compose(UnivariateSecondDifferential<X>(op, x.value()), x);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Sqr, const UnivariateSecondDifferential<X>& x) {
         return UnivariateSecondDifferential<X>(sqr(x._value), (2 * x._value) * x._gradient, (x._value) * x._half_hessian + sqr(x._gradient));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Pow, const UnivariateSecondDifferential<X>& x, Int n) {
         return UnivariateSecondDifferential<X>(pow(x._value, n), (n * pow(x._value, n - 1)) * x._gradient, hlf(n * (n - 1) * pow(x._value, n - 2)) * x._half_hessian);
     }
 
     // ddf(y)/dxdx = d/dx ( f'(y) dy/dx) = f''(y) dy/dx dy/dx + f'(y) ddy/dxdx
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Sqrt, const UnivariateSecondDifferential<X>& x) {
         X sqrt_val = sqrt(x._value);
         X rec_dbl_sqrt_val = rec(2 * sqrt_val);
@@ -573,11 +657,13 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return UnivariateSecondDifferential<X>(sqrt_val, rec_dbl_sqrt_val * x._gradient, rec_dbl_sqrt_val * x._half_hessian + hlf(neg_rec_quad_pow_val) * sqr(x._gradient));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Exp, const UnivariateSecondDifferential<X>& x) {
         X exp_val = exp(x._value);
         return UnivariateSecondDifferential<X>(exp_val, exp_val * x._gradient, exp_val * x._half_hessian + hlf(exp_val) * sqr(x._gradient));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Log, const UnivariateSecondDifferential<X>& x) {
         X log_val = log(x._value);
         X rec_val = rec(x._value);
@@ -585,6 +671,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return UnivariateSecondDifferential<X>(log_val, rec_val * x._gradient, rec_val * x._half_hessian + hlf(neg_sqr_rec_val) * sqr(x._gradient));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Sin, const UnivariateSecondDifferential<X>& x) {
         X sin_val = sin(x._value);
         X cos_val = cos(x._value);
@@ -592,6 +679,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return UnivariateSecondDifferential<X>(sin_val, cos_val * x._gradient, cos_val * x._half_hessian + hlf(neg_sin_val) * sqr(x._gradient));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Cos, const UnivariateSecondDifferential<X>& x) {
         X cos_val = cos(x._value);
         X neg_sin_val = neg(sin(x._value));
@@ -599,6 +687,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return UnivariateSecondDifferential<X>(cos_val, neg_sin_val * x._gradient, neg_sin_val * x._half_hessian + hlf(neg_cos_val) * sqr(x._gradient));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Tan, const UnivariateSecondDifferential<X>& x) {
         X tan_val = tan(x._value);
         X sqr_sec_val = sqr(rec(cos(x._value)));
@@ -606,6 +695,7 @@ struct AlgebraOperations<UnivariateSecondDifferential<X>, X> {
         return UnivariateSecondDifferential<X>(tan_val, sqr_sec_val * x._gradient, sqr_sec_val * x._half_hessian + hlf(dbl_tan_sqr_sec_val) * sqr(x._gradient));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static UnivariateSecondDifferential<X> apply(Atan, const UnivariateSecondDifferential<X>& x) {
         X atan_val = atan(x._value);
         X atan_deriv = rec(1 + sqr(x._value));

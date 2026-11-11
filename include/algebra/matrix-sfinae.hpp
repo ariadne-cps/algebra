@@ -41,7 +41,9 @@ class MatrixRow {
     SizeType _i;
 
   public:
+    /** @brief Construct a \c MatrixRow from Ap, i. */
     MatrixRow(M* Ap, SizeType i) : _Ap(Ap), _i(i) {}
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType j) -> decltype(_Ap->at(_i, j)) { return _Ap->at(_i, j); }
 };
 
@@ -53,27 +55,41 @@ class Matrix {
     Array<X> _ary;
 
   public:
+    /** @brief Construct a \c Matrix from m, n. */
     Matrix(SizeType m, SizeType n) : _zero(), _rs(m), _cs(n), _ary(m * n) {}
+    /** @brief Construct a \c Matrix from m, n, x. */
     Matrix(SizeType m, SizeType n, const X& x) : _zero(x * 0), _rs(m), _cs(n), _ary(m * n, x) {}
     //    Matrix(InitializerList<X> lst) : _zero(*lst.begin()*0), _ary(lst.begin(),lst.end()) { }
+    /** @brief Return the number of rows. */
     SizeType row_size() const { return _rs; }
+    /** @brief Return the number of columns. */
     SizeType column_size() const { return _cs; }
+    /** @brief Return the selected element or component. */
     MatrixRow<const Matrix<X>> operator[](SizeType i) const { return MatrixRow<const Matrix<X>>{this, i}; }
+    /** @brief Return the selected element or component. */
     MatrixRow<Matrix<X>> operator[](SizeType i) { return MatrixRow<Matrix<X>>{this, i}; }
+    /** @brief Return the element at the specified index. */
     const X& at(SizeType i, SizeType j) const { return this->_ary[i * this->_cs + j]; }
+    /** @brief Return the element at the specified index. */
     X& at(SizeType i, SizeType j) { return this->_ary[i * this->_cs + j]; }
+    /** @brief Replace the selected value. */
     Void set(SizeType i, SizeType j, const X& c) const { this->_ary[i * this->_cs + j] = c; }
+    /** @brief Return a zero with the element characteristics. */
     X zero_element() const { return _zero; }
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 };
+/** @brief Compile-time predicate testing whether a type is matrix. */
 template<class X>
 struct IsMatrix<Matrix<X>> : True {};
 
 template<class X>
 class SymmetricMatrix : public Matrix<X> {
   public:
+    /** @brief Construct a \c SymmetricMatrix from n. */
     SymmetricMatrix(SizeType n) : Matrix<X>(n, n) {}
 };
+/** @brief Compile-time predicate testing whether a type is matrix. */
 template<class X>
 struct IsMatrix<SymmetricMatrix<X>> : True {};
 

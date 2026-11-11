@@ -31,8 +31,10 @@
 
 namespace Ariadne {
 
+/** @brief Compile-time predicate testing whether a type is normed algebra. */
 template<class A>
 struct IsNormedAlgebra : False {};
+/** @brief Compile-time predicate testing whether a type is graded algebra. */
 template<class A>
 struct IsGradedAlgebra : False {};
 
@@ -41,6 +43,7 @@ concept ANormedAlgebra = IsNormedAlgebra<A>::value;
 template<class A>
 concept AGradedAlgebra = IsNormedAlgebra<A>::value;
 
+/** @brief Compose the outer object with the inner object. */
 template<AGradedAlgebra A>
 A compose(const Series<typename A::NumericType>& x, const A& y) {
     Nat d = y.degree();
@@ -58,6 +61,7 @@ A compose(const Series<typename A::NumericType>& x, const A& y) {
 // Compose using the Taylor formula directly. The final term is the Taylor series computed
 // over the range of the series. This method tends to suffer from blow-up of the
 // truncation error
+/** @brief Compose a unary differential expansion. */
 template<ANormedAlgebra A>
 A _compose1(const AnalyticFunction& fn, const A& tm, double eps) {
     static const Nat DEGREE = 18;
@@ -90,6 +94,7 @@ A _compose1(const AnalyticFunction& fn, const A& tm, double eps) {
 // is usually better than _compose1 since there is no blow-up of the trunction
 // error. The radius of convergence of this method is still quite low,
 // typically only half of the radius of convergence of the power series itself
+/** @brief Compose a binary differential expansion. */
 template<ANormedAlgebra A>
 A _compose2(const AnalyticFunction& fn, const A& tm, double eps) {
     static const Nat DEGREE = 20;
@@ -121,11 +126,13 @@ A _compose2(const AnalyticFunction& fn, const A& tm, double eps) {
     return res;
 }
 
+/** @brief Return a bound on the approximation error. */
 template<class F>
 Error<F> error_bound(const Bounds<F>& b, const F& c) {
     return Error<F>(max(b.upper() - c, c - b.lower()));
 }
 
+/** @brief Return a bound on the approximation error. */
 template<class F>
 Error<F> error_bound(const Bounds<F>& b, const Bounds<F>& c) {
     return Error<F>(max(b.upper() - c.lower(), c.upper() - b.lower()));
@@ -135,6 +142,7 @@ Error<F> error_bound(const Bounds<F>& b, const Bounds<F>& c) {
 // is usually better than _compose1 since there is no blow-up of the trunction
 // error. This method is better than _compose2 since the truncation error is
 // assumed at the ends of the intervals
+/** @brief Compose a ternary differential expansion. */
 template<ANormedAlgebra A>
 A _compose3(const AnalyticFunction& fn, const A& tm, FloatDP) {
     static const Nat DEGREE = 20;
@@ -171,6 +179,7 @@ A _compose3(const AnalyticFunction& fn, const A& tm, FloatDP) {
     return res;
 }
 
+/** @brief Compose the outer object with the inner object. */
 template<ANormedAlgebra A>
 A _compose(const AnalyticFunction& fn, const A& tm, FloatDP eps) {
     return _compose3(fn, tm, eps);
@@ -183,7 +192,9 @@ A _compose(const AnalyticFunction& fn, const A& tm, FloatDP eps) {
 //   unbounded domain (exp,sin,cos)
 
 namespace {
+/** @brief Return two raised to the supplied exponent. */
 inline Int pow2(Nat k) { return 1 << k; }
+/** @brief Return minus one raised to the supplied integer exponent. */
 inline Int powm1(Nat k) { return (k % 2) ? -1 : +1; }
 } // namespace
 

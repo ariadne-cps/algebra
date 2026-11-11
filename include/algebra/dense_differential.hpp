@@ -92,6 +92,7 @@ class DenseDifferential {
     Void set_value(const X&);
     /// The variation of the quantity with respect to the \a j<sup>th</sup> argument.
     const X& gradient(SizeType j) const;
+    /** @brief Set the gradient. */
     Void set_gradient(SizeType j, const X&);
     /// The Array of derivative values.
     const Vector<X>& data() const;
@@ -99,9 +100,11 @@ class DenseDifferential {
     Vector<X>& data();
     /// A reference to the \a i<sup>th</sup> derivative \f$D^af=d^{|a|}f/dx_1^{a_1}\cdots dx_n^{a_n}\f$.
     X& operator[](const MultiIndex& a);
+    /** @brief Return the selected element or component. */
     X& operator[](const SizeType& j);
     /// The \a i<sup>th</sup> derivative \f$D^af=d^{|a|}f/dx_1^{a_1}\cdots dx_n^{a_n}\f$.
     const X& operator[](const MultiIndex& a) const;
+    /** @brief Return the selected element or component. */
     const X& operator[](const SizeType& j) const;
 
     /// Assign all elements of degree less than the degree of \a x to those of \a x .
@@ -221,30 +224,37 @@ DenseDifferential<X> exp(const DenseDifferential<X>& x);
 template<class X>
 DenseDifferential<X> log(const DenseDifferential<X>& x);
 
+/** @brief Return the sum or unary positive value. */
 template<class X, class XX>
 DenseDifferential<X> operator+(const XX& c, const DenseDifferential<X>& x) {
     return DenseDifferential<X>(x) += X(c);
 }
+/** @brief Return the sum or unary positive value. */
 template<class X, class XX>
 DenseDifferential<X> operator+(const DenseDifferential<X>& x, const XX& c) {
     return DenseDifferential<X>(x) += X(c);
 }
+/** @brief Return the difference or additive inverse. */
 template<class X, class XX>
 DenseDifferential<X> operator-(const XX& c, const DenseDifferential<X>& x) {
     return DenseDifferential<X>(-x) += X(c);
 }
+/** @brief Return the difference or additive inverse. */
 template<class X, class XX>
 DenseDifferential<X> operator-(const DenseDifferential<X>& x, const XX& c) {
     return DenseDifferential<X>(x) -= X(c);
 }
+/** @brief Return the product. */
 template<class X, class XX>
 DenseDifferential<X> operator*(const DenseDifferential<X>& x, const XX& c) {
     return DenseDifferential<X>(x) *= c;
 }
+/** @brief Return the product. */
 template<class X, class XX>
 DenseDifferential<X> operator*(const XX& c, const DenseDifferential<X>& x) {
     return DenseDifferential<X>(x) *= X(c);
 }
+/** @brief Return the quotient. */
 template<class X, class XX>
 DenseDifferential<X> operator/(const DenseDifferential<X>& x, const XX& c) {
     return DenseDifferential<X>(x) *= (1.0 / c);
@@ -256,6 +266,7 @@ OutputStream& operator<<(OutputStream& os, const DenseDifferential<X>& x);
 // template<class X> DenseDifferential<X>& acc(DenseDifferential<X>& r, const DenseDifferential<X>& x, const DenseDifferential<X>& y);
 // template<class X> DenseDifferential<X>& acc(DenseDifferential<X>& r, const X& c, const DenseDifferential<X>& x);
 
+/** @brief Compute the polynomial data size. */
 inline SizeType compute_polynomial_data_size(SizeType rs, SizeType as, DegreeType d) { return rs * Ariadne::bin(d + as, as); }
 
 template<class X>
@@ -293,6 +304,7 @@ Bool DenseDifferential<X>::operator!=(const DenseDifferential<X>& other) const {
     return !(*this == other);
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X>
 X evaluate(const DenseDifferential<X>& y, const Vector<X>& x) {
     // std::cerr<<ARIADNE_PRETTY_FUNCTION<<std::endl;
@@ -329,6 +341,7 @@ X evaluate(const DenseDifferential<X>& y, const Vector<X>& x) {
     return r;
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X, class Y>
 Y evaluate(const DenseDifferential<X>& y, const Vector<Y>& x) {
     // std::cerr<<ARIADNE_PRETTY_FUNCTION<<std::endl;
@@ -366,6 +379,7 @@ Y evaluate(const DenseDifferential<X>& y, const Vector<Y>& x) {
     return r;
 }
 
+/** @brief Return the minimum of the operands. */
 template<class X>
 DenseDifferential<X>
     min(const DenseDifferential<X>& x1, const DenseDifferential<X>& x2) {
@@ -375,6 +389,7 @@ DenseDifferential<X>
     return x1.value() < x2.value() ? x1 : x2;
 }
 
+/** @brief Return the maximum of the operands. */
 template<class X>
 DenseDifferential<X>
     max(const DenseDifferential<X>& x1, const DenseDifferential<X>& x2) {
@@ -384,12 +399,14 @@ DenseDifferential<X>
     return x1.value() > x2.value() ? x1 : x2;
 }
 
+/** @brief Return the unary positive value. */
 template<class X>
 DenseDifferential<X>
     pos(const DenseDifferential<X>& x) {
     return x;
 }
 
+/** @brief Return the additive inverse. */
 template<class X>
 DenseDifferential<X>
     neg(const DenseDifferential<X>& x) {
@@ -400,6 +417,7 @@ DenseDifferential<X>
     return y;
 }
 
+/** @brief Return the absolute value. */
 template<class X>
 DenseDifferential<X>
     abs(const DenseDifferential<X>& x) {
@@ -409,6 +427,7 @@ DenseDifferential<X>
     return x.value() > 0 ? pos(x) : neg(x);
 }
 
+/** @brief Return the sum of the operands. */
 template<class X>
 DenseDifferential<X>
     add(const DenseDifferential<X>& x, const DenseDifferential<X>& y) {
@@ -420,6 +439,7 @@ DenseDifferential<X>
     return z;
 }
 
+/** @brief Return the difference of the operands. */
 template<class X>
 DenseDifferential<X>
     sub(const DenseDifferential<X>& x, const DenseDifferential<X>& y) {
@@ -431,6 +451,7 @@ DenseDifferential<X>
     return z;
 }
 
+/** @brief Return the product of the operands. */
 template<class X>
 DenseDifferential<X>
     mul(const DenseDifferential<X>& x, const DenseDifferential<X>& y) {
@@ -440,72 +461,84 @@ DenseDifferential<X>
     return z;
 }
 
+/** @brief Return the quotient of the operands. */
 template<class X>
 DenseDifferential<X>
     div(const DenseDifferential<X>& x, const DenseDifferential<X>& y) {
     return mul(x, rec(y));
 }
 
+/** @brief Raise the value to the specified power. */
 template<class X>
 DenseDifferential<X>
     pow(const DenseDifferential<X>& x, Int k) {
     return compose(Series<X>::pow(x.degree(), x.value(), k), x);
 }
 
+/** @brief Return the multiplicative inverse. */
 template<class X>
 DenseDifferential<X>
     rec(const DenseDifferential<X>& x) {
     return compose(Series<X>::rec(x.degree(), x.value()), x);
 }
 
+/** @brief Return the square root. */
 template<class X>
 DenseDifferential<X>
     sqrt(const DenseDifferential<X>& x) {
     return compose(Series<X>::sqrt(x.degree(), x.value()), x);
 }
 
+/** @brief Return the exponential. */
 template<class X>
 DenseDifferential<X>
     exp(const DenseDifferential<X>& x) {
     return compose(Series<X>::exp(x.degree(), x.value()), x);
 }
 
+/** @brief Return the natural logarithm. */
 template<class X>
 DenseDifferential<X>
     log(const DenseDifferential<X>& x) {
     return compose(Series<X>::log(x.degree(), x.value()), x);
 }
 
+/** @brief Return the sum or unary positive value. */
 template<class X>
 DenseDifferential<X>
     operator+(const DenseDifferential<X>& x) {
     return pos(x);
 }
 
+/** @brief Return the difference or additive inverse. */
 template<class X>
 DenseDifferential<X>
     operator-(const DenseDifferential<X>& x) {
     return neg(x);
 }
 
+/** @brief Return the sum or unary positive value. */
 template<class X>
 DenseDifferential<X>
     operator+(const DenseDifferential<X>& x, const DenseDifferential<X>& y) {
     return add(x, y);
 }
 
+/** @brief Return the difference or additive inverse. */
 template<class X>
 DenseDifferential<X>
     operator-(const DenseDifferential<X>& x, const DenseDifferential<X>& y) {
     return sub(x, y);
 }
 
+/** @brief Return the product. */
 template<class X>
 DenseDifferential<X>
     operator*(const DenseDifferential<X>& x, const DenseDifferential<X>& y) {
     return mul(x, y);
 }
 
+/** @brief Return the quotient. */
 template<class X>
 DenseDifferential<X>
     operator/(const DenseDifferential<X>& x, const DenseDifferential<X>& y) {
@@ -684,11 +717,13 @@ template<class X>
 Void DenseDifferential<X>::cleanup() {
 }
 
+/** @brief Test whether the first operand is less than the second. */
 template<class X>
 Bool operator<(const DenseDifferential<X>& x1, const DenseDifferential<X>& x2) {
     return x1.value() < x2.value();
 }
 
+/** @brief Accumulate the supplied value. */
 template<class X>
 DenseDifferential<X>&
     acc(DenseDifferential<X>& r, const DenseDifferential<X>& x1, const DenseDifferential<X>& x2) {
@@ -703,6 +738,7 @@ DenseDifferential<X>&
     return r;
 }
 
+/** @brief Accumulate the supplied value. */
 template<class X>
 DenseDifferential<X>&
     acc(DenseDifferential<X>& r, const X& c, const DenseDifferential<X>& x) {
@@ -725,6 +761,7 @@ DenseDifferential<X>&
     return *this;
 }
 
+/** @brief Add the operand in place. */
 template<class X>
 DenseDifferential<X>&
     operator+=(DenseDifferential<X>& r, const DenseDifferential<X>& x) {
@@ -738,6 +775,7 @@ DenseDifferential<X>&
     return r;
 }
 
+/** @brief Compute the composition. */
 template<class X>
 Void compute_composition(DenseDifferential<X>& z,
                          const Series<X>& y,
@@ -759,6 +797,7 @@ Void compute_composition(DenseDifferential<X>& z,
     return;
 }
 
+/** @brief Compose the outer object with the inner object. */
 template<class X>
 DenseDifferential<X>
     compose(const Series<X>& y, const DenseDifferential<X>& x) {
@@ -767,6 +806,7 @@ DenseDifferential<X>
     return z;
 }
 
+/** @brief Reduce the set or enclosure using the supplied constraints. */
 template<class X>
 DenseDifferential<X>
     reduce(const DenseDifferential<X>& x, const DegreeType& d) {
@@ -778,16 +818,19 @@ DenseDifferential<X>
     return r;
 }
 
+/** @brief Construct a scalar constant. */
 template<class X>
 DenseDifferential<X> scalar_constant(SizeType as, DegreeType d, const X& x) {
     return DenseDifferential<X>::constant(as, d, x);
 }
 
+/** @brief Construct a scalar variable. */
 template<class X>
 DenseDifferential<X> scalar_variable(SizeType as, DegreeType d, const X& x, SizeType i) {
     return DenseDifferential<X>::variable(as, d, x, i);
 }
 
+/** @brief Return the derivative with respect to the selected argument. */
 template<class X>
 DenseDifferential<X> derivative(const DenseDifferential<X>& x, SizeType i) {
     if (x.degree() == 0) {
@@ -809,6 +852,7 @@ DenseDifferential<X> derivative(const DenseDifferential<X>& x, SizeType i) {
     return r;
 }
 
+/** @brief Return an antiderivative with respect to the selected argument. */
 template<class X>
 DenseDifferential<X> antiderivative(const DenseDifferential<X>& x, SizeType i) {
     DenseDifferential<X> r(x.argument_size(), x.degree() + 1);
@@ -826,6 +870,7 @@ DenseDifferential<X> antiderivative(const DenseDifferential<X>& x, SizeType i) {
     return r;
 }
 
+/** @brief Write the value to the output stream. */
 template<class X>
 OutputStream&
     operator<<(OutputStream& os, const DenseDifferential<X>& x) {

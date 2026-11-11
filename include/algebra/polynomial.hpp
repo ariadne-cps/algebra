@@ -69,6 +69,7 @@ using ArgumentOf = typename IndexTraits<I>::template Argument<Y>;
 
 template<class X, class A>
 ArithmeticType<X, A> horner_evaluate(const Expansion<MultiIndex, X>& e, const Vector<A>& y);
+/** @brief Evaluate the polynomial using Horner nesting. */
 template<class X, class A>
 ArithmeticType<X, A> horner_evaluate(const Expansion<UniIndex, X>& e, const A& y);
 
@@ -77,33 +78,44 @@ template<class I, class X>
 class Monomial
     : public ExpansionValue<I, X> {
   public:
+    /** @brief Construct a \c Monomial from a, x. */
     Monomial(const I& a, const X& x) : ExpansionValue<I, X>(a, x) {}
+    /** @brief Construct a \c Monomial from v. */
     Monomial(const ExpansionValue<I, X>& v) : ExpansionValue<I, X>(v) {}
 };
 
+/** @brief Construction helpers for polynomial constants and variables. */
 template<class I, class X>
 class PolynomialConstructors {
 };
 
+/** @brief Construction helpers for polynomial constants and variables. */
 template<class X>
 class PolynomialConstructors<UniIndex, X> {
     typedef UniIndex I;
 
   public:
+    /** @brief Construct a constant with the supplied value. */
     static Polynomial<I, X> constant(const X& c) { return Polynomial<I, X>::_constant(SizeOne(), c); }
+    /** @brief Construct or return the selected coordinate. */
     static Polynomial<I, X> coordinate(const X& z) { return Polynomial<I, X>::_coordinate(SizeOne(), IndexZero(), z); }
+    /** @brief Construct or return the selected coordinate. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     static Polynomial<I, X> coordinate(PRS... prs) { return Polynomial<I, X>::_coordinate(SizeOne(), IndexZero(), X(0u, prs...)); }
     //    static Polynomial<I,X> variable() { return Polynomial<I,X>::_coordinate(SizeOne(),IndexZero()); }
+    /** @brief Construct a constant with the supplied value. */
     static Polynomial<I, X> constant(SizeOne as, const X& c) { return Polynomial<I, X>::_constant(as, c); }
+    /** @brief Construct or return the selected coordinate. */
     static Polynomial<I, X> coordinate(SizeOne as, IndexZero j, const X& z) { return Polynomial<I, X>::_coordinate(as, j, z); }
+    /** @brief Construct or return the selected coordinate. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     static Polynomial<I, X> coordinate(SizeOne as, IndexZero j, PRS... prs) { return Polynomial<I, X>::_coordinate(as, j, X(0u, prs...)); }
     //    static Polynomial<I,X> variable(SizeOne as, IndexZero j) { return Polynomial<I,X>::_coordinate(as,j); }
 };
 
+/** @brief Construction helpers for polynomial constants and variables. */
 template<class X>
 class PolynomialConstructors<MultiIndex, X> {
     typedef MultiIndex I;
@@ -113,9 +125,11 @@ class PolynomialConstructors<MultiIndex, X> {
     static Polynomial<I, X> constant(SizeType as, const X& c) { return Polynomial<I, X>::_constant(as, c); }
     //! \brief Create a polynomial in \a as variables which returns the value of the \a j<sup>th</sup> variable.
     static Polynomial<I, X> coordinate(SizeType as, SizeType j, const X& z) { return Polynomial<I, X>::_coordinate(as, j, z); }
+    /** @brief Construct or return the selected coordinate. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     static Polynomial<I, X> coordinate(SizeType as, SizeType j, PRS... prs) { return Polynomial<I, X>::_coordinate(as, j, X(0u, prs...)); }
+    /** @brief Construct the selected independent variable. */
     template<class... PRS>
     static Polynomial<I, X> variable(SizeType as, SizeType j, PRS... prs) { return Polynomial<I, X>::_coordinate(as, j, X(0u, prs...)); }
 };
@@ -196,10 +210,13 @@ class Polynomial
     //! \brief Create an Array of polynomials in \a as variables,
     //! the i<sup>th</sup> of  which returns the value of the i<sup>th</sup> variable.
     static Argument<Polynomial<I, X>> coordinates(ArgumentSizeType as, const X& z);
+    /** @brief Construct the independent variables. */
     static Argument<Polynomial<I, X>> variables(ArgumentSizeType as, const X& z);
+    /** @brief Construct or return the coordinate family. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     Argument<Polynomial<I, X>> static coordinates(ArgumentSizeType as, PRS... prs) { return coordinates(as, X(0u, prs...)); }
+    /** @brief Construct the independent variables. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     Argument<Polynomial<I, X>> static variables(ArgumentSizeType as, PRS... prs) { return variables(as, X(0u, prs...)); }
@@ -293,59 +310,79 @@ class Polynomial
 
     //!@{
     //! \name Related operations
+    /** @brief Multiply by the operand in place. */
     friend Polynomial<I, X>& operator*=(Polynomial<I, X>& p, const Monomial<I, X>& m) { return AlgebraOperations<Polynomial<I, X>>::iapply(Mul(), p, m); }
 
+    /** @brief Evaluate at the supplied argument. */
     template<class XX, class A>
     friend A evaluate(const UnivariateMonomial<XX>& p, const A& v);
+    /** @brief Evaluate at the supplied argument. */
     template<class XX, class A>
     friend A evaluate(const MultivariatePolynomial<XX>& p, const Vector<A>& v);
+    /** @brief Compose the outer object with the inner object. */
     template<class II, class XX>
     friend Polynomial<II, XX> compose(const UnivariatePolynomial<XX>& p, const Scalar<Polynomial<II, XX>>& q);
+    /** @brief Compose the outer object with the inner object. */
     template<class II, class XX>
     friend Polynomial<II, XX> compose(const MultivariatePolynomial<XX>& p, const Vector<Polynomial<II, XX>>& q);
     //!@}
 
+    /** @brief Check the predicate at the supplied effort or validate the supplied data. */
     Void check() const;
+    /** @brief Construct a constant with the supplied value. */
     static Polynomial<I, X> _constant(ArgumentSizeType as, const X& c);
+    /** @brief Construct or return the selected coordinate. */
     static Polynomial<I, X> _coordinate(ArgumentSizeType as, VariableIndexType j, const X& z);
+    /** @brief Compose the outer object with the inner object. */
     static Polynomial<UniIndex, X> _compose(const Polynomial<I, X>& p, const ArgumentOf<I, Polynomial<UniIndex, X>>& q);
+    /** @brief Compose the outer object with the inner object. */
     static Polynomial<MultiIndex, X> _compose(const Polynomial<I, X>& p, const ArgumentOf<I, Polynomial<MultiIndex, X>>& q);
+    /** @brief Evaluate at the supplied argument. */
     static X _evaluate(const Polynomial<I, X>& p, const ArgumentOf<I, X>& vx);
+    /** @brief Fix the selected argument to the supplied value. */
     static Polynomial<I, X> _partial_evaluate(const Polynomial<I, X>& p, SizeType k, const X& c);
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os, const typename IndexTraits<I>::NameType& names) const;
 
   private:
+    /** @brief Append the supplied element or sequence. */
     Void _append(const IndexType& a, const X& c);
 
   private:
     SortedExpansion<I, X, ReverseLexicographicIndexLess> _expansion;
 
   private: // FIXME: Put these concrete-generic operations in proper place
+    /** @brief Return the sum or unary positive value. */
     template<AssignableTo<X> Y>
     friend Polynomial<I, X> operator+(Polynomial<I, X> p, const Y& c) {
         X xc = p.value();
         xc = c;
         return p + xc;
     }
+    /** @brief Return the difference or additive inverse. */
     template<AssignableTo<X> Y>
     friend Polynomial<I, X> operator-(Polynomial<I, X> p, const Y& c) {
         X xc = p.value();
         xc = c;
         return p - xc;
     }
+    /** @brief Return the product. */
     template<AssignableTo<X> Y>
     friend Polynomial<I, X> operator*(const Y& c, Polynomial<I, X> p) {
         X xc = p.value();
         xc = c;
         return xc * p;
     }
+    /** @brief Return the product. */
     template<AssignableTo<X> Y>
     friend Polynomial<I, X> operator*(Polynomial<I, X> p, const Y& c) {
         X xc = p.value();
         xc = c;
         return p * xc;
     }
+    /** @brief Return the quotient. */
     template<AssignableTo<X> Y>
     friend Polynomial<I, X> operator/(Polynomial<I, X> p, const Y& c) {
         X xc = p.value();
@@ -354,22 +391,33 @@ class Polynomial
     }
 };
 
+/** @brief Combine equivalent terms and remove redundant entries. */
 template<>
 Void Polynomial<MultiIndex, FloatDP>::cleanup();
 
+/** @brief Operations supported by algebra objects. */
 template<class I, class X>
 struct AlgebraOperations<Polynomial<I, X>> {
     typedef I IndexType;
 
   public:
+    /** @brief Apply the supplied operation to the operands. */
     static Polynomial<I, X> apply(Nul, const Polynomial<I, X>& p);
+    /** @brief Apply the supplied operation to the operands. */
     static Polynomial<I, X> apply(Pos, const Polynomial<I, X>& p);
+    /** @brief Apply the supplied operation to the operands. */
     static Polynomial<I, X> apply(Neg, const Polynomial<I, X>& p);
+    /** @brief Apply the supplied operation to the operands. */
     static Polynomial<I, X> apply(Add, const Polynomial<I, X>& p1, const Polynomial<I, X>& p2);
+    /** @brief Apply the supplied operation to the operands. */
     static Polynomial<I, X> apply(Sub, const Polynomial<I, X>& p1, const Polynomial<I, X>& p2);
+    /** @brief Apply the supplied operation to the operands. */
     static Polynomial<I, X> apply(Mul, const Polynomial<I, X>& p1, const Polynomial<I, X>& p2);
+    /** @brief Apply the supplied operation to the operands. */
     static Polynomial<I, X> apply(Add, Polynomial<I, X> p, const X& c);
+    /** @brief Apply the supplied operation to the operands. */
     static Polynomial<I, X> apply(Mul, Polynomial<I, X> p, const X& c);
+    /** @brief Apply the supplied operation in place. */
     static Polynomial<I, X>& iapply(Mul, Polynomial<I, X>& p, const Monomial<I, X>& m);
 };
 
@@ -408,21 +456,25 @@ InequalityType<X, XX> Polynomial<I, X>::operator!=(const Polynomial<I, XX>& p) c
     return !(*this == p);
 }
 
+/** @brief Fix the selected argument to the supplied value. */
 template<class I, class X>
 inline Polynomial<I, X> partial_evaluate(const Polynomial<I, X>& p, SizeType k, const X& c) {
     return Polynomial<I, X>::_partial_evaluate(p, k, c);
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X>
 inline X evaluate(const UnivariatePolynomial<X>& p, const Scalar<X>& v) {
     return UnivariatePolynomial<X>::_evaluate(p, v);
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X>
 inline X evaluate(const MultivariatePolynomial<X>& p, const Vector<X>& v) {
     return MultivariatePolynomial<X>::_evaluate(p, v);
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X>
 inline Vector<X> evaluate(const Vector<MultivariatePolynomial<X>>& p, const Vector<X>& v) {
     Vector<X> r(p.size(), v.zero_element());
@@ -431,16 +483,19 @@ inline Vector<X> evaluate(const Vector<MultivariatePolynomial<X>>& p, const Vect
     return r;
 }
 
+/** @brief Compose the outer object with the inner object. */
 template<class I, class X>
 inline Polynomial<I, X> compose(const UnivariatePolynomial<X>& p, const Polynomial<I, X>& q) {
     return UnivariatePolynomial<X>::_compose(p, q);
 }
 
+/** @brief Compose the outer object with the inner object. */
 template<class I, class X>
 inline Polynomial<I, X> compose(const MultivariatePolynomial<X>& p, const Vector<Polynomial<I, X>>& q) {
     return MultivariatePolynomial<X>::_compose(p, q);
 }
 
+/** @brief Compose the outer object with the inner object. */
 template<class I, class X>
 inline Vector<Polynomial<I, X>> compose(const Vector<MultivariatePolynomial<X>>& p, const Vector<Polynomial<I, X>>& q) {
     const SizeType rs = p.size();
@@ -448,87 +503,103 @@ inline Vector<Polynomial<I, X>> compose(const Vector<MultivariatePolynomial<X>>&
     return r;
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X, class A>
 inline A evaluate(const UnivariatePolynomial<X>& p, const Scalar<A>& v) {
     return horner_evaluate(p.expansion(), v);
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X, class A>
 inline A evaluate(const MultivariatePolynomial<X>& p, const Vector<A>& v) {
     return horner_evaluate(p.expansion(), v);
 }
 
+/** @brief Return the derivative with respect to the selected argument. */
 template<class I, class X>
 inline Polynomial<I, X> derivative(Polynomial<I, X> p, SizeType k) {
     p.differentiate(k);
     return p;
 }
 
+/** @brief Return an antiderivative with respect to the selected argument. */
 template<class I, class X>
 inline Polynomial<I, X> antiderivative(Polynomial<I, X> p, SizeType k) {
     p.antidifferentiate(k);
     return p;
 }
 
+/** @brief Truncate to the supplied degree or size. */
 template<class I, class X>
 inline Polynomial<I, X> truncate(Polynomial<I, X> p, DegreeType deg) {
     p.truncate(deg);
     return p;
 }
 
+/** @brief Write the value to the output stream. */
 template<class I, class X>
 inline OutputStream& operator<<(OutputStream& os, const Polynomial<I, X>& p) {
     return p._write(os);
 }
 
+/** @brief Test whether the supplied objects have compatible characteristics. */
 template<class I, class X>
 inline Bool compatible(const Polynomial<I, X>& x1, const Polynomial<I, X>& x2) {
     return x1.argument_size() == x2.argument_size();
 }
 
+/** @brief Value paired with argument names for readable expression output. */
 template<class F>
 struct NamedArgumentRepresentation {
     const F& function;
     const List<String>& argument_names;
 };
 
+/** @brief Return a representation using the supplied argument names. */
 template<class F>
 inline NamedArgumentRepresentation<F> named_argument_repr(const F& function, const List<String>& argument_names) {
     NamedArgumentRepresentation<F> r = {function, argument_names};
     return r;
 }
 
+/** @brief Write the value to the output stream. */
 template<class I, class X>
 inline OutputStream& operator<<(OutputStream& os, const NamedArgumentRepresentation<Polynomial<I, X>>& repr) {
     return repr.function._write(os, repr.argument_names);
 }
 
+/** @brief Return the midpoint. */
 template<class I, class X>
 inline MultivariatePolynomial<MidpointType<X>> midpoint(const Polynomial<I, X>& p) {
     return MultivariatePolynomial<MidpointType<X>>(midpoint(p.expansion()));
 }
 
 // Vectorised operations
+/** @brief Evaluate at the supplied argument. */
 template<class I, class X, class A>
 Vector<A> evaluate(const Vector<Polynomial<I, X>>& p, const Vector<A>& v) {
     return Vector<A>(p.size(), [&p, v](SizeType i) { return evaluate(p[i], v); });
 }
 
+/** @brief Return the derivative with respect to the selected argument. */
 template<class I, class X>
 Vector<Polynomial<I, X>> derivative(const Vector<Polynomial<I, X>>& p, SizeType j) {
     return Vector<Polynomial<I, X>>(p.size(), [&p, j](SizeType i) { return derivative(p[i], j); });
 }
 
+/** @brief Return an antiderivative with respect to the selected argument. */
 template<class I, class X>
 Vector<Polynomial<I, X>> antiderivative(const Vector<Polynomial<I, X>>& p, SizeType j) {
     return Vector<Polynomial<I, X>>(p.size(), [&p, j](SizeType i) { return antiderivative(p[i], j); }, p.element_characteristics());
 }
 
+/** @brief Truncate to the supplied degree or size. */
 template<class I, class X>
 Vector<Polynomial<I, X>> truncate(const Vector<Polynomial<I, X>>& p, DegreeType d) {
     return Vector<Polynomial<I, X>>(p.size(), [&p, d](SizeType i) { return truncate(p[i], d); }, characteristics(truncate(p.zero_element(), d)));
 }
 
+/** @brief Return the midpoint. */
 template<class I, class X>
 Vector<MultivariatePolynomial<MidpointType<X>>> midpoint(const Vector<Polynomial<I, X>>& p) {
     return Vector<Polynomial<I, X>>(p.size(), [&p](SizeType i) { return midpoint(p[i]); });

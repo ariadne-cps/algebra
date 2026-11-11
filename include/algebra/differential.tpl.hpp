@@ -52,7 +52,9 @@ class Expansion;
 template<class X>
 class Differential;
 
+/** @brief Return the minimum of the operands. */
 inline DegreeType min(DegreeType d1, DegreeType d2) { return std::min(d1, d2); }
+/** @brief Return the maximum of the operands. */
 inline DegreeType max(DegreeType d1, DegreeType d2) { return std::max(d1, d2); }
 
 // template<class X> Differential<X>::Differential() : _expansion(0), _degree(0) { }
@@ -606,6 +608,7 @@ Differential<X> AlgebraOperations<Differential<X>>::apply(Abs, const Differentia
     return decide(x.value() > 0) ? pos(x) : neg(x);
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X>
 Differential<X> _evaluate(const Differential<X>& x, const Vector<Differential<X>>& a) {
     ARIADNE_PRECONDITION_MSG(x.argument_size() == a.size(), "x=" << x << " a=" << a);
@@ -740,6 +743,7 @@ Differential<X> Differential<X>::_antiderivative(const Differential<X>& x, SizeT
     return r;
 }
 
+/** @brief Write the indexed coefficient expansion. */
 template<class X>
 OutputStream& write_expansion(OutputStream& os, const Differential<X>& dx) {
     Expansion<MultiIndex, X> e = dx.expansion();

@@ -31,6 +31,7 @@
 
 namespace Ariadne {
 
+/** @brief Construct a zero object with compatible characteristics. */
 template<class X>
 inline X create_zero();
 
@@ -57,6 +58,7 @@ Matrix<X>::Matrix(InitializerList<InitializerList<X>> lst)
     }
 }
 
+/** @brief Join the operands in their natural order. */
 template<class X>
 Matrix<X> join(const Matrix<X>& A1, const Matrix<X>& A2) {
     ARIADNE_PRECONDITION(A1.column_size() == A2.column_size());
@@ -75,6 +77,7 @@ Matrix<X> join(const Matrix<X>& A1, const Matrix<X>& A2) {
     return R;
 }
 
+/** @brief Join the operands in their natural order. */
 template<class X>
 Matrix<X> join(const Matrix<X>& A1, const Covector<X>& u2) {
     ARIADNE_PRECONDITION(A1.column_size() == u2.size());
@@ -91,6 +94,7 @@ Matrix<X> join(const Matrix<X>& A1, const Covector<X>& u2) {
     return R;
 }
 
+/** @brief Join the operands in their natural order. */
 template<class X>
 Matrix<X> join(const Covector<X>& u1, const Matrix<X>& A2) {
     ARIADNE_PRECONDITION(u1.size() == A2.column_size());
@@ -106,6 +110,7 @@ Matrix<X> join(const Covector<X>& u1, const Matrix<X>& A2) {
     return R;
 }
 
+/** @brief Join the operands along the complementary matrix dimension. */
 template<class X>
 Matrix<X> cojoin(const Matrix<X>& A1, const Matrix<X>& A2) {
     ARIADNE_PRECONDITION(A1.row_size() == A2.row_size());
@@ -122,6 +127,7 @@ Matrix<X> cojoin(const Matrix<X>& A1, const Matrix<X>& A2) {
     return R;
 }
 
+/** @brief Join the operands along the complementary matrix dimension. */
 template<class X>
 Matrix<X> cojoin(const Matrix<X>& A1, const Vector<X>& v2) {
     ARIADNE_PRECONDITION(A1.row_size() == v2.size());
@@ -136,6 +142,7 @@ Matrix<X> cojoin(const Matrix<X>& A1, const Vector<X>& v2) {
     return R;
 }
 
+/** @brief Join the operands along the complementary matrix dimension. */
 template<class X>
 Matrix<X> cojoin(const Vector<X>& v1, const Matrix<X>& A2) {
     ARIADNE_PRECONDITION(v1.size() == A2.row_size());
@@ -149,6 +156,7 @@ Matrix<X> cojoin(const Vector<X>& v1, const Matrix<X>& A2) {
     return R;
 }
 
+/** @brief Return the supremum norm. */
 template<class X>
 decltype(mag(declval<X>())) sup_norm(const Matrix<X>& A) {
     typedef decltype(mag(declval<X>())) R;
@@ -165,6 +173,7 @@ decltype(mag(declval<X>())) sup_norm(const Matrix<X>& A) {
     return result;
 }
 
+/** @brief Return the logarithmic matrix norm. */
 template<class X>
 decltype(declval<X>() + mag(declval<X>())) log_norm(const Matrix<X>& A) {
     ARIADNE_PRECONDITION(A.row_size() == A.column_size());
@@ -183,6 +192,7 @@ decltype(declval<X>() + mag(declval<X>())) log_norm(const Matrix<X>& A) {
     return r;
 }
 
+/** @brief Compute the matrix inverse using LU decomposition. */
 template<class X>
 Matrix<X>
     lu_inverse(const Matrix<X>& M) {
@@ -276,26 +286,31 @@ Matrix<Bounds<X>> gs_solve_bounds(const Matrix<Bounds<X>>& A, const Matrix<Bound
 
 template<class X>
 Matrix<X> lu_solve(const Matrix<X>& A, const Matrix<X>& B);
+/** @brief Solve the linear system using Gauss–Seidel iteration. */
 template<class X>
 Matrix<X> gs_solve(const Matrix<X>& A, const Matrix<X>& B) {
     return gs_solve_bounds(A, B);
 }
+/** @brief Solve the linear system using the diagonally dominant solver. */
 template<class X>
 Matrix<X> dd_solve(const Matrix<X>& A, const Matrix<X>& B) {
     return gs_solve_bounds(A, B);
 }
 
+/** @brief Solve the linear system using LU decomposition. */
 template<class X>
 Matrix<X> lu_solve(const Matrix<X>& A, const Matrix<X>& B) {
     return lu_inverse(A) * B;
 }
 
+/** @brief Solve the linear system using LU decomposition. */
 template<class X>
 Vector<X> lu_solve(const Matrix<X>& A, const Vector<X>& b) {
     return lu_inverse(A) * b;
 }
 
 // Find a starting solution for a diagonally dominant system
+/** @brief Enclose the solution using the diagonally dominant solver. */
 template<class X>
 Matrix<Bounds<X>> dd_solve_bounds(const Matrix<Bounds<X>>& A, const Matrix<Bounds<X>>& B) {
     const SizeType n = B.row_size();
@@ -329,6 +344,7 @@ Matrix<Bounds<X>> dd_solve_bounds(const Matrix<Bounds<X>>& A, const Matrix<Bound
     return R;
 }
 
+/** @brief Perform one Gauss–Seidel iteration step. */
 template<class X>
 Void gs_step(const Matrix<Bounds<X>>& A, const Vector<Bounds<X>>& b, Vector<Bounds<X>>& x) {
     // Perform Gauss-Seidel iteration
@@ -348,6 +364,7 @@ Void gs_step(const Matrix<Bounds<X>>& A, const Vector<Bounds<X>>& b, Vector<Boun
     }
 }
 
+/** @brief Enclose the solution using Gauss–Seidel iteration. */
 template<class X>
 Matrix<Bounds<X>> gs_solve_bounds(const Matrix<Bounds<X>>& A, const Matrix<Bounds<X>>& B) {
     ARIADNE_ASSERT(A.row_size() == A.column_size());
@@ -393,6 +410,7 @@ Matrix<Bounds<X>> gs_solve_bounds(const Matrix<Bounds<X>>& A, const Matrix<Bound
     return R;
 }
 
+/** @brief Solve the linear system using Gauss–Seidel iteration. */
 template<class X>
 Vector<X> gs_solve(const Matrix<X>& A, const Vector<X>& b) {
     X bz = b.zero_element();
@@ -408,21 +426,26 @@ Vector<X> gs_solve(const Matrix<X>& A, const Vector<X>& b) {
     return r;
 }
 
+/** @brief Compute an inverse using the Gauss–Seidel iteration. */
 template<class X>
 Matrix<X> gs_inverse(const Matrix<X>& A) {
     return gs_solve(A, Matrix<X>::identity(A.row_size(), A.zero_element()));
 }
 
+/** @brief Return the inverse. */
 template<class X>
 Matrix<ArithmeticType<X>> inverse(const Matrix<X>& A) {
     return lu_inverse(A);
 }
 
+/** @brief Enclose the inverse of a double-precision matrix. */
 template<>
 Matrix<FloatDPBounds> inverse<FloatDP>(const Matrix<FloatDP>& A);
+/** @brief Enclose the inverse of a matrix with double-precision interval entries. */
 template<>
 Matrix<FloatDPBounds> inverse<FloatDPBounds>(const Matrix<FloatDPBounds>& A);
 
+/** @brief Solve the linear system. */
 template<class X1, class X2>
 Matrix<ArithmeticType<X1, X2>> solve(const Matrix<X1>& A, const Matrix<X2>& B) {
     // return inverse(A)*B;
@@ -430,14 +453,17 @@ Matrix<ArithmeticType<X1, X2>> solve(const Matrix<X1>& A, const Matrix<X2>& B) {
     return Ainv * B;
 }
 
+/** @brief Solve the linear system. */
 template<>
 Matrix<FloatDPBounds> solve(const Matrix<FloatDPBounds>& A, const Matrix<FloatDPBounds>& B);
 
+/** @brief Solve the linear system. */
 template<class X1, class X2>
 Vector<ArithmeticType<X1, X2>> solve(const Matrix<X1>& A, const Vector<X2>& b) {
     return lu_inverse(A) * b;
 }
 
+/** @brief Solve the linear system. */
 template<class X>
 Matrix<X>
     solve(const PLUMatrix<X>& A, const Matrix<X>& B) {
@@ -496,6 +522,7 @@ Matrix<X>
     }
 }
 
+/** @brief Return the product. */
 template<class X>
 Matrix<X> operator*(PivotMatrix P, Matrix<X> A) {
     for (SizeType i = 0; i != A.row_size(); ++i) {
@@ -510,6 +537,7 @@ Matrix<X> operator*(PivotMatrix P, Matrix<X> A) {
 }
 
 // Compute the vector of row norms (sums of absolute values) of A
+/** @brief Return the norms of the matrix rows. */
 template<class X>
 Vector<RowNormType<X>>
     row_norms(const Matrix<X>& A) {
@@ -529,6 +557,7 @@ Vector<RowNormType<X>>
 
 // Scale the rows of A to each have sum of absolute values less than or equal to one
 // FIXME: This code is inherantly approximate and relies on changing the rounding mode
+/** @brief Scale matrix rows to the normalization used by the solver. */
 template<class X>
 Void normalise_rows(Matrix<X>& A) {
     const SizeType m = A.row_size();
@@ -554,6 +583,7 @@ Void normalise_rows(Matrix<X>& A) {
 
 // Returns a pivot P and matrices L and U such that L is unit lower-triangular,
 // U is upper-trianguler and A=PLU.
+/** @brief Compute the triangular matrix decomposition. */
 template<class X>
 Tuple<PivotMatrix, Matrix<X>, Matrix<X>>
     triangular_decomposition(const Matrix<X>& A) {
@@ -617,6 +647,7 @@ Tuple<PivotMatrix, Matrix<X>, Matrix<X>>
 // Use Householder transformation H=I-vv' where v=u/|u|
 // and u=a +/- |a|e with a and e the working column of A
 // and corresponding unit vector.
+/** @brief Return the triangular factor of the matrix decomposition. */
 template<class X>
 Tuple<Matrix<X>, PivotMatrix>
     triangular_factor(const Matrix<X>& A) {
@@ -721,6 +752,7 @@ Tuple<Matrix<X>, PivotMatrix>
 // orthogonal rows, and such that the row absolute value sums of the inverse of
 // T are at most 1. Then the image of the unit box under the matrix T is
 // an over-approximation of the unit box.
+/** @brief Return the triangular multiplier used in elimination. */
 template<class X>
 Matrix<X>
     triangular_multiplier(const Matrix<X>& A) {
@@ -766,6 +798,7 @@ Matrix<X>
     return T;
 }
 
+/** @brief Return the permutation matrix representing the pivots. */
 template<class X>
 Matrix<X> pivot_matrix(const Array<SizeType>& pv) {
     const SizeType n = pv.size();
@@ -792,6 +825,7 @@ PivotMatrix::operator Matrix<X>() const {
 // matrix Q is built up as a composition of elementary Householder
 // transformations H=I-vv' with |v|=1. Note that inv(H)=H'=H. The vector v is
 // chosen to be a multiple of the first working column of A.
+/** @brief Compute the orthogonal matrix decomposition. */
 template<class X>
 Tuple<Matrix<X>, Matrix<X>, PivotMatrix>
     orthogonal_decomposition(const Matrix<X>& A, Bool allow_pivoting) {
@@ -915,18 +949,22 @@ Tuple<Matrix<X>, Matrix<X>, PivotMatrix>
 
 namespace {
 // TODO: Move these operations to VectorExpression
+/** @brief Return the product. */
 template<class X>
 inline decltype(auto) operator*(const SelfType<X>& s, MatrixColumn<Matrix<X>> v) {
     return s * Vector<X>(v);
 }
+/** @brief Return the product. */
 template<class X>
 inline decltype(auto) operator*(MatrixColumn<Matrix<X>> v, const SelfType<X>& s) {
     return Vector<X>(v) * s;
 }
+/** @brief Return the quotient. */
 template<class X>
 inline decltype(auto) operator/(MatrixColumn<Matrix<X>> v, const SelfType<X>& s) {
     return Vector<X>(v) / s;
 }
+/** @brief Add the operand in place. */
 template<class X>
 inline MatrixColumn<Matrix<X>> operator+=(MatrixColumn<Matrix<X>> c, const Vector<SelfType<X>>& v) {
     for (SizeType i = 0; i != c.size(); ++i) {
@@ -934,6 +972,7 @@ inline MatrixColumn<Matrix<X>> operator+=(MatrixColumn<Matrix<X>> c, const Vecto
     }
     return c;
 }
+/** @brief Subtract the operand in place. */
 template<class X>
 inline MatrixColumn<Matrix<X>> operator-=(MatrixColumn<Matrix<X>> c, const Vector<SelfType<X>>& v) {
     for (SizeType i = 0; i != c.size(); ++i) {
@@ -941,6 +980,7 @@ inline MatrixColumn<Matrix<X>> operator-=(MatrixColumn<Matrix<X>> c, const Vecto
     }
     return c;
 }
+/** @brief Multiply by the operand in place. */
 template<class X>
 inline MatrixColumn<Matrix<X>> operator*=(MatrixColumn<Matrix<X>> c, const SelfType<X>& s) {
     for (SizeType i = 0; i != c.size(); ++i) {
@@ -948,6 +988,7 @@ inline MatrixColumn<Matrix<X>> operator*=(MatrixColumn<Matrix<X>> c, const SelfT
     }
     return c;
 }
+/** @brief Divide by the operand in place. */
 template<class X>
 inline MatrixColumn<Matrix<X>> operator/=(MatrixColumn<Matrix<X>> c, const SelfType<X>& s) {
     for (SizeType i = 0; i != c.size(); ++i) {
@@ -955,20 +996,24 @@ inline MatrixColumn<Matrix<X>> operator/=(MatrixColumn<Matrix<X>> c, const SelfT
     }
     return c;
 }
+/** @brief Return the scalar product of the operands. */
 template<class X>
 inline decltype(auto) dot(MatrixColumn<Matrix<X>> v1, MatrixColumn<Matrix<X>> v2) {
     return dot(Vector<X>(v1), Vector<X>(v2));
 }
+/** @brief Return the Euclidean norm. */
 template<class X>
 inline decltype(auto) two_norm(MatrixColumn<Matrix<X>> v) {
     return two_norm(Vector<X>(v));
 }
+/** @brief Return the selected matrix column. */
 template<class X>
 MatrixColumn<Matrix<X>> column(Matrix<X>& A, SizeType j) {
     return MatrixColumn<Matrix<X>>(A, j);
 }
 } // namespace
 
+/** @brief Orthogonalize the matrix vectors using Gram–Schmidt. */
 template<class X>
 Tuple<Matrix<X>, Matrix<X>>
     gram_schmidt_orthogonalisation(const Matrix<X>& A) {
@@ -1071,6 +1116,7 @@ Tuple<Matrix<X>, Matrix<X>>
     return std::make_tuple(O, R);
 }
 
+/** @brief Return the midpoint. */
 template<class X>
 Matrix<MidpointType<X>> midpoint(const Matrix<X>& A) {
     Matrix<MidpointType<X>> R(A.row_size(), A.column_size(), midpoint(A.zero_element()));
@@ -1082,6 +1128,7 @@ Matrix<MidpointType<X>> midpoint(const Matrix<X>& A) {
     return R;
 }
 
+/** @brief Convert to the singleton representation. */
 template<class X>
 Matrix<SingletonType<X>> cast_singleton(const Matrix<X>& A) {
     Matrix<SingletonType<X>> R(A.row_size(), A.column_size(), cast_singleton(A.zero_element()));
@@ -1093,6 +1140,7 @@ Matrix<SingletonType<X>> cast_singleton(const Matrix<X>& A) {
     return R;
 }
 
+/** @brief Convert to the exact representation. */
 template<class X>
 Matrix<ExactType<X>> cast_exact(const Matrix<X>& A) {
     Matrix<ExactType<X>> R(A.row_size(), A.column_size(), cast_exact(A.zero_element()));

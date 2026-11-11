@@ -51,6 +51,7 @@ namespace Ariadne {
 template<class X, class A>
 ArithmeticType<X, A> horner_evaluate(const Expansion<MultiIndex, X>& e, const Vector<A>& x);
 
+/** @brief Evaluate the polynomial using Horner nesting. */
 template<class X, class Y>
 ArithmeticType<X, Y> horner_evaluate(const Expansion<MultiIndex, X>& e, const Vector<Y>& x) {
     typedef typename Expansion<MultiIndex, X>::ConstIterator ConstIterator;
@@ -127,6 +128,7 @@ ArithmeticType<X, Y> horner_evaluate(const Expansion<MultiIndex, X>& e, const Ve
     return t;
 }
 
+/** @brief Evaluate the polynomial using Horner nesting. */
 template<class X, class Y>
 ArithmeticType<X, Y> horner_evaluate(const Expansion<UniIndex, X>& e, const Y& x) {
     typedef ArithmeticType<X, Y> R;
@@ -165,6 +167,7 @@ ArithmeticType<X, Y> horner_evaluate(const Expansion<UniIndex, X>& e, const Y& x
     return r;
 }
 
+/** @brief Evaluate the polynomial using explicit powers of the arguments. */
 template<class X, class Y>
 ArithmeticType<X, Y> power_evaluate(const Expansion<MultiIndex, X>& e, const Vector<Y>& y) {
     typedef ArithmeticType<X, Y> R;
@@ -191,16 +194,19 @@ ArithmeticType<X, Y> power_evaluate(const Expansion<MultiIndex, X>& e, const Vec
     return r;
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X, class Y>
 ArithmeticType<X, Y> evaluate(const Expansion<MultiIndex, X>& e, const Vector<Y>& y) {
     return power_evaluate(e, y);
 }
 
+/** @brief Evaluate by directly summing the stored terms. */
 template<class X, class Y>
 ArithmeticType<X, Y> simple_evaluate(const Expansion<MultiIndex, X>& e, const Vector<Y>& y) {
     return power_evaluate(e, y);
 }
 
+/** @brief Evaluate at the supplied argument. */
 template<class X, class Y>
 Vector<ArithmeticType<X, Y>> evaluate(const Vector<Expansion<MultiIndex, X>>& x, const Vector<Y>& y) {
     Vector<Y> r(x.size(), y.zero_element());

@@ -47,8 +47,10 @@ using ProductType = decltype(declval<X1>() * declval<X2>());
 template<class X1, class X2>
 using QuotientType = decltype(declval<X1>() / declval<X2>());
 
+/** @brief Lazy expression representing vector operations. */
 template<class V>
 struct VectorExpression : Object<V> {};
+/** @brief Common representation base for vector objects. */
 template<class V>
 struct VectorObject : VectorExpression<V> {};
 
@@ -59,11 +61,17 @@ struct Vector : VectorObject<Vector<X>> {
 
   public:
     typedef X ScalarType;
+    /** @brief Construct a \c Vector with the specified characteristics. */
     Vector() : _zero(), _ary() {}
+    /** @brief Construct a \c Vector from n. */
     Vector(SizeType n) : _zero(), _ary(n) {}
+    /** @brief Construct a \c Vector from n, x. */
     Vector(SizeType n, const X& x) : _zero(x * 0), _ary(n, x) {}
+    /** @brief Construct a \c Vector from ary. */
     Vector(Array<X> ary) : _zero(*ary.begin() * 0), _ary(std::move(ary)) {}
+    /** @brief Construct a \c Vector from lst. */
     Vector(InitializerList<X> lst) : _zero(X(0)), _ary(lst.begin(), lst.end()) {}
+    /** @brief Copy-construct the object from the supplied instance. */
     template<class V>
     Vector(const VectorExpression<V>& ve) : _zero(ve.upcast().zero_element()), _ary(ve.upcast().size(), _zero) {
         const V& v = ve.upcast();
@@ -71,6 +79,7 @@ struct Vector : VectorObject<Vector<X>> {
             this->_ary[i] = v[i];
         }
     }
+    /** @brief Assign the supplied value and return this object. */
     template<class V>
     Vector<X>& operator=(const VectorExpression<V>& ve) {
         const V& v = ve.upcast();
@@ -80,12 +89,19 @@ struct Vector : VectorObject<Vector<X>> {
         }
         return *this;
     }
+    /** @brief Return the number of elements. */
     SizeType size() const { return _ary.size(); }
+    /** @brief Return the selected element or component. */
     const X& operator[](SizeType i) const { return _ary.at(i); }
+    /** @brief Return the selected element or component. */
     X& operator[](SizeType i) { return _ary.at(i); }
+    /** @brief Return the element at the specified index. */
     const X& at(SizeType i) const { return _ary.at(i); }
+    /** @brief Return the element at the specified index. */
     X& at(SizeType i) { return _ary.at(i); }
+    /** @brief Return a zero with the element characteristics. */
     X zero_element() const { return _zero; }
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 };
 template<class X>
@@ -98,11 +114,13 @@ OutputStream& Vector<X>::_write(OutputStream& os) const {
     }
     return os << "}";
 }
+/** @brief Write the value to the output stream. */
 template<class X>
 OutputStream& operator<<(OutputStream& os, const Vector<X>& v) {
     return v._write(os);
 }
 
+/** @brief Write the value to the output stream. */
 template<class V>
 OutputStream& operator<<(OutputStream& os, const VectorExpression<V>& ve) {
     const V& v = ve.upcast();
@@ -110,6 +128,7 @@ OutputStream& operator<<(OutputStream& os, const VectorExpression<V>& ve) {
     return os << Vector<X>(v);
 }
 
+/** @brief Test equality of the operands. */
 template<class V1, class V2>
 auto operator==(const VectorExpression<V1>& ve1, const VectorExpression<V2>& ve2)
     -> decltype(ve1.upcast()[0] == ve2.upcast()[0]) {
@@ -122,41 +141,55 @@ auto operator==(const VectorExpression<V1>& ve1, const VectorExpression<V2>& ve2
     return r;
 }
 
+/** @brief Test inequality of the operands. */
 template<class V1, class V2>
 auto operator!=(const VectorExpression<V1>& ve1, const VectorExpression<V2>& ve2)
     -> decltype(!(ve1 == ve2)) {
     return !(ve1 == ve2);
 }
 
+/** @brief Return the sum or unary positive value. */
 template<class V>
 inline const V& operator+(const VectorExpression<V>& v) {
     return v.upcast();
 }
 
+/** @brief Lazy expression for the additive inverse of a vector. */
 template<class V>
 struct VectorNegation : VectorExpression<VectorNegation<V>> {
     typedef NegationType<typename V::ScalarType> ScalarType;
     const V& _v;
+    /** @brief Construct a \c VectorNegation from v. */
     VectorNegation(const V& v) : _v(v) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _v.size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return -_v.zero_element(); }
+    /** @brief Return the selected element or component. */
     ScalarType operator[](SizeType i) const { return -_v[i]; }
 };
+/** @brief Return the difference or additive inverse. */
 template<class V>
 inline VectorNegation<V> operator-(const VectorExpression<V>& v) {
     return VectorNegation<V>(v.upcast());
 }
 
+/** @brief Lazy expression for the sum of vectors. */
 template<class V1, class V2>
 struct VectorSum : VectorExpression<VectorSum<V1, V2>> {
     typedef SumType<typename V1::ScalarType, typename V2::ScalarType> ScalarType;
     const V1& _v1;
     const V2& _v2;
+    /** @brief Construct a \c VectorSum from v1, v2. */
     VectorSum(const V1& v1, const V2& v2) : _v1(v1), _v2(v2) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _v1.size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return _v1.zero_element() + _v2.zero_element(); }
+    /** @brief Return the selected element or component. */
     ScalarType operator[](SizeType i) const { return _v1[i] + _v2[i]; }
 };
+/** @brief Return the sum or unary positive value. */
 template<class V1, class V2>
 inline VectorSum<V1, V2> operator+(const VectorExpression<V1>& ve1, const VectorExpression<V2>& ve2) {
     const V1& v1 = ve1.upcast();
@@ -165,6 +198,7 @@ inline VectorSum<V1, V2> operator+(const VectorExpression<V1>& ve1, const Vector
     return VectorSum<V1, V2>(v1, v2);
 }
 
+/** @brief Add the operand in place. */
 template<class X, class XX>
 inline Vector<X>& operator+=(const Vector<X>& v1, const Vector<XX>& v2) {
     ARIADNE_PRECONDITION(v1.size() == v2.size());
@@ -174,16 +208,22 @@ inline Vector<X>& operator+=(const Vector<X>& v1, const Vector<XX>& v2) {
     return v1;
 }
 
+/** @brief Lazy expression for the difference of vectors. */
 template<class V1, class V2>
 struct VectorDifference : VectorExpression<VectorDifference<V1, V2>> {
     typedef DifferenceType<typename V1::ScalarType, typename V2::ScalarType> ScalarType;
     const V1& _v1;
     const V2& _v2;
+    /** @brief Construct a \c VectorDifference from v1, v2. */
     VectorDifference(const V1& v1, const V2& v2) : _v1(v1), _v2(v2) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _v1.size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return _v1.zero_element() - _v2.zero_element(); }
+    /** @brief Return the selected element or component. */
     ScalarType operator[](SizeType i) const { return _v1[i] - _v2[i]; }
 };
+/** @brief Return the difference or additive inverse. */
 template<class V1, class V2>
 inline VectorDifference<V1, V2> operator-(const VectorExpression<V1>& ve1, const VectorExpression<V2>& ve2) {
     const V1& v1 = ve1.upcast();
@@ -192,6 +232,7 @@ inline VectorDifference<V1, V2> operator-(const VectorExpression<V1>& ve1, const
     return VectorDifference<V1, V2>(v1, v2);
 }
 
+/** @brief Subtract the operand in place. */
 template<class X, class XX>
 inline Vector<X>& operator-=(const Vector<X>& v1, const Vector<XX>& v2) {
     ARIADNE_PRECONDITION(v1.size() == v2.size());
@@ -201,25 +242,33 @@ inline Vector<X>& operator-=(const Vector<X>& v1, const Vector<XX>& v2) {
     return v1;
 }
 
+/** @brief Lazy expression for a vector multiplied by a scalar. */
 template<class V1, class X2>
 struct VectorScalarProduct : VectorExpression<VectorScalarProduct<V1, X2>> {
     typedef ProductType<typename V1::ScalarType, X2> ScalarType;
     const V1& _v1;
     const X2& _x2;
+    /** @brief Construct a \c VectorScalarProduct from v1, x2. */
     VectorScalarProduct(const V1& v1, const X2& x2) : _v1(v1), _x2(x2) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _v1.size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return _v1.zero_element() * _x2; }
+    /** @brief Return the selected element or component. */
     ScalarType operator[](SizeType i) const { return _v1[i] * _x2; }
 };
+/** @brief Return the product. */
 template<class X1, class V2>
 inline VectorScalarProduct<V2, X1> operator*(const ScalarObject<X1>& x1, const VectorExpression<V2>& v2) {
     return VectorScalarProduct<V2, X1>(v2.upcast(), x1.upcast());
 }
+/** @brief Return the product. */
 template<class V1, class X2>
 inline VectorScalarProduct<V1, X2> operator*(const VectorExpression<V1>& v1, const ScalarObject<X2>& x2) {
     return VectorScalarProduct<V1, X2>(v1.upcast(), x2.upcast());
 }
 
+/** @brief Multiply by the operand in place. */
 template<class X>
 inline Vector<X>& operator*=(const Vector<X>& v, const typename Vector<X>::ScalarType& s) {
     for (SizeType i = 0; i != v.size(); ++i) {
@@ -228,16 +277,22 @@ inline Vector<X>& operator*=(const Vector<X>& v, const typename Vector<X>::Scala
     return v;
 }
 
+/** @brief Lazy expression for a vector divided by a scalar. */
 template<class V1, class X2>
 struct VectorScalarQuotient : VectorExpression<VectorScalarQuotient<V1, X2>> {
     typedef QuotientType<typename V1::ScalarType, X2> ScalarType;
     const V1& _v1;
     const X2& _x2;
+    /** @brief Construct a \c VectorScalarQuotient from v1, x2. */
     VectorScalarQuotient(const V1& v1, const X2& x2) : _v1(v1), _x2(x2) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _v1.size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return _v1.zero_element() / _x2; }
+    /** @brief Return the selected element or component. */
     ScalarType operator[](SizeType i) const { return _v1[i] / _x2; }
 };
+/** @brief Return the quotient. */
 template<class V1, class X2>
 inline VectorScalarQuotient<V1, X2> operator/(const VectorExpression<V1>& v1, const ScalarObject<X2>& x2) {
     return VectorScalarQuotient<V1, X2>(v1.upcast(), x2.upcast());
@@ -246,6 +301,7 @@ inline VectorScalarQuotient<V1, X2> operator/(const VectorExpression<V1>& v1, co
 template<class V>
 using ScalarType = typename V::ScalarType;
 
+/** @brief Return the norm. */
 template<class X>
 inline auto norm(const Vector<X>& v) -> decltype(abs(declval<X>())) {
     decltype(abs(declval<X>())) r = 0u;
@@ -255,6 +311,7 @@ inline auto norm(const Vector<X>& v) -> decltype(abs(declval<X>())) {
     return r;
 }
 
+/** @brief Return the supremum norm. */
 template<class X>
 inline auto sup_norm(const Vector<X>& v) -> decltype(mag(declval<X>())) {
     decltype(mag(declval<X>())) r = 0u;
@@ -264,6 +321,7 @@ inline auto sup_norm(const Vector<X>& v) -> decltype(mag(declval<X>())) {
     return r;
 }
 
+/** @brief Return the scalar product of the operands. */
 template<class X1, class X2>
 inline auto dot(const Vector<X1>& v1, const Vector<X2>& v2) -> decltype(v1[0] * v2[0]) {
     ARIADNE_PRECONDITION(v1.size() == v2.size());
@@ -274,6 +332,7 @@ inline auto dot(const Vector<X1>& v1, const Vector<X2>& v2) -> decltype(v1[0] * 
     return r;
 }
 
+/** @brief Return the scalar product of the operands. */
 template<class V1, class V2>
 inline auto dot(const VectorExpression<V1>& ve1, const VectorExpression<V2>& ve2)
     -> decltype(ve1.upcast()[0] * ve2.upcast()[0]) {
@@ -301,6 +360,7 @@ template<class V1, class V2> inline auto join(const VectorExpression<V1>& ve1, c
 }
 */
 
+/** @brief Join the operands in their natural order. */
 template<class V1, class V2>
     requires Same<ScalarType<V1>, ScalarType<V2>>
 Vector<ScalarType<V1>>
@@ -325,6 +385,7 @@ Vector<ScalarType<V1>>
     return r;
 }
 
+/** @brief Join the operands in their natural order. */
 template<class V1, class V2, class V3>
     requires AllSame<ScalarType<V1>, ScalarType<V2>, ScalarType<V3>>
 Vector<ScalarType<V1>> join(const VectorExpression<V1>& ve1, const VectorExpression<V2>& ve2, const VectorExpression<V3>& ve3) {
@@ -346,6 +407,7 @@ Vector<ScalarType<V1>> join(const VectorExpression<V1>& ve1, const VectorExpress
     return r;
 }
 
+/** @brief Join the operands in their natural order. */
 template<class V1, class X2>
     requires Same<ScalarType<V1>, X2>
 Vector<ScalarType<V1>> join(const VectorExpression<V1>& ve1, const ScalarObject<X2>& xe2) {
@@ -361,6 +423,7 @@ Vector<ScalarType<V1>> join(const VectorExpression<V1>& ve1, const ScalarObject<
     return r;
 }
 
+/** @brief Join the operands in their natural order. */
 template<class V1, class V2, class X3>
     requires AllSame<ScalarType<V1>, ScalarType<V2>, X3>
 Vector<ScalarType<V1>> join(const VectorExpression<V1>& ve1, const VectorExpression<V2>& ve2, const ScalarObject<X3>& xe3) {
@@ -386,12 +449,19 @@ struct Covector {
     Array<X> _ary;
 
   public:
+    /** @brief Construct a \c Covector from n. */
     Covector(SizeType n) : _zero(), _ary(n) {}
+    /** @brief Construct a \c Covector from n, x. */
     Covector(SizeType n, const X& x) : _zero(x * 0), _ary(n, x) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _ary.size(); }
+    /** @brief Return the selected element or component. */
     const X& operator[](SizeType i) const { return _ary.at(i); }
+    /** @brief Return the selected element or component. */
     X& operator[](SizeType i) { return _ary.at(i); }
+    /** @brief Return a zero with the element characteristics. */
     X zero_element() const { return _zero; }
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 };
 template<class X>
@@ -404,6 +474,7 @@ OutputStream& Covector<X>::_write(OutputStream& os) const {
     }
     return os << "}";
 }
+/** @brief Write the value to the output stream. */
 template<class X>
 OutputStream& operator<<(OutputStream& os, const Covector<X>& v) {
     return v._write(os);

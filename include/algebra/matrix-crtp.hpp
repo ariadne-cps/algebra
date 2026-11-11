@@ -40,37 +40,48 @@ using InitializerList = InitializerList<T>;
 
 /************ Matrix *********************************************************/
 
+/** @brief Lazy expression representing matrix operations. */
 template<class A>
 struct MatrixExpression : Object<A> {};
+/** @brief Common representation base for matrix objects. */
 template<class A>
 struct MatrixObject : MatrixExpression<A> {};
 
 template<class X>
 class Matrix;
 
+/** @brief View of a matrix row. */
 template<class M>
 class MatrixRow {
     M* _Ap;
     SizeType _i;
 
   public:
+    /** @brief Construct a \c MatrixRow from Ap, i. */
     MatrixRow(M* Ap, SizeType i) : _Ap(Ap), _i(i) {}
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType j) -> decltype(_Ap->at(_i, j)) { return _Ap->at(_i, j); }
 };
 
+/** @brief Lazy expression for a matrix-matrix product. */
 template<class X1, class X2>
 struct MatrixMatrixProduct {
     const Matrix<X1>& _a1;
     const Matrix<X2>& _a2;
+    /** @brief Construct a \c MatrixMatrixProduct from a1, a2. */
     MatrixMatrixProduct(const Matrix<X1>& a1, const Matrix<X2>& a2) : _a1(a1), _a2(a2) {}
 };
 
+/** @brief Lazy expression for a matrix-vector product. */
 template<class X1, class X2>
 struct MatrixVectorProduct : VectorExpression<MatrixVectorProduct<X1, X2>> {
     const Matrix<X1>& _A1;
     const Vector<X2>& _v2;
+    /** @brief Construct a \c MatrixVectorProduct from A1, v2. */
     MatrixVectorProduct(const Matrix<X1>& A1, const Vector<X2>& v2) : _A1(A1), _v2(v2) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _A1.row_size(); }
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType i) -> decltype(declval<X1>() * declval<X2>()) {
         decltype(declval<X1>() * declval<X2>()) r = 0;
         for (SizeType j = 0; j != _v2.size(); ++j) {
@@ -89,16 +100,25 @@ class Matrix : public MatrixObject<Matrix<X>> {
 
   public:
     typedef X ScalarType;
+    /** @brief Construct a \c Matrix from m, n. */
     Matrix(SizeType m, SizeType n);
+    /** @brief Construct a \c Matrix from m, n, x. */
     Matrix(SizeType m, SizeType n, const X& x);
+    /** @brief Construct a \c Matrix from lst. */
     Matrix(InitializerList<InitializerList<X>> lst);
+    /** @brief Construct the identity. */
     static Matrix<X> identity(SizeType n);
+    /** @brief Assign the supplied value and return this object. */
     template<class M>
     Matrix<X>& operator=(const MatrixExpression<M>& Ae);
+    /** @brief Add the operand in place. */
     template<class M>
     Matrix<X>& operator+=(const MatrixExpression<M>& Ae);
+    /** @brief Return the number of rows. */
     SizeType row_size() const { return _rs; }
+    /** @brief Return the number of columns. */
     SizeType column_size() const { return _cs; }
+    /** @brief Change the number of elements. */
     Void resize(SizeType m, SizeType n) {
         if (m * n != _rs * _cs) {
             _ary.resize(m * n);
@@ -106,17 +126,26 @@ class Matrix : public MatrixObject<Matrix<X>> {
         _rs = m;
         _cs = n;
     }
+    /** @brief Return the selected element or component. */
     MatrixRow<const Matrix<X>> operator[](SizeType i) const { return MatrixRow<const Matrix<X>>{this, i}; }
+    /** @brief Return the selected element or component. */
     MatrixRow<Matrix<X>> operator[](SizeType i) { return MatrixRow<Matrix<X>>{this, i}; }
+    /** @brief Return the element at the specified index. */
     const X& at(SizeType i, SizeType j) const { return this->_ary[i * this->_cs + j]; }
+    /** @brief Return the element at the specified index. */
     X& at(SizeType i, SizeType j) { return this->_ary[i * this->_cs + j]; }
+    /** @brief Replace the selected value. */
     Void set(SizeType i, SizeType j, const X& c) const { this->_ary[i * this->_cs + j] = c; }
+    /** @brief Return a zero with the element characteristics. */
     X zero_element() const { return _zero; }
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 
+    /** @brief Assign the supplied value and return this object. */
     Matrix<X>& operator=(const MatrixMatrixProduct<X, X>& A1mulA2);
 
   public:
+    /** @brief Return the product of the operands. */
     static Matrix<X> _mul(const Matrix<X>& A1, const Matrix<X>& A2);
 };
 
@@ -139,6 +168,7 @@ inline Matrix<X> Matrix<X>::identity(SizeType n) {
     return A;
 }
 
+/** @brief Write the value to the output stream. */
 template<class X>
 inline OutputStream& operator<<(OutputStream& os, const Matrix<X>& A) {
     return A._write(os);
@@ -183,6 +213,7 @@ Matrix<X>& Matrix<X>::operator+=(const MatrixExpression<M>& Ae) {
     return *this;
 }
 
+/** @brief Multiply the stored value by the operand in place. */
 template<class X0, class X1, class X2>
 Void _mul_assign(Matrix<X0>& A0, const Matrix<X1>& A1, const Matrix<X2>& A2) {
     for (SizeType i = 0; i != A0.row_size(); ++i) {
@@ -211,34 +242,44 @@ Matrix<X>& Matrix<X>::operator=(const MatrixMatrixProduct<X, X>& A1mulA2) {
     return *this;
 }
 
+/** @brief Return the product. */
 template<class X1, class X2>
 inline MatrixMatrixProduct<X1, X2> operator*(const Matrix<X1>& A1, const Matrix<X2>& A2) {
     return MatrixMatrixProduct<X1, X2>(A1, A2);
 }
 
+/** @brief Lazy expression for division of a matrix by a scalar. */
 template<class M1, class X2>
 struct MatrixScalarQuotient : MatrixExpression<MatrixScalarQuotient<M1, X2>> {
     const M1& _a1;
     const X2& _x2;
+    /** @brief Construct a \c MatrixScalarQuotient from a1, x2. */
     MatrixScalarQuotient(const M1& a1, const X2& x2) : _a1(a1), _x2(x2) {}
+    /** @brief Return the number of rows. */
     SizeType row_size() const { return _a1.row_size(); }
+    /** @brief Return the number of columns. */
     SizeType column_size() const { return _a1.column_size(); }
+    /** @brief Return the element at the specified index. */
     auto at(SizeType i, SizeType j) const -> decltype(_a1.at(i, j) / _x2) { return _a1.at(i, j) / _x2; }
 };
+/** @brief Return the quotient. */
 template<class M1, class X2>
 inline MatrixScalarQuotient<M1, X2> operator/(const MatrixExpression<M1>& a1, const ScalarObject<X2>& x2) {
     return MatrixScalarQuotient<M1, X2>(a1.upcast(), x2.upcast());
 }
+/** @brief Return the quotient. */
 template<class M>
 inline MatrixScalarQuotient<M, typename M::ScalarType> operator/(const MatrixExpression<M>& a1, const typename M::ScalarType& x2) {
     return MatrixScalarQuotient<M, typename M::ScalarType>(a1.upcast(), x2);
 }
 
+/** @brief Return the product. */
 template<class X1, class X2>
 inline MatrixVectorProduct<X1, X2> operator*(const Matrix<X1>& A1, const Vector<X2>& v2) {
     return MatrixVectorProduct<X1, X2>(A1, v2);
 }
 
+/** @brief Multiply by the operand in place. */
 template<class X>
 inline Matrix<X>& operator*=(Matrix<X>& A, const typename Matrix<X>::ScalarType& s) {
     for (SizeType i = 0; i != A.row_size(); ++i) {
@@ -249,6 +290,7 @@ inline Matrix<X>& operator*=(Matrix<X>& A, const typename Matrix<X>::ScalarType&
     return A;
 }
 
+/** @brief Return the supremum norm. */
 template<class X>
 inline auto sup_norm(const Matrix<X>& A) -> decltype(mag(declval<X>())) {
     typedef decltype(mag(declval<X>()) + mag(declval<X>())) R;
@@ -263,6 +305,7 @@ inline auto sup_norm(const Matrix<X>& A) -> decltype(mag(declval<X>())) {
     return r;
 }
 
+/** @brief Return the logarithmic matrix norm. */
 template<class X>
 inline auto log_norm(const Matrix<X>& A) -> decltype(declval<X>() + mag(declval<X>())) {
     typedef decltype(declval<X>() + mag(declval<X>())) R;
@@ -282,6 +325,7 @@ inline auto log_norm(const Matrix<X>& A) -> decltype(declval<X>() + mag(declval<
 template<class X>
 class SymmetricMatrix : public Matrix<X> {
   public:
+    /** @brief Construct a \c SymmetricMatrix from n. */
     SymmetricMatrix(SizeType n) : Matrix<X>(n, n) {}
 };
 

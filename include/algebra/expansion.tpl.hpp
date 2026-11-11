@@ -37,12 +37,16 @@
 
 namespace Ariadne {
 
+/** @brief Return the absolute value. */
 inline double abs(double d) { return std::fabs(d); }
 
 namespace {
+/** @brief Construct zero index from the supplied arguments. */
 inline UniIndex make_zero_index(SizeOne) { return UniIndex(); }
+/** @brief Construct zero index from the supplied arguments. */
 inline MultiIndex make_zero_index(SizeType as) { return MultiIndex(as); }
 
+/** @brief Construct zero index from initializer from the supplied arguments. */
 template<class I, class A>
 I make_zero_index_from_initializer(const A& a) {
     I index(a);
@@ -78,6 +82,7 @@ template<class I, class X> Expansion<I,X>::Expansion(InitializerList<Pair<IndexI
 */
 
 namespace {
+/** @brief Return the coefficient characteristics. */
 template<class I, class X>
 CharacteristicsType<X> get_coefficient_characteristics(const InitializerList<Pair<I, X>>& lst) {
     ARIADNE_PRECONDITION(lst.size() != 0);
@@ -177,18 +182,21 @@ template<class X>
 concept HasPrecision = requires(const X& x) { x.precision(); };
 
 namespace {
+/** @brief Return the coefficient characteristics of the supplied object. */
 template<class X>
     requires HasPrecision<X>
 CharacteristicsType<X> coefficient_characteristics_of(const X& x) {
     return x.precision();
 }
 
+/** @brief Return the coefficient characteristics of the supplied object. */
 template<class X>
     requires(!HasPrecision<X> && HasCharacteristics<X>)
 CharacteristicsType<X> coefficient_characteristics_of(const X& x) {
     return Ariadne::characteristics(x);
 }
 
+/** @brief Return the coefficient characteristics of the supplied object. */
 template<class X>
     requires(!HasPrecision<X> && !HasCharacteristics<X>)
 CharacteristicsType<X> coefficient_characteristics_of(const X&) {
@@ -256,6 +264,7 @@ Void Expansion<I, X>::remove_zeros() {
 template<class X, class Y>
 concept CanInplaceAdd = requires(X& x, const Y& y) { x += y; };
 
+/** @brief Combine entries with equal indices. */
 template<class I, class X>
     requires CanInplaceAdd<X, X>
 Void combine_terms(Expansion<I, X>& e) {
@@ -276,6 +285,7 @@ Void combine_terms(Expansion<I, X>& e) {
     e.resize(static_cast<SizeType>(curr - begin));
 }
 
+/** @brief Combine entries with equal indices. */
 template<class I, class X>
     requires(!CanInplaceAdd<X, X>)
 Void combine_terms(Expansion<I, X>&) {
@@ -560,12 +570,14 @@ Bool Expansion<I, X>::is_sorted(GradedIndexLess) {
 }
 
 namespace {
+/** @brief Copy the index into the selected coordinates of a larger index. */
 inline Void copy_embedded_index(MultiIndex& new_index, const MultiIndex& old_index, SizeType before_size, SizeType old_size) {
     for (SizeType j = 0; j != old_size; ++j) {
         new_index[j + before_size] = old_index[j];
     }
 }
 
+/** @brief Copy the index into the selected coordinates of a larger index. */
 inline Void copy_embedded_index(MultiIndex& new_index, UniIndex old_index, SizeType before_size, SizeOne) {
     new_index[before_size] = old_index;
 }
@@ -586,10 +598,12 @@ Expansion<MultiIndex, X> Expansion<I, X>::_embed(SizeType before_size, const Exp
     return r;
 }
 
+/** @brief Write the value to the output stream. */
 template<class X>
 inline OutputStream& operator<<(OutputStream& os, const typename UniformList<X>::Iterator&) {
     return os << "{UniformList::Iterator}";
 }
+/** @brief Write the value to the output stream. */
 template<class X>
 inline OutputStream& operator<<(OutputStream& os, const typename UniformList<X>::ConstIterator&) {
     return os << "{UniformList::ConstIterator}";
@@ -606,6 +620,7 @@ OutputStream& Expansion<I, X>::_write(OutputStream& os) const {
     return os;
 }
 
+/** @brief Write the value to the output stream. */
 inline OutputStream& write(OutputStream& os, const UniIndex& a, const String& name, bool first_factor) {
     if (a != 0) {
         if (!first_factor) {
@@ -619,6 +634,7 @@ inline OutputStream& write(OutputStream& os, const UniIndex& a, const String& na
     return os;
 }
 
+/** @brief Write the value to the output stream. */
 inline OutputStream& write(OutputStream& os, const MultiIndex& a, const Array<String>& names, bool first_factor) {
     for (SizeType j = 0; j != a.size(); ++j) {
         if (a[j] != 0) {
@@ -637,7 +653,9 @@ inline OutputStream& write(OutputStream& os, const MultiIndex& a, const Array<St
 }
 
 namespace {
+/** @brief Validate that the supplied variable names match the argument dimension. */
 inline Void check_variable_names(SizeOne, const String&) {}
+/** @brief Validate that the supplied variable names match the argument dimension. */
 inline Void check_variable_names(SizeType as, const Array<String>& names) {
     ARIADNE_PRECONDITION(as == names.size());
 }
@@ -734,7 +752,9 @@ void SortedExpansion<I, X, CMP>::sort() {
     std::sort(this->begin(), this->end(), CMP());
 }
 
+/** @brief Write the value to the output stream. */
 inline OutputStream& operator<<(OutputStream& os, GradedIndexLess) { return os << "GradedIndexLess"; }
+/** @brief Write the value to the output stream. */
 inline OutputStream& operator<<(OutputStream& os, ReverseLexicographicIndexLess) { return os << "ReverseLexicographicIndexLess"; }
 
 template<class I, class X, class CMP>

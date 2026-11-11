@@ -57,6 +57,7 @@ class Matrix;
 
 class SingularMatrixException;
 
+/** @brief Exception reporting non symmetric matrix. */
 class NonSymmetricMatrixException {};
 
 //! \ingroup LinearAlgebraSubModule
@@ -119,6 +120,7 @@ class SymmetricMatrix
     Void resize(SizeType n);
     //! \brief Get the value stored in the \a i<sup>th</sup> row and \a j<sup>th</sup> column.
     X& at(SizeType i, SizeType j);
+    /** @brief Return the element at the specified index. */
     const X& at(SizeType i, SizeType j) const;
     //! \brief Get the value stored in the \a i<sup>th</sup> row and \a j<sup>th</sup> column.
     const X& get(SizeType i, SizeType j) const;
@@ -133,40 +135,56 @@ class SymmetricMatrix
     //! \brief C-style constant subscripting operator.
     const X& operator[][](SizeType i, SizeType j) const;
 #else
+    /** @brief Return the selected element or component. */
     MatrixRow<const SymmetricMatrix<X>> operator[](SizeType i) const;
+    /** @brief Return the selected element or component. */
     MatrixRow<SymmetricMatrix<X>> operator[](SizeType i);
 #endif
     //! \brief The zero element of the field/algebra of the matrix.
     X zero_element() const;
 
   public:
+    /** @brief Write the value to the output stream. */
     template<class T>
     friend OutputStream& operator<<(OutputStream& os, const SymmetricMatrix<T>& A);
+    /** @brief Return the sum or unary positive value. */
     template<class T>
     friend SymmetricMatrix<T> operator+(const SymmetricMatrix<T>&, const SymmetricMatrix<T>&);
+    /** @brief Return the difference or additive inverse. */
     template<class T>
     friend SymmetricMatrix<T> operator-(const SymmetricMatrix<T>&, const SymmetricMatrix<T>&);
+    /** @brief Return the product. */
     template<class T>
     friend SymmetricMatrix<T> operator*(const T&, const SymmetricMatrix<T>&);
+    /** @brief Return the product. */
     template<class T>
     friend SymmetricMatrix<T> operator*(const SymmetricMatrix<T>&, const T&);
+    /** @brief Return the quotient. */
     template<class T>
     friend SymmetricMatrix<T> operator/(const SymmetricMatrix<T>&, const T&);
+    /** @brief Construct a symmetric matrix from the supplied matrix data. */
     template<class T>
     friend SymmetricMatrix<T> symmetrize(const Matrix<T>& A);
+    /** @brief Return the outer product of the operands. */
     template<class T>
     friend SymmetricMatrix<T> outer(const Matrix<T>& A);
+    /** @brief Return the symmetric matrix transformation of the supplied operands. */
     template<class T>
     friend SymmetricMatrix<T> AxTpTA(const Matrix<T>&, const SymmetricMatrix<T>&);
 
   private:
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 
+    /** @brief Materialize the supplied range or expression as a vector. */
     friend Vector<X>& to_vector(SymmetricMatrix<X>& S) { return reinterpret_cast<Vector<X>&>(S._ary); }
+    /** @brief Materialize the supplied range or expression as a vector. */
     friend const Vector<X>& to_vector(const SymmetricMatrix<X>& S) { return reinterpret_cast<const Vector<X>&>(S._ary); }
 
   private:
+    /** @brief Compute the index storage position without a full search. */
     SizeType _fast_position(SizeType i, SizeType j) const { return i * (2 * this->size() - i - 1) / 2 + j; }
+    /** @brief Find the storage position of the supplied index. */
     SizeType _position(SizeType i, SizeType j) const {
         ARIADNE_PRECONDITION(i < this->size() && j < this->size());
         if (i <= j) {
@@ -177,8 +195,10 @@ class SymmetricMatrix
     }
 };
 
+/** @brief Materialize the supplied range or expression as a vector. */
 template<class X>
 Vector<X>& to_vector(SymmetricMatrix<X>& S);
+/** @brief Materialize the supplied range or expression as a vector. */
 template<class X>
 const Vector<X>& to_vector(const SymmetricMatrix<X>& S);
 
@@ -294,6 +314,7 @@ inline X SymmetricMatrix<X>::zero_element() const {
     return _zero;
 }
 
+/** @brief Write the value to the output stream. */
 template<class X>
 inline OutputStream& operator<<(OutputStream& os, const SymmetricMatrix<X>& S) {
     return S._write(os);
@@ -318,6 +339,7 @@ OutputStream& SymmetricMatrix<X>::_write(OutputStream& os) const {
     return os << Matrix<X>(*this);
 }
 
+/** @brief Return the sum or unary positive value. */
 template<class X>
 SymmetricMatrix<X> operator+(const SymmetricMatrix<X>& S1, const SymmetricMatrix<X>& S2) {
     ARIADNE_PRECONDITION(S1.size() == S2.size());
@@ -329,6 +351,7 @@ SymmetricMatrix<X> operator+(const SymmetricMatrix<X>& S1, const SymmetricMatrix
     return R;
 }
 
+/** @brief Return the difference or additive inverse. */
 template<class X>
 SymmetricMatrix<X> operator-(const SymmetricMatrix<X>& S1, const SymmetricMatrix<X>& S2) {
     assert(S1.size() == S2.size());
@@ -340,6 +363,7 @@ SymmetricMatrix<X> operator-(const SymmetricMatrix<X>& S1, const SymmetricMatrix
     return R;
 }
 
+/** @brief Return the product. */
 template<class X>
 SymmetricMatrix<X> operator*(const X& x1, const SymmetricMatrix<X>& S2) {
     const SizeType n = S2.size();
@@ -350,6 +374,7 @@ SymmetricMatrix<X> operator*(const X& x1, const SymmetricMatrix<X>& S2) {
     return R;
 }
 
+/** @brief Return the product. */
 template<class X>
 SymmetricMatrix<X> operator*(const SymmetricMatrix<X>& S1, const X& x2) {
     const SizeType n = S1.size();
@@ -360,6 +385,7 @@ SymmetricMatrix<X> operator*(const SymmetricMatrix<X>& S1, const X& x2) {
     return R;
 }
 
+/** @brief Return the quotient. */
 template<class X>
 SymmetricMatrix<X> operator/(const SymmetricMatrix<X>& S1, const X& x2) {
     const SizeType n = S1.size();
@@ -370,6 +396,7 @@ SymmetricMatrix<X> operator/(const SymmetricMatrix<X>& S1, const X& x2) {
     return R;
 }
 
+/** @brief Return the outer product of the operands. */
 template<class X>
 SymmetricMatrix<X> outer(const Matrix<X>& A) {
     const SizeType m = A.row_size();
@@ -387,6 +414,7 @@ SymmetricMatrix<X> outer(const Matrix<X>& A) {
     return S;
 }
 
+/** @brief Return the outer product of the operands. */
 template<class X>
 SymmetricMatrix<X> outer(const SymmetricMatrix<X>& A) {
     const SizeType m = A.row_size();
@@ -404,6 +432,7 @@ SymmetricMatrix<X> outer(const SymmetricMatrix<X>& A) {
     return S;
 }
 
+/** @brief Construct a symmetric matrix from the supplied matrix data. */
 template<class X>
 SymmetricMatrix<X> symmetrize(const Matrix<X>& A) {
     ARIADNE_PRECONDITION(A.row_size() == A.column_size());

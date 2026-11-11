@@ -47,6 +47,7 @@ class Expansion;
 template<class F>
 class UnknownError;
 
+/** @brief Polymorphic interface for sweeper. */
 template<class F>
 class SweeperInterface {
     friend class Sweeper<F>;
@@ -56,24 +57,39 @@ class SweeperInterface {
     typedef typename F::PrecisionType PR;
 
   public:
+    /** @brief Destroy the object and release its owned resources. */
     virtual ~SweeperInterface() = default;
+    /** @brief Remove terms according to the configured sweeping policy. */
     inline Void sweep(Expansion<MultiIndex, Float<PR>>& p, FloatError<PR>& e) const { this->_sweep(p, e); }
+    /** @brief Remove terms according to the configured sweeping policy. */
     inline Void sweep(Expansion<MultiIndex, FloatBounds<PR>>& p, FloatError<PR>& e) const { this->_sweep(p, e); }
+    /** @brief Remove terms according to the configured sweeping policy. */
     inline Void sweep(Expansion<MultiIndex, FloatApproximation<PR>>& p) const { this->_sweep(p); }
+    /** @brief Remove terms according to the configured sweeping policy. */
     inline Void sweep(Expansion<MultiIndex, FloatUpperInterval<PR>>& p, FloatError<PR>& e) const { this->_sweep(p, e); }
+    /** @brief Return the working precision. */
     inline PR precision() const { return this->_precision(); }
 
   private:
+    /** @brief Return a dynamically allocated copy preserving the concrete type. */
     virtual SweeperInterface* _clone() const = 0;
+    /** @brief Return the working precision. */
     virtual PR _precision() const = 0;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, Float<PR>>& p, FloatError<PR>& e) const = 0;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatBounds<PR>>& p, FloatError<PR>& e) const = 0;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatApproximation<PR>>& p) const = 0;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatUpperInterval<PR>>& p, FloatError<PR>& e) const = 0;
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const = 0;
 
   public:
+    /** @brief Return a copy of the object. */
     inline SweeperInterface* _copy() const { return this->_clone(); }
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const SweeperInterface& swp) {
         swp._write(os);
         return os;
@@ -100,6 +116,7 @@ class Sweeper
   public:
     using Handle<const Interface>::Handle;
 
+    /** @brief Construct a \c Sweeper with the specified characteristics. */
     Sweeper();
 
     //! \brief The precision to which terms should be built.
@@ -112,26 +129,37 @@ class Sweeper
     inline Void sweep(Expansion<MultiIndex, FloatApproximation<PR>>& p, UnknownError<F>&) const { this->_ptr->_sweep(p); }
     //! \brief Discard terms in the expansion, adding the absolute value of the coefficient to the uniform error.
     inline Void sweep(Expansion<MultiIndex, FloatUpperInterval<PR>>& p, FloatError<PR>& e) const { this->_ptr->_sweep(p, e); }
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const Sweeper<F>& swp) { return os << *swp._ptr; }
 };
 
+/** @brief Shared configuration and construction support for coefficient sweepers. */
 template<class F>
 class SweeperBase
     : public virtual SweeperInterface<F> {
     typedef typename F::PrecisionType PR;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, Float<PR>>& p, FloatError<PR>& e) const override;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatBounds<PR>>& p, FloatError<PR>& e) const override;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatApproximation<PR>>& p) const override;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatUpperInterval<PR>>& p, FloatError<PR>& e) const override;
+    /** @brief Discard the specified terms or coordinates. */
     virtual Bool _discard(const MultiIndex& a, const F& x) const = 0;
 };
 
+/** @brief Reusable implementation of sweeper. */
 template<class SWP, class F>
 class SweeperMixin
     : public virtual SweeperBase<F> {
     typedef typename F::PrecisionType PR;
+    /** @brief Return a dynamically allocated copy preserving the concrete type. */
     virtual SweeperInterface<F>* _clone() const override final;
+    /** @brief Return the working precision. */
     virtual PR _precision() const override final;
+    /** @brief Discard the specified terms or coordinates. */
     virtual Bool _discard(const MultiIndex& a, const F& x) const override final;
 };
 
@@ -150,23 +178,33 @@ auto SweeperMixin<SWP, F>::_discard(const MultiIndex& a, const F& x) const -> Bo
     return static_cast<const SWP*>(this)->SWP::discard(a, x);
 }
 
+/** @brief Shared configuration for norm-relative coefficient sweeping. */
 template<class F>
 class RelativeSweeperBase
     : public virtual SweeperInterface<F> {
     typedef typename F::PrecisionType PR;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, Float<PR>>& p, FloatError<PR>& e) const override;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatBounds<PR>>& p, FloatError<PR>& e) const override;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatApproximation<PR>>& p) const override;
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatUpperInterval<PR>>& p, FloatError<PR>& e) const override;
+    /** @brief Discard the specified terms or coordinates. */
     virtual Bool _discard(const F& x, const F& nrm) const = 0;
 };
 
+/** @brief Reusable implementation of relative sweeper. */
 template<class SWP, class F>
 class RelativeSweeperMixin
     : public virtual RelativeSweeperBase<F> {
     typedef typename F::PrecisionType PR;
+    /** @brief Return a dynamically allocated copy preserving the concrete type. */
     virtual SweeperInterface<F>* _clone() const override final;
+    /** @brief Return the working precision. */
     virtual PR _precision() const override final;
+    /** @brief Discard the specified terms or coordinates. */
     virtual Bool _discard(const F& x, const F& nrm) const override final;
 };
 
@@ -193,15 +231,21 @@ class ThresholdSweeper : public SweeperMixin<ThresholdSweeper<F>, F> {
     F _sweep_threshold;
 
   public:
+    /** @brief Construct a \c ThresholdSweeper from precision, sweep_threshold. */
     ThresholdSweeper(PR precision, F sweep_threshold)
         : _coefficient_precision(precision), _sweep_threshold(sweep_threshold) { ARIADNE_PRECONDITION(sweep_threshold >= 0); }
+    /** @brief Construct a \c ThresholdSweeper from precision, sweep_threshold. */
     ThresholdSweeper(PR precision, ApproximateDouble sweep_threshold)
         : _coefficient_precision(precision), _sweep_threshold(cast_exact(sweep_threshold), precision) { ARIADNE_PRECONDITION(cast_exact(sweep_threshold) >= 0); }
+    /** @brief Return the working precision. */
     inline PR precision() const { return _coefficient_precision; }
+    /** @brief Return the coefficient-removal threshold. */
     inline F sweep_threshold() const { return _sweep_threshold; }
+    /** @brief Discard the specified terms or coordinates. */
     inline Bool discard(const MultiIndex&, const F& x) const { return abs(x) < this->_sweep_threshold; }
 
   private:
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const { os << "ThresholdSweeper( sweep_threshold=" << this->_sweep_threshold << " )"; };
 };
 
@@ -215,6 +259,7 @@ class DegreeThresholdSweeper : public SweeperMixin<DegreeThresholdSweeper<F>, F>
     F _high_degree_threshold;
 
   public:
+    /** @brief Construct a \c DegreeThresholdSweeper from precision, degree_cutoff, low_degree_threshold, high_degree_threshold. */
     DegreeThresholdSweeper(PR precision, DegreeType degree_cutoff,
                            F low_degree_threshold, F high_degree_threshold)
         : _coefficient_precision(precision),
@@ -224,12 +269,15 @@ class DegreeThresholdSweeper : public SweeperMixin<DegreeThresholdSweeper<F>, F>
         ARIADNE_PRECONDITION(low_degree_threshold >= 0);
         ARIADNE_PRECONDITION(high_degree_threshold >= 0);
     }
+    /** @brief Return the working precision. */
     inline PR precision() const { return _coefficient_precision; }
+    /** @brief Discard the specified terms or coordinates. */
     inline Bool discard(const MultiIndex& a, const F& x) const {
         return abs(x) < (a.degree() < _degree_cutoff ? _low_degree_threshold : _high_degree_threshold);
     }
 
   private:
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const {
         os << "DegreeThresholdSweeper( degree_cutoff=" << _degree_cutoff
            << ", low_degree_threshold=" << _low_degree_threshold
@@ -237,6 +285,7 @@ class DegreeThresholdSweeper : public SweeperMixin<DegreeThresholdSweeper<F>, F>
     }
 };
 
+/** @brief Sweeping policy discarding coefficients below a relative threshold. */
 template<class F>
 class RelativeThresholdSweeper : public RelativeSweeperMixin<RelativeThresholdSweeper<F>, F> {
     typedef PrecisionType<F> PR;
@@ -244,13 +293,18 @@ class RelativeThresholdSweeper : public RelativeSweeperMixin<RelativeThresholdSw
     F _relative_sweep_threshold;
 
   public:
+    /** @brief Construct a \c RelativeThresholdSweeper from precision, relative_sweep_threshold. */
     RelativeThresholdSweeper(PR precision, F relative_sweep_threshold)
         : _coefficient_precision(precision), _relative_sweep_threshold(relative_sweep_threshold) { ARIADNE_PRECONDITION(relative_sweep_threshold > 0); }
+    /** @brief Return the working precision. */
     inline PR precision() const { return _coefficient_precision; }
+    /** @brief Return the coefficient-removal threshold relative to the model norm. */
     inline F relative_sweep_threshold() const { return _relative_sweep_threshold; }
+    /** @brief Discard the specified terms or coordinates. */
     inline Bool discard(const F& x, const F& nrm) const { return abs(x) < mul(approx, this->_relative_sweep_threshold, nrm); }
 
   private:
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const { os << "RelativeThresholdSweeper( relative_sweep_threshold=" << this->_relative_sweep_threshold << " )"; };
 };
 
@@ -261,13 +315,19 @@ class TrivialSweeper : public SweeperMixin<TrivialSweeper<F>, F> {
     PR _coefficient_precision;
 
   public:
+    /** @brief Construct a \c TrivialSweeper from precision. */
     TrivialSweeper(PR precision) : _coefficient_precision(precision) {}
+    /** @brief Return the working precision. */
     inline PR precision() const { return _coefficient_precision; }
+    /** @brief Discard the specified terms or coordinates. */
     inline Bool discard(const MultiIndex&, const F&) const { return false; }
 
   private:
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, Float<PR>>&, FloatError<PR>&) const final {}
+    /** @brief Remove terms according to the configured sweeping policy. */
     virtual Void _sweep(Expansion<MultiIndex, FloatApproximation<PR>>&) const final {}
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const { os << "TrivialSweeper"; }
 };
 
@@ -278,11 +338,15 @@ class NullSweeper : public SweeperMixin<NullSweeper<F>, F> {
     PR _coefficient_precision;
 
   public:
+    /** @brief Construct a \c NullSweeper from precision. */
     NullSweeper(PR precision) : _coefficient_precision(precision) {}
+    /** @brief Return the working precision. */
     inline PR precision() const { return _coefficient_precision; }
+    /** @brief Discard the specified terms or coordinates. */
     inline Bool discard(const MultiIndex&, const F& x) const { return x == 0.0; }
 
   private:
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const { os << "NullSweeper"; }
 };
 
@@ -293,11 +357,15 @@ class AffineSweeper : public SweeperMixin<AffineSweeper<F>, F> {
     PR _coefficient_precision;
 
   public:
+    /** @brief Construct a \c AffineSweeper from precision. */
     AffineSweeper(PR precision) : _coefficient_precision(precision) {}
+    /** @brief Return the working precision. */
     inline PR precision() const { return _coefficient_precision; }
+    /** @brief Discard the specified terms or coordinates. */
     inline Bool discard(const MultiIndex& a, const F&) const { return a.degree() > 1; }
 
   private:
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const { os << "AffineSweeper"; }
 };
 
@@ -308,12 +376,17 @@ class GradedSweeper : public SweeperMixin<GradedSweeper<F>, F> {
     PR _coefficient_precision;
 
   public:
+    /** @brief Construct a \c GradedSweeper from precision, degree. */
     GradedSweeper(PR precision, DegreeType degree) : _coefficient_precision(precision), _degree(degree) {}
+    /** @brief Return the polynomial or expansion degree. */
     DegreeType degree() const { return this->_degree; }
+    /** @brief Return the working precision. */
     inline PR precision() const { return _coefficient_precision; }
+    /** @brief Discard the specified terms or coordinates. */
     inline Bool discard(const MultiIndex& a, const F&) const { return a.degree() > this->_degree; }
 
   private:
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const { os << "GradedSweeper( degree=" << this->_degree << " )"; }
 
   private:
@@ -328,23 +401,31 @@ class GradedThresholdSweeper : public SweeperMixin<GradedThresholdSweeper<F>, F>
     F _sweep_threshold;
 
   public:
+    /** @brief Construct a \c GradedThresholdSweeper from precision, degree, sweep_threshold. */
     GradedThresholdSweeper(PR precision, DegreeType degree, F sweep_threshold)
         : _coefficient_precision(precision), _sweep_threshold(sweep_threshold), _degree(degree) { ARIADNE_PRECONDITION(sweep_threshold >= 0); }
+    /** @brief Return the polynomial or expansion degree. */
     DegreeType degree() const { return this->_degree; }
+    /** @brief Return the coefficient-removal threshold. */
     inline F sweep_threshold() const { return _sweep_threshold; }
+    /** @brief Return the working precision. */
     inline PR precision() const { return _coefficient_precision; }
+    /** @brief Discard the specified terms or coordinates. */
     inline Bool discard(const MultiIndex& a, const F& x) const { return a.degree() > this->_degree || abs(x) < this->_sweep_threshold; }
 
   private:
+    /** @brief Write the value to the output stream. */
     virtual Void _write(OutputStream& os) const { os << "GradedThresholdSweeper( degree=" << this->_degree << ", sweep_threshold=" << this->_sweep_threshold << " )"; }
 
   private:
     DegreeType _degree;
 };
 
+/** @brief Construct a \c Sweeper with the specified characteristics. */
 template<>
 inline Sweeper<FloatDP>::Sweeper()
     : Sweeper(new ThresholdSweeper<FloatDP>(dp, std::numeric_limits<float>::epsilon())) {}
+/** @brief Construct a \c Sweeper with the specified characteristics. */
 template<>
 inline Sweeper<FloatMP>::Sweeper()
     : Sweeper(new ThresholdSweeper<FloatMP>(MultiplePrecision(64_bits), std::numeric_limits<double>::epsilon())) {}
@@ -352,18 +433,25 @@ inline Sweeper<FloatMP>::Sweeper()
 using SweeperDP = Sweeper<FloatDP>;
 using SweeperMP = Sweeper<FloatMP>;
 
+/** @brief Construct a \c ThresholdSweeper with the specified characteristics. */
 template<class PR>
 ThresholdSweeper(PR, RawFloatType<PR>) -> ThresholdSweeper<RawFloatType<PR>>;
+/** @brief Construct a \c RelativeThresholdSweeper with the specified characteristics. */
 template<class PR>
 RelativeThresholdSweeper(PR, RawFloatType<PR>) -> RelativeThresholdSweeper<RawFloatType<PR>>;
+/** @brief Construct a \c TrivialSweeper with the specified characteristics. */
 template<class PR>
 TrivialSweeper(PR) -> TrivialSweeper<RawFloatType<PR>>;
+/** @brief Construct a \c NullSweeper with the specified characteristics. */
 template<class PR>
 NullSweeper(PR) -> NullSweeper<RawFloatType<PR>>;
+/** @brief Construct a \c AffineSweeper with the specified characteristics. */
 template<class PR>
 AffineSweeper(PR) -> AffineSweeper<RawFloatType<PR>>;
+/** @brief Construct a \c GradedSweeper with the specified characteristics. */
 template<class PR>
 GradedSweeper(PR, DegreeType) -> GradedSweeper<RawFloatType<PR>>;
+/** @brief Construct a \c GradedThresholdSweeper with the specified characteristics. */
 template<class PR>
 GradedThresholdSweeper(PR, DegreeType, RawFloatType<PR>) -> GradedThresholdSweeper<RawFloatType<PR>>;
 

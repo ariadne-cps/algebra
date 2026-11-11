@@ -44,32 +44,45 @@ namespace Ariadne {
 
 using namespace PyBind11;
 
+/** @brief Compile-time Python template-name customization. */
 template<>
 struct PythonTemplateName<Sweeper> {
+    /** @brief Return the requested element or stored value. */
     static std::string get() { return "Sweeper"; }
 };
+/** @brief Compile-time Python template-name customization. */
 template<>
 struct PythonTemplateName<ThresholdSweeper> {
+    /** @brief Return the requested element or stored value. */
     static std::string get() { return "ThresholdSweeper"; }
 };
+/** @brief Compile-time Python template-name customization. */
 template<>
 struct PythonTemplateName<GradedSweeper> {
+    /** @brief Return the requested element or stored value. */
     static std::string get() { return "GradedSweeper"; }
 };
 
+/** @brief Compile-time Python class-name customization. */
 template<>
 struct PythonClassName<Sweeper<FloatDP>> {
+    /** @brief Return the requested element or stored value. */
     static std::string get() { return "SweeperDP"; }
 };
+/** @brief Compile-time Python class-name customization. */
 template<>
 struct PythonClassName<ThresholdSweeper<FloatDP>> {
+    /** @brief Return the requested element or stored value. */
     static std::string get() { return "ThresholdSweeperDP"; }
 };
+/** @brief Compile-time Python class-name customization. */
 template<>
 struct PythonClassName<GradedSweeper<FloatDP>> {
+    /** @brief Return the requested element or stored value. */
     static std::string get() { return "GradedSweeperDP"; }
 };
 
+/** @brief Write the value to the output stream. */
 inline OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Sweeper<FloatDP>>& repr) {
     const Sweeper<FloatDP>& swp = repr.reference();
     auto swp_ptr = &static_cast<const SweeperInterface<FloatDP>&>(swp);
@@ -82,6 +95,7 @@ inline OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Swe
     return os;
 }
 
+/** @brief Write the value to the output stream. */
 template<class X>
 OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Expansion<MultiIndex, X>>& repr) {
     const Expansion<MultiIndex, X>& exp = repr.reference();
@@ -99,13 +113,16 @@ OutputStream& operator<<(OutputStream& os, const PythonRepresentation<Expansion<
     return os;
 }
 
+/** @brief Write the value to the output stream. */
 template<class X, class CMP>
 OutputStream& operator<<(OutputStream& os, const PythonRepresentation<SortedExpansion<MultiIndex, X, CMP>>& repr) {
     return os << python_representation(static_cast<const Expansion<MultiIndex, X>&>(repr.reference()));
 }
 
+/** @brief Convert a Python index to a checked native index. */
 inline SizeType pyindex(int i, SizeType n) { return (i >= 0) ? static_cast<SizeType>(i) : (n - static_cast<SizeType>(-i)); }
 
+/** @brief Return the selected elements through the Python indexing interface. */
 template<class C, class I, class X = decltype(declval<const C>()[declval<I>()])>
 inline auto __getitem__(const C& c, const I& i) -> X {
     if constexpr (std::same_as<I, int>) {
@@ -115,6 +132,7 @@ inline auto __getitem__(const C& c, const I& i) -> X {
     }
 }
 
+/** @brief Return the selected elements through the Python indexing interface. */
 template<class C, class I0, class I1, class S>
 inline S __getslice__(const C& c, const I0& i0, const I1& i1) {
     if constexpr (std::same_as<I0, int>) {
@@ -125,6 +143,7 @@ inline S __getslice__(const C& c, const I0& i0, const I1& i1) {
     }
 }
 
+/** @brief Replace the selected elements through the Python indexing interface. */
 template<class C, class I, class X>
 inline Void __setitem__(C& c, const I& i, const X& x) {
     if constexpr (std::same_as<I, int>) {
@@ -134,108 +153,152 @@ inline Void __setitem__(C& c, const I& i, const X& x) {
     }
 }
 
+/** @brief Return the selected elements through the Python indexing interface. */
 template<class C, class I, class J, class X>
 inline X __getitem2__(const C& c, const I& i, const J& j) { return c[i][j]; }
 
+/** @brief Replace the selected elements through the Python indexing interface. */
 template<class C, class I, class J, class X>
 inline Void __setitem2__(C& c, const I& i, const J& j, const X& x) { c[i][j] = x; }
 
+/** @brief Add the operand in place. */
 template<class A1, class A2>
 A1& __iadd__(A1& a1, const A2& a2) { return a1 += a2; }
 
+/** @brief Subtract the operand in place. */
 template<class A1, class A2>
 A1& __isub__(A1& a1, const A2& a2) { return a1 -= a2; }
 
+/** @brief Multiply by the operand in place. */
 template<class A1, class A2>
 A1& __imul__(A1& a1, const A2& a2) { return a1 *= a2; }
 
+/** @brief Divide by the operand in place. */
 template<class A1, class A2>
 A1& __idiv__(A1& a1, const A2& a2) { return a1 /= a2; }
 
+/** @brief Evaluate with the supplied arguments. */
 template<class F, class... AS>
 auto __call__(const F& f, AS... as) -> decltype(f(as...)) { return f(as...); }
+/** @brief Evaluate at the supplied argument. */
 template<class... AS>
 auto _evaluate_(AS... as) -> decltype(evaluate(as...)) { return evaluate(as...); }
+/** @brief Fix the selected argument to the supplied value. */
 template<class... AS>
 auto _partial_evaluate_(AS... as) -> decltype(partial_evaluate(as...)) { return partial_evaluate(as...); }
+/** @brief Evaluate without checking that the argument belongs to the domain. */
 template<class... AS>
 auto _unchecked_evaluate_(AS... as) -> decltype(unchecked_evaluate(as...)) { return unchecked_evaluate(as...); }
+/** @brief Compose the outer object with the inner object. */
 template<class... AS>
 auto _compose_(AS... as) -> decltype(compose(as...)) { return compose(as...); }
+/** @brief Compose without checking domain compatibility. */
 template<class... AS>
 auto _unchecked_compose_(AS... as) -> decltype(unchecked_compose(as...)) { return unchecked_compose(as...); }
 
+/** @brief Return the inverse. */
 template<class... AS>
 auto _inverse_(AS... as) -> decltype(inverse(as...)) { return inverse(as...); }
+/** @brief Solve the linear system. */
 template<class... AS>
 auto _solve_(AS... as) -> decltype(solve(as...)) { return solve(as...); }
 
+/** @brief Return the differential at the supplied argument. */
 template<class... AS>
 auto _differential_(AS... as) -> decltype(differential(as...)) { return differential(as...); }
 
+/** @brief Return the norm. */
 template<class... AS>
 auto _norm_(AS... as) -> decltype(norm(as...)) { return norm(as...); }
+/** @brief Return the supremum norm. */
 template<class... AS>
 auto _sup_norm_(AS... as) -> decltype(sup_norm(as...)) { return sup_norm(as...); }
+/** @brief Return the Euclidean norm. */
 template<class... AS>
 auto _two_norm_(AS... as) -> decltype(two_norm(as...)) { return two_norm(as...); }
+/** @brief Return the scalar product of the operands. */
 template<class... AS>
 auto _dot_(AS... as) -> decltype(dot(as...)) { return dot(as...); }
+/** @brief Join the operands in their natural order. */
 template<class... AS>
 auto _join_(AS... as) -> decltype(join(as...)) { return join(as...); }
+/** @brief Join the operands along the complementary matrix dimension. */
 template<class... AS>
 auto _cojoin_(AS... as) -> decltype(cojoin(as...)) { return cojoin(as...); }
+/** @brief Combine the operands over their respective arguments. */
 template<class... AS>
 auto _combine_(AS... as) -> decltype(combine(as...)) { return combine(as...); }
+/** @brief Return the transposed matrix. */
 template<class... AS>
 auto _transpose_(AS... as) -> decltype(transpose(as...)) { return transpose(as...); }
 
+/** @brief Return the midpoint. */
 template<class... AS>
 auto _midpoint_(AS... as) -> decltype(midpoint(as...)) { return midpoint(as...); }
+/** @brief Embed in the larger argument space. */
 template<class... AS>
 auto _embed_(AS... as) -> decltype(embed(as...)) { return embed(as...); }
+/** @brief Return an extension to the supplied larger domain. */
 template<class... AS>
 auto _extension_(AS... as) -> decltype(extension(as...)) { return extension(as...); }
+/** @brief Return the object restricted to the supplied domain. */
 template<class... AS>
 auto _restriction_(AS... as) -> decltype(restriction(as...)) { return restriction(as...); }
+/** @brief Split the domain or model along the selected coordinate. */
 template<class... AS>
 auto _split_(AS... as) -> decltype(split(as...)) { return split(as...); }
+/** @brief Return the derivative with respect to the selected argument. */
 template<class... AS>
 auto _derivative_(AS... as) -> decltype(derivative(as...)) { return derivative(as...); }
+/** @brief Return an antiderivative with respect to the selected argument. */
 template<class... AS>
 auto _antiderivative_(AS... as) -> decltype(antiderivative(as...)) { return antiderivative(as...); }
 
+/** @brief Enlarge the enclosure by the supplied amount. */
 template<class... AS>
 auto _widen_(AS const&... as) -> decltype(widen(as...)) { return widen(as...); }
 
+/** @brief Test containment of the supplied value. */
 template<class... AS>
 auto _contains_(AS const&... as) -> decltype(contains(as...)) { return contains(as...); }
+/** @brief Return the intersection of the operands. */
 template<class... AS>
 auto _intersection_(AS const&... as) -> decltype(intersection(as...)) { return intersection(as...); }
+/** @brief Test whether the sets have no common elements. */
 template<class... AS>
 auto _disjoint_(AS const&... as) -> decltype(disjoint(as...)) { return disjoint(as...); }
+/** @brief Test whether the first set is contained in the second. */
 template<class... AS>
 auto _subset_(AS const&... as) -> decltype(subset(as...)) { return subset(as...); }
+/** @brief Return the Cartesian product. */
 template<class... AS>
 auto _product_(AS const&... as) -> decltype(product(as...)) { return product(as...); }
+/** @brief Return the smallest representable enclosure containing the operands. */
 template<class... AS>
 auto _hull_(AS const&... as) -> decltype(hull(as...)) { return hull(as...); }
+/** @brief Test whether the sets are separated. */
 template<class... AS>
 auto _separated_(AS const&... as) -> decltype(separated(as...)) { return separated(as...); }
+/** @brief Test whether the sets overlap. */
 template<class... AS>
 auto _overlap_(AS const&... as) -> decltype(overlap(as...)) { return overlap(as...); }
+/** @brief Test whether the first set covers the second. */
 template<class... AS>
 auto _covers_(AS const&... as) -> decltype(covers(as...)) { return covers(as...); }
+/** @brief Test whether the first set lies inside the second. */
 template<class... AS>
 auto _inside_(AS const&... as) -> decltype(inside(as...)) { return inside(as...); }
 
+/** @brief Return the image of the supplied domain under the function. */
 template<class... AS>
 auto _image_(AS const&... as) -> decltype(image(as...)) { return image(as...); }
+/** @brief Return the preimage of the supplied set. */
 template<class... AS>
 auto _preimage_(AS const&... as) -> decltype(preimage(as...)) { return preimage(as...); }
 
 } // namespace Ariadne
 
+/** @brief Expose array to Python. */
 template<class T>
 void export_array(pybind11::module& module, const char* name) {
     using namespace Ariadne;
@@ -255,15 +318,19 @@ void export_array(pybind11::module& module, const char* name) {
 namespace pybind11::detail {
 
 // The third template argument is 'true' if the array is resizable
+/** @brief Conversion adapter between Python objects and the C++ value type. */
 template<class T>
 struct type_caster<Ariadne::Array<T>>
     : array_caster<Ariadne::Array<T>, T, Ariadne::DefaultConstructible<T>> {};
+/** @brief Conversion adapter between Python objects and the C++ value type. */
 template<class T>
 struct type_caster<Ariadne::List<T>>
     : list_caster<Ariadne::List<T>, T> {};
+/** @brief Conversion adapter between Python objects and the C++ value type. */
 template<class T>
 struct type_caster<Ariadne::Set<T>>
     : set_caster<Ariadne::Set<T>, T> {};
+/** @brief Conversion adapter between Python objects and the C++ value type. */
 template<class K, class V>
 struct type_caster<Ariadne::Map<K, V>>
     : map_caster<Ariadne::Map<K, V>, K, V> {};
@@ -271,6 +338,7 @@ struct type_caster<Ariadne::Map<K, V>>
 
 namespace Ariadne {
 
+/** @brief Register Python bindings for conversion. */
 template<class F, class T>
 void define_conversion(pybind11::class_<T>& pyclass) {
     if constexpr (Constructible<T, F> and not Same<T, F>) {
@@ -281,6 +349,7 @@ void define_conversion(pybind11::class_<T>& pyclass) {
     }
 }
 
+/** @brief Register Python bindings for inplace arithmetic. */
 template<class X, class Y>
 pybind11::class_<X>& define_inplace_arithmetic(pybind11::module& module, pybind11::class_<X>& pyclass, Tag<Y> = Tag<Y>()) {
     module.def("__iadd__", &__iadd__<X, Y>);
@@ -290,6 +359,7 @@ pybind11::class_<X>& define_inplace_arithmetic(pybind11::module& module, pybind1
     return pyclass;
 }
 
+/** @brief Register Python bindings for algebra. */
 template<class A, class X = typename A::NumericType>
 pybind11::class_<A>& define_algebra(pybind11::module& module, pybind11::class_<A>& pyclass, Tag<X> = Tag<X>()) {
     define_arithmetic(module, pyclass);
@@ -297,6 +367,7 @@ pybind11::class_<A>& define_algebra(pybind11::module& module, pybind11::class_<A
     return pyclass;
 }
 
+/** @brief Register Python bindings for elementary algebra. */
 template<class A, class X = typename A::NumericType>
 pybind11::class_<A>& define_elementary_algebra(pybind11::module& module, pybind11::class_<A>& pyclass, Tag<X> = Tag<X>()) {
     define_algebra<A, X>(module, pyclass);
@@ -304,6 +375,7 @@ pybind11::class_<A>& define_elementary_algebra(pybind11::module& module, pybind1
     return pyclass;
 }
 
+/** @brief Register Python bindings for inplace algebra. */
 template<class A, class X = typename A::NumericType>
 pybind11::class_<A>& define_inplace_algebra(pybind11::module& module, pybind11::class_<A>& pyclass, Tag<X> = Tag<X>()) {
     module.def("__iadd__", &__iadd__<A, A>);
@@ -312,6 +384,7 @@ pybind11::class_<A>& define_inplace_algebra(pybind11::module& module, pybind11::
     return pyclass;
 }
 
+/** @brief Register Python bindings for vector operations. */
 template<class V, class X = typename V::ScalarType>
 pybind11::class_<V>& define_vector_operations(pybind11::module& module, pybind11::class_<V>& pyclass) {
     pyclass.def("size", &V::size);
@@ -334,6 +407,7 @@ pybind11::class_<V>& define_vector_operations(pybind11::module& module, pybind11
     return pyclass;
 }
 
+/** @brief Register Python bindings for vector arithmetic. */
 template<class V, class X = typename V::ScalarType>
 pybind11::class_<V>& define_vector_arithmetic(pybind11::module&, pybind11::class_<V>& pyclass, Tag<X> = Tag<X>()) {
     pyclass.def("__pos__", &__pos__<V>, pybind11::is_operator());
@@ -351,6 +425,7 @@ pybind11::class_<V>& define_vector_arithmetic(pybind11::module&, pybind11::class
     return pyclass;
 }
 
+/** @brief Register Python bindings for mixed vector arithmetic. */
 template<class VX, class VY>
 pybind11::class_<VX>& define_mixed_vector_arithmetic(pybind11::module& module, pybind11::class_<VX>& pyclass, Tag<VY> = Tag<VY>()) {
     using X = typename VX::ScalarType;
@@ -369,6 +444,7 @@ pybind11::class_<VX>& define_mixed_vector_arithmetic(pybind11::module& module, p
     return pyclass;
 }
 
+/** @brief Register Python bindings for inplace vector arithmetic. */
 template<class V, class X = typename V::ScalarType>
 pybind11::class_<V>& define_inplace_vector_arithmetic(pybind11::module& module, pybind11::class_<V>& pyclass, Tag<X> = Tag<X>()) {
     module.def("__iadd__", &__iadd__<V, V>, pybind11::is_operator());
@@ -378,6 +454,7 @@ pybind11::class_<V>& define_inplace_vector_arithmetic(pybind11::module& module, 
     return pyclass;
 }
 
+/** @brief Register Python bindings for inplace mixed vector arithmetic. */
 template<class VX, class VY>
 pybind11::class_<VX>& define_inplace_mixed_vector_arithmetic(pybind11::module& module, pybind11::class_<VX>& pyclass, Tag<VY> = Tag<VY>()) {
     using Y = typename VY::ScalarType;
@@ -388,6 +465,7 @@ pybind11::class_<VX>& define_inplace_mixed_vector_arithmetic(pybind11::module& m
     return pyclass;
 }
 
+/** @brief Register Python bindings for vector concept. */
 template<class V, class X = typename V::ScalarType>
 pybind11::class_<V>& define_vector_concept(pybind11::module& module, pybind11::class_<V>& pyclass) {
     define_vector_operations<V, X>(module, pyclass);
@@ -395,6 +473,7 @@ pybind11::class_<V>& define_vector_concept(pybind11::module& module, pybind11::c
     return pyclass;
 }
 
+/** @brief Register Python bindings for vector algebra arithmetic. */
 template<class VA, class A = typename VA::ScalarType, class X = typename A::NumericType>
 pybind11::class_<VA>& define_vector_algebra_arithmetic(pybind11::module&, pybind11::class_<VA>& pyclass) {
     typedef Vector<X> VX;
@@ -427,6 +506,7 @@ pybind11::class_<VA>& define_vector_algebra_arithmetic(pybind11::module&, pybind
 
 #include "algebra/vector.hpp"
 
+/** @brief Expose vector to Python. */
 template<class X>
 pybind11::class_<Ariadne::Vector<X>> export_vector(pybind11::module& module, std::string name) {
     using namespace Ariadne;

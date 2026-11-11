@@ -56,6 +56,7 @@ class MultiIndexListIterator;
 
 class MultiIndexBound;
 
+/** @brief Reference proxy into  storage. */
 template<class T>
 class Reference;
 template<>
@@ -66,6 +67,7 @@ class Reference<const MultiIndexReference>;
 // struct MultiIndexData { unsigned int _n; unsigned int* _p; };
 
 // A reference to a MultiIndex
+/** @brief Reference proxy into multi index storage. */
 class MultiIndexReference {
     friend class MultiIndexListIterator;
     friend class MultiIndexListConstIterator;
@@ -154,17 +156,26 @@ class MultiIndexReference {
 
   public:
     // IndexType& at(SizeType i) { return _p[i]; }
+    /** @brief Return the element at the specified index. */
     const IndexType& at(SizeType i) const { return _p[i]; }
+    /** @brief Return the element at the specified index. */
     IndexType& at(SizeType i) { return _p[i]; }
+    /** @brief Return an iterator to the first element. */
     IndexType* begin() { return _p; }
+    /** @brief Return an iterator to the first element. */
     const IndexType* begin() const { return _p; }
+    /** @brief Return the past-the-end iterator. */
     IndexType* end() { return _p + (_n + 1u); }
+    /** @brief Return the past-the-end iterator. */
     const IndexType* end() const { return _p + (_n + 1u); }
 
   public:
     // SizeType memory_size() { return sizeof(WordType)*(1+_n/sizeof(WordType)); }
+    /** @brief Return the size of the allocated storage. */
     SizeType memory_size() { return _n + 1; }
+    /** @brief Allocate storage for the requested elements. */
     Void allocate() { _p = new IndexType[memory_size()]; }
+    /** @brief Release the allocated storage. */
     Void deallocate() { delete[] _p; }
 
   private:
@@ -172,6 +183,7 @@ class MultiIndexReference {
     IndexType* _p;
 };
 
+/** @brief Vector of nonnegative exponents identifying a multivariate monomial. */
 class MultiIndex : public MultiIndexReference {
   public:
     //! \brief Destructor.
@@ -200,6 +212,7 @@ class MultiIndex : public MultiIndexReference {
     static MultiIndex first(SizeType nv, IndexType d);
 };
 
+/** @brief Reference proxy into multi index value storage. */
 class MultiIndexValueReference {
     typedef MultiIndexReference::SizeType SizeType;
     typedef MultiIndexReference::IndexType IndexType;
@@ -211,24 +224,31 @@ class MultiIndexValueReference {
     SizeType _i;
 
   public:
+    /** @brief Construct a \c MultiIndexValueReference from n, p, i. */
     MultiIndexValueReference(SizeType n, IndexType* p, SizeType i) : _n(n), _p(p), _i(i) {}
+    /** @brief Convert to const index type &. */
     operator const IndexType&() { return _p[_i]; }
+    /** @brief Assign the supplied value and return this object. */
     MultiIndexValueReference& operator=(const IndexType& d) {
         _p[_n] += (d - _p[_i]);
         _p[_i] = d;
         return *this;
     }
+    /** @brief Increment the value or iterator. */
     MultiIndexValueReference& operator++() {
         ++_p[_n];
         ++_p[_i];
         return *this;
     }
+    /** @brief Decrement the value or iterator. */
     MultiIndexValueReference& operator--();
+    /** @brief Add the operand in place. */
     MultiIndexValueReference& operator+=(Int k) {
         _p[_n] += k;
         _p[_i] += k;
         return *this;
     }
+    /** @brief Subtract the operand in place. */
     MultiIndexValueReference& operator-=(Int k) {
         _p[_n] -= k;
         _p[_i] -= k;
@@ -396,6 +416,7 @@ inline Void MultiIndexReference::decrement(SizeType i) {
     --this->_p[this->_n];
 }
 
+/** @brief Test equality of the operands. */
 inline Bool operator==(const MultiIndexReference& a1, const MultiIndexReference& a2) {
     if (a1.size() != a2.size()) {
         return false;
@@ -412,10 +433,12 @@ inline Bool operator==(const MultiIndexReference& a1, const MultiIndexReference&
     // return true;
 }
 
+/** @brief Test inequality of the operands. */
 inline Bool operator!=(const MultiIndexReference& a1, const MultiIndexReference& a2) {
     return !(a1 == a2);
 }
 
+/** @brief Test whether the first operand is less than the second. */
 inline Bool operator<(const MultiIndexReference& a1, const MultiIndexReference& a2) {
     if (a1.size() != a2.size()) {
         throw std::runtime_error("operator<(MultiIndexReference,MultiIndexReference): number of variables must match");
@@ -523,30 +546,35 @@ inline MultiIndexReference& MultiIndexReference::operator*=(const IndexType& s) 
     return *this;
 }
 
+/** @brief Add the operand in place. */
 inline Void iadd(MultiIndexReference& r, const MultiIndexReference& a1, const MultiIndexReference& a2) {
     for (MultiIndexReference::SizeType j = 0; j != r.size(); ++j) {
         r.at(j) = a1.at(j) + a2.at(j);
     }
 }
 
+/** @brief Return the sum or unary positive value. */
 inline MultiIndexReference operator+(const MultiIndexReference& a1, const MultiIndexReference& a2) {
     MultiIndexReference r(a1);
     r += a2;
     return r;
 }
 
+/** @brief Return the difference or additive inverse. */
 inline MultiIndexReference operator-(const MultiIndexReference& a1, const MultiIndexReference& a2) {
     MultiIndexReference r(a1);
     r -= a2;
     return r;
 }
 
+/** @brief Return the product. */
 inline MultiIndexReference operator*(const MultiIndexReference& a, MultiIndexReference::IndexType s) {
     MultiIndexReference r(a);
     r *= s;
     return r;
 }
 
+/** @brief Return the product. */
 inline MultiIndexReference operator*(MultiIndexReference::IndexType s, const MultiIndexReference& a) {
     MultiIndexReference r(a);
     r *= s;
@@ -554,6 +582,7 @@ inline MultiIndexReference operator*(MultiIndexReference::IndexType s, const Mul
 }
 
 inline unsigned int
+    /** @brief Return the represented numeric value. */
     number(const MultiIndexReference& i) {
     unsigned int result = fac(i.degree());
     for (unsigned int k = 0; k != i.size(); ++k) {
@@ -563,6 +592,7 @@ inline unsigned int
 }
 
 inline unsigned int
+    /** @brief Return the factorial. */
     fac(const MultiIndexReference& i) {
     unsigned int result = 1;
     for (unsigned int k = 0; k != i.size(); ++k) {
@@ -572,6 +602,7 @@ inline unsigned int
 }
 
 inline unsigned int
+    /** @brief Return the binomial coefficient. */
     bin(const MultiIndexReference& n, const MultiIndexReference& k) {
     assert(n.size() == k.size());
     unsigned int result = 1;
@@ -581,6 +612,7 @@ inline unsigned int
     return result;
 }
 
+/** @brief Write the value to the output stream. */
 inline OutputStream& operator<<(OutputStream& os, const MultiIndexReference& a) {
     // os<<"<"<<static_cast<const Void*>(a.begin())<<">";
     if (a.size() == 0) {
@@ -599,10 +631,15 @@ inline OutputStream& operator<<(OutputStream& os, const MultiIndexReference& a) 
 class MultiIndexBound {
   public:
     typedef MultiIndexReference::SizeType SizeType;
+    /** @brief Construct a \c MultiIndexBound from as, d. */
     MultiIndexBound(SizeType as, SizeType d);
+    /** @brief Construct a \c MultiIndexBound from a. */
     MultiIndexBound(const MultiIndexReference& a);
+    /** @brief Construct a \c MultiIndexBound from as, ng, g1s, g1d. */
     MultiIndexBound(SizeType as, SizeType ng, SizeType g1s, SizeType g1d, ...);
+    /** @brief Return the number of elements. */
     SizeType size() const { return _groups.size(); }
+    /** @brief Test whether the first operand is less than or equal to the second. */
     friend Bool operator<=(const MultiIndexReference& a, const MultiIndexBound& b);
 
   private:
@@ -646,6 +683,7 @@ inline MultiIndexBound::MultiIndexBound(SizeType as, SizeType ng, SizeType g1s, 
     ARIADNE_ASSERT(k == as);
 }
 
+/** @brief Test whether the first operand is less than or equal to the second. */
 inline Bool operator<=(const MultiIndexReference& a, const MultiIndexBound& b) {
     typedef MultiIndexReference::SizeType SizeType;
     Array<SizeType> degrees(b._max_degrees.size());
@@ -660,6 +698,7 @@ inline Bool operator<=(const MultiIndexReference& a, const MultiIndexBound& b) {
     return true;
 }
 
+/** @brief Iterator over multi index list entries. */
 class MultiIndexListIterator
     : public IteratorFacade<MultiIndexListIterator, MultiIndex, RandomAccessTraversalTag, MultiIndexReference> {
     MultiIndexReference _ref;
@@ -668,26 +707,37 @@ class MultiIndexListIterator
     typedef MultiIndex::SizeType SizeType;
     typedef MultiIndex::IndexType IndexType;
 
+    /** @brief Construct a \c MultiIndexListIterator with the specified characteristics. */
     MultiIndexListIterator() : _ref(0u, 0) {}
+    /** @brief Construct a \c MultiIndexListIterator from as, p. */
     MultiIndexListIterator(SizeType as, IndexType* p) : _ref(as, p) {}
+    /** @brief Copy-construct the object from the supplied instance. */
     MultiIndexListIterator(const MultiIndexListIterator& iter) : _ref(iter._ref) {}
+    /** @brief Assign the supplied value and return this object. */
     MultiIndexListIterator& operator=(const MultiIndexListIterator& iter) {
         _ref._n = iter._ref._n;
         _ref._p = iter._ref._p;
         return *this;
     }
 
+    /** @brief Test equality with the supplied iterator or value. */
     Bool equal(const MultiIndexListIterator& other) const { return this->_ref._p == other._ref._p; }
+    /** @brief Return the value at the current iterator position. */
     MultiIndexReference dereference() const { return _ref; }
+    /** @brief Advance to the next iterator position or index. */
     Void increment() { advance(1); }
+    /** @brief Move to the preceding iterator position or index. */
     Void decrement() { advance(-1); }
+    /** @brief Move the iterator by the specified offset. */
     Void advance(Int m) { _ref._p += m * (_ref._n + 1); }
 
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const MultiIndexListIterator& iter) {
         return os << "<" << &iter._ref[0] << ">" << iter._ref << "\n";
     }
 };
 
+/** @brief Iterator over multi index list const entries. */
 class MultiIndexListConstIterator
     : public IteratorFacade<MultiIndexListConstIterator, MultiIndex, RandomAccessTraversalTag, const MultiIndexReference> {
     MultiIndexReference _ref;
@@ -696,26 +746,38 @@ class MultiIndexListConstIterator
     typedef MultiIndex::SizeType SizeType;
     typedef MultiIndex::IndexType IndexType;
 
+    /** @brief Construct a \c MultiIndexListConstIterator with the specified characteristics. */
     MultiIndexListConstIterator() : _ref(0u, 0) {}
+    /** @brief Construct a \c MultiIndexListConstIterator from as, p. */
     MultiIndexListConstIterator(SizeType as, const IndexType* p) : _ref(as, const_cast<IndexType*>(p)) {}
+    /** @brief Construct a \c MultiIndexListConstIterator from iter. */
     MultiIndexListConstIterator(MultiIndexListIterator iter) : _ref(*iter) {}
+    /** @brief Copy-construct the object from the supplied instance. */
     MultiIndexListConstIterator(const MultiIndexListConstIterator& iter) : _ref(iter._ref) {}
+    /** @brief Assign the supplied value and return this object. */
     MultiIndexListConstIterator& operator=(const MultiIndexListConstIterator& iter) {
         _ref._n = iter._ref._n;
         _ref._p = iter._ref._p;
         return *this;
     }
+    /** @brief Test equality with the supplied iterator or value. */
     Bool equal(const MultiIndexListConstIterator& other) const { return this->_ref._p == other._ref._p; }
+    /** @brief Return the value at the current iterator position. */
     const MultiIndexReference dereference() const { return _ref; }
+    /** @brief Advance to the next iterator position or index. */
     Void increment() { advance(1); }
+    /** @brief Move to the preceding iterator position or index. */
     Void decrement() { advance(-1); }
+    /** @brief Move the iterator by the specified offset. */
     Void advance(Int m) { _ref._p += m * (_ref._n + 1); }
 
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const MultiIndexListConstIterator& iter) {
         return os << "<" << &iter._ref[0] << ">" << iter._ref << "\n";
     }
 };
 
+/** @brief Contiguous storage of multivariate exponent vectors. */
 class MultiIndexList {
   public:
     typedef MultiIndex::SizeType SizeType;
@@ -727,39 +789,64 @@ class MultiIndexList {
     typedef MultiIndexListIterator Iterator;
     typedef MultiIndexListConstIterator ConstIterator;
 
+    /** @brief Construct a \c MultiIndexList with the specified characteristics. */
     MultiIndexList() : _as(0u), _d() {}
+    /** @brief Construct a \c MultiIndexList from as. */
     MultiIndexList(SizeType as) : _as(as), _d() {}
+    /** @brief Test equality of the operands. */
     Bool operator==(const MultiIndexList& other) const { return this == &other || (this->_as == other._as && this->_d == other._d); }
+    /** @brief Test inequality of the operands. */
     Bool operator!=(const MultiIndexList& other) const { return !(*this == other); }
+    /** @brief Return the storage size of one element. */
     SizeType element_size() const { return _as; }
+    /** @brief Return the number of elements. */
     SizeType size() const { return _d.size() / (_as + 1); }
+    /** @brief Return the allocated element capacity. */
     SizeType capacity() const { return _d.capacity() / (_as + 1); }
+    /** @brief Remove all elements. */
     Void clear() { _d.clear(); }
+    /** @brief Change the number of elements. */
     Void resize(SizeType n) { _d.resize(n * (_as + 1)); }
+    /** @brief Reserve storage for at least the requested number of elements. */
     Void reserve(SizeType c) { _d.reserve(c * (_as + 1)); };
+    /** @brief Append the supplied element or sequence. */
     Void append(const MultiIndexReference& a) {
         this->resize(this->size() + 1);
         (*this)[this->size() - 1] = a;
     }
 
+    /** @brief Return the selected element or component. */
     reference operator[](SizeType i) { return MultiIndexReference(_as, _begin_pointer() + i * (_as + 1)); }
+    /** @brief Return the selected element or component. */
     const_reference operator[](SizeType i) const { return MultiIndexReference(_as, const_cast<IndexType*>(_begin_pointer()) + i * (_as + 1)); }
+    /** @brief Return the first element. */
     reference front() { return (*this)[0]; }
+    /** @brief Return the first element. */
     const_reference front() const { return (*this)[0]; }
+    /** @brief Return the last element. */
     reference back() { return (*this)[this->size() - 1]; }
+    /** @brief Return the last element. */
     const_reference back() const { return (*this)[this->size() - 1]; }
 
+    /** @brief Return an iterator to the first element. */
     Iterator begin() { return Iterator(_as, _begin_pointer()); }
+    /** @brief Return the past-the-end iterator. */
     Iterator end() { return Iterator(_as, _begin_pointer() + size() * (_as + 1u)); }
+    /** @brief Return an iterator to the first element. */
     ConstIterator begin() const { return ConstIterator(_as, _begin_pointer()); }
+    /** @brief Return the past-the-end iterator. */
     ConstIterator end() const { return ConstIterator(_as, _begin_pointer() + size() * (_as + 1u)); }
 
   private:
 
   public:
+    /** @brief Return the number of storage units used by the data. */
     SizeType _data_size() const { return _d.size(); }
+    /** @brief Return a pointer to the first stored expansion entry. */
     IndexType* _begin_pointer() { return &_d[0]; }
+    /** @brief Return a pointer to the first stored expansion entry. */
     const IndexType* _begin_pointer() const { return &_d[0]; }
+    /** @brief Return the underlying data pointer. */
     const std::vector<IndexType>& _data() const { return _d; }
 
   private:
@@ -767,6 +854,7 @@ class MultiIndexList {
     std::vector<IndexType> _d;
 };
 
+/** @brief Write the value to the output stream. */
 inline OutputStream& operator<<(OutputStream& os, const MultiIndexList& lst) {
     os << "MultiIndexList";
     os << "<" << lst.size() << "," << lst.capacity() << "," << lst.element_size() << "," << lst._data_size() << ">";

@@ -49,35 +49,44 @@ class Matrix;
 template<class X>
 class Series;
 
+/** @brief Tag selecting series. */
 struct SeriesTag {};
 
 template<class X>
 class SecondDifferential;
 
+/** @brief Symmetric matrix expression formed from an outer product. */
 template<class V1, class V2>
 struct SymmetricOuterProduct
     : public MatrixExpression<SymmetricOuterProduct<V1, V2>> {
     typedef typename V1::value_type value_type;
     const V1& _v1;
     const V2& _v2;
+    /** @brief Construct a \c SymmetricOuterProduct from v1, v2. */
     SymmetricOuterProduct(const V1& v1, const V2& v2) : _v1(v1), _v2(v2) {}
+    /** @brief Apply the callable to the supplied arguments. */
     value_type operator()(SizeType i, SizeType j) { return _v1[i] * _v2[j] + _v1[j] * _v2[i]; }
 };
+/** @brief Return the symmetric outer product. */
 template<class V1, class V2>
 inline SymmetricOuterProduct<V1, V2>
     symmetric_outer_product(const V1& v1, const V2& v2) {
     return SymmetricOuterProduct<V1, V2>(v1, v2);
 }
 
+/** @brief Lazy expression for an outer product. */
 template<class V1, class V2>
 struct OuterProduct
     : public MatrixExpression<OuterProduct<V1, V2>> {
     typedef typename V1::value_type value_type;
     const V1& _v1;
     const V2& _v2;
+    /** @brief Construct a \c OuterProduct from v1, v2. */
     OuterProduct(const V1& v1, const V2& v2) : _v1(v1), _v2(v2) {}
+    /** @brief Apply the callable to the supplied arguments. */
     value_type operator()(SizeType i, SizeType j) { return _v1[i] * _v2[j]; }
 };
+/** @brief Return the outer product of the operands. */
 template<class V1, class V2>
 inline OuterProduct<V1, V2>
     outer_product(const V1& v1, const V2& v2) {
@@ -102,6 +111,7 @@ Matrix<X> outer(const Vector<X>& v) {
 }
 */
 
+/** @brief Return the outer product of the operands. */
 template<class X>
 Matrix<X> outer(const Covector<X>& u1, const Covector<X>& u2) {
     Matrix<X> r(u1.size(), u2.size());
@@ -113,6 +123,7 @@ Matrix<X> outer(const Covector<X>& u1, const Covector<X>& u2) {
     return r;
 }
 
+/** @brief Return the outer product of the operands. */
 template<class X>
 Matrix<X> outer(const Covector<X>& u) {
     return outer(u, u);
@@ -123,19 +134,26 @@ class FirstDifferential;
 template<class X>
 class SecondDifferential;
 
+/** @brief Compile-time or fixed characteristics of a differential expansion. */
 template<class X>
 class FixedDifferentialCharacteristics {
     SizeType _argument_size;
     X _zero_coefficient;
 
   public:
+    /** @brief Construct a \c FixedDifferentialCharacteristics from as, prs. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     FixedDifferentialCharacteristics(SizeType as, PRS... prs) : _argument_size(as), _zero_coefficient(0u, prs...) {}
+    /** @brief Construct a \c FixedDifferentialCharacteristics from as, z. */
     FixedDifferentialCharacteristics(SizeType as, const X& z) : _argument_size(as), _zero_coefficient(nul(z)) {}
+    /** @brief Construct a \c FixedDifferentialCharacteristics from d. */
     FixedDifferentialCharacteristics(const FirstDifferential<X>& d);
+    /** @brief Construct a \c FixedDifferentialCharacteristics from d. */
     FixedDifferentialCharacteristics(const SecondDifferential<X>& d);
+    /** @brief Return the number of scalar arguments. */
     SizeType argument_size() const { return this->_argument_size; }
+    /** @brief Return a zero with the coefficient characteristics. */
     X zero_coefficient() const { return this->_zero_coefficient; }
 };
 
@@ -190,6 +208,7 @@ class FirstDifferential
         }
         return *this;
     }
+    /** @brief Assign the supplied value and return this object. */
     template<AssignableTo<X> W>
     FirstDifferential<X>& operator=(const W& c) {
         X xc = nul(this->value());
@@ -290,16 +309,20 @@ class FirstDifferential
         *this = z;
     }
 
+    /** @brief Compose the outer object with the inner object. */
     friend FirstDifferential<X> compose(const UnivariateFirstDifferential<X>& df, FirstDifferential<X> dg) {
         return _compose(df, dg);
     }
 
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, FirstDifferential<X> df) {
         return df._write(os);
     }
 
   private:
+    /** @brief Compose the outer object with the inner object. */
     static FirstDifferential<X> _compose(const UnivariateFirstDifferential<X>&, FirstDifferential<X>);
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream&) const;
 };
 
@@ -324,51 +347,63 @@ OutputStream& FirstDifferential<X>::_write(OutputStream& os) const {
     return os << " }";
 }
 
+/** @brief Operations supported by algebra objects. */
 template<class X>
 struct AlgebraOperations<FirstDifferential<X>, X> {
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Pos, const FirstDifferential<X>& x) {
         return FirstDifferential<X>(+x._value, +x._gradient);
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Neg, const FirstDifferential<X>& x) {
         return FirstDifferential<X>(-x._value, -x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Add, FirstDifferential<X> x, const FirstDifferential<X>& y) {
         x._value += y._value;
         x._gradient += y._gradient;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Sub, FirstDifferential<X> x, const FirstDifferential<X>& y) {
         x._value -= y._value;
         x._gradient -= y._gradient;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Mul, const FirstDifferential<X>& x, const FirstDifferential<X>& y) {
         return FirstDifferential<X>(x._value * y._value, x._value * y._gradient + y._value * x._gradient);
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Div, const FirstDifferential<X>& x, const FirstDifferential<X>& y) {
         return FirstDifferential<X>(x._value / y._value, ((x._value / y._value) * y._gradient + x._gradient) / y._value);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Add, FirstDifferential<X> x, const X& c) {
         x._value += c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Sub, FirstDifferential<X> x, const X& c) {
         x._value -= c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Mul, FirstDifferential<X> x, const X& c) {
         x._value *= c;
         x._gradient *= c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Div, FirstDifferential<X> x, const X& c) {
         x._value /= c;
         x._gradient /= c;
         return x;
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Min, const FirstDifferential<X>& x1, const FirstDifferential<X>& x2) {
         ARIADNE_ASSERT_MSG(x1.argument_size() == x2.argument_size(), "x1=" << x1 << " x2=" << x2);
         if (x1.value() == x2.value()) {
@@ -376,6 +411,7 @@ struct AlgebraOperations<FirstDifferential<X>, X> {
         }
         return x1.value() < x2.value() ? x1 : x2;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Max, const FirstDifferential<X>& x1, const FirstDifferential<X>& x2) {
         ARIADNE_ASSERT_MSG(x1.argument_size() == x2.argument_size(), "x1=" << x1 << " x2=" << x2);
         if (x1.value() == x2.value()) {
@@ -383,6 +419,7 @@ struct AlgebraOperations<FirstDifferential<X>, X> {
         }
         return x1.value() > x2.value() ? x1 : x2;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Abs, const FirstDifferential<X>& x) {
         if (x.value() == 0) {
             ARIADNE_THROW(std::runtime_error, "abs(FirstDifferential<X> x)", "x[0]==0");
@@ -390,69 +427,82 @@ struct AlgebraOperations<FirstDifferential<X>, X> {
         return x.value() > 0 ? pos(x) : neg(x);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     template<class OP>
     static FirstDifferential<X> apply(OP op, const FirstDifferential<X>& x) {
         return compose(UnivariateFirstDifferential<X>(op, x._value), x);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Rec, const FirstDifferential<X>& x) {
         return FirstDifferential<X>(rec(x._value), x._gradient * (neg(sqr(rec(x._value)))));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Sqr, const FirstDifferential<X>& x) {
         return FirstDifferential<X>(sqr(x._value), (2 * x._value) * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Pow, const FirstDifferential<X>& x, Int n) {
         return FirstDifferential<X>(pow(x._value, n), (n * pow(x._value, n - 1)) * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Sqrt, const FirstDifferential<X>& x) {
         X sqrt_val = sqrt(x._value);
         return FirstDifferential<X>(sqrt_val, rec(2 * sqrt_val) * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Exp, const FirstDifferential<X>& x) {
         X exp_val = exp(x._value);
         return FirstDifferential<X>(exp_val, exp_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Log, const FirstDifferential<X>& x) {
         X log_val = log(x._value);
         X rec_val = rec(x._value);
         return FirstDifferential<X>(log_val, rec_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Sin, const FirstDifferential<X>& x) {
         X sin_val = sin(x._value);
         X cos_val = cos(x._value);
         return FirstDifferential<X>(sin_val, cos_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Cos, const FirstDifferential<X>& x) {
         X cos_val = cos(x._value);
         X neg_sin_val = neg(sin(x._value));
         return FirstDifferential<X>(cos_val, neg_sin_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Tan, const FirstDifferential<X>& x) {
         X tan_val = tan(x._value);
         X sqr_sec_val = sqr(rec(cos(x._value)));
         return FirstDifferential<X>(tan_val, sqr_sec_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Asin, const FirstDifferential<X>& x) {
         X asin_val = asin(x._value);
         X d_asin_val = rec(sqrt(1.0 - sqr(x._value)));
         return FirstDifferential<X>(asin_val, d_asin_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Acos, const FirstDifferential<X>& x) {
         X acos_val = acos(x._value);
         X d_acos_val = neg(rec(sqrt(1.0 - sqr(x._value))));
         return FirstDifferential<X>(acos_val, d_acos_val * x._gradient);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static FirstDifferential<X> apply(Atan, const FirstDifferential<X>& x) {
         X atan_val = atan(x._value);
         X d_atan_val = rec(1 + sqr(x._value));
@@ -478,40 +528,59 @@ class Vector<FirstDifferential<X>>
     // The type used for scalars.
     typedef X ScalarType;
 
+    /** @brief Construct a \c Vector from rs, as. */
     Vector(SizeType rs, SizeType as) : _chars(as), _ary(rs, FirstDifferential<X>(as)) {}
+    /** @brief Construct a \c Vector from rs, d. */
     Vector(SizeType rs, const FirstDifferential<X>& d) : _chars(d), _ary(rs, d) {
         for (SizeType i = 0; i != rs; ++i) {
             (*this)[i] = d;
         }
     }
+    /** @brief Construct a \c Vector from rs, p. */
     Vector(SizeType rs, const FirstDifferential<X>* p) : _chars(p[0]), _ary(rs, FirstDifferential<X>(p[0].argument_size())) {
         for (SizeType i = 0; i != rs; ++i) {
             (*this)[i] = p[i];
         }
     }
+    /** @brief Construct a \c Vector from ary. */
     Vector(const Array<FirstDifferential<X>>& ary) : _chars(ary[0]), _ary(ary) {}
+    /** @brief Copy-construct the object from the supplied instance. */
     template<class E>
     Vector(const VectorExpression<E>& ve);
+    /** @brief Assign the supplied value and return this object. */
     template<class E>
     Vector<FirstDifferential<X>>& operator=(const VectorExpression<E>& ve);
 
+    /** @brief Return the number of result components. */
     SizeType result_size() const { return this->size(); }
+    /** @brief Return the number of scalar arguments. */
     SizeType argument_size() const { return this->_chars.argument_size(); }
+    /** @brief Return the polynomial or expansion degree. */
     DegreeType degree() const { return 1u; }
 
+    /** @brief Return the number of elements. */
     SizeType size() const { return this->_ary.size(); }
+    /** @brief Return the requested element or stored value. */
     const FirstDifferential<X>& get(SizeType i) const { return _ary[i]; }
+    /** @brief Return the element at the specified index. */
     FirstDifferential<X>& at(SizeType i) { return _ary[i]; }
+    /** @brief Replace the selected value. */
     Void set(SizeType i, const FirstDifferential<X>& d) const { _ary[i] = d; }
+    /** @brief Return the selected element or component. */
     const FirstDifferential<X>& operator[](SizeType i) const { return _ary[i]; }
+    /** @brief Return the selected element or component. */
     FirstDifferential<X>& operator[](SizeType i) { return _ary[i]; }
+    /** @brief Return a zero with the element characteristics. */
     const FirstDifferential<X> zero_element() const {
         return FirstDifferential(this->argument_size(), _chars.zero_coefficient());
     }
+    /** @brief Return the underlying array. */
     const Array<FirstDifferential<X>>& array() const { return _ary; }
 
+    /** @brief Return the selected element or component. */
     VectorRange<const Vector<FirstDifferential<X>>> operator[](Range rng) const { return project(*this, rng); }
 
+    /** @brief Return the stored value. */
     Vector<X> value() const {
         Vector<X> r(this->result_size());
         for (SizeType i = 0; i != r.size(); ++i) {
@@ -519,6 +588,7 @@ class Vector<FirstDifferential<X>>
         }
         return r;
     }
+    /** @brief Return the matrix of first partial derivatives. */
     Matrix<X> jacobian() const {
         Matrix<X> r(this->result_size(), this->argument_size(), this->_chars.zero_coefficient());
         for (SizeType i = 0; i != r.row_size(); ++i) {
@@ -529,7 +599,9 @@ class Vector<FirstDifferential<X>>
         return r;
     }
 
+    /** @brief Return the stored value. */
     friend Vector<X> value(const Vector<FirstDifferential<X>>& x) { return x.value(); }
+    /** @brief Return the matrix of first partial derivatives. */
     friend Matrix<X> jacobian(const Vector<FirstDifferential<X>>& x) { return x.jacobian(); }
 };
 
@@ -593,6 +665,7 @@ class SecondDifferential
         }
         return *this;
     }
+    /** @brief Assign the supplied value and return this object. */
     template<AssignableTo<X> W>
     SecondDifferential<X>& operator=(const W& c) {
         X xc = nul(this->value());
@@ -695,9 +768,11 @@ class SecondDifferential
     //! \brief Set all coefficients to zero.
     Void clear() { *this = 0; }
 
+    /** @brief Compose the outer object with the inner object. */
     friend SecondDifferential<X> compose(const UnivariateSecondDifferential<X>& df, SecondDifferential<X> dg) {
         return _compose(df, dg);
     }
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, SecondDifferential<X> df) {
         return df._write(os);
     }
@@ -705,14 +780,18 @@ class SecondDifferential
   private:
 
   public:
+    /** @brief Construct a \c SecondDifferential from v, g, hh. */
     explicit SecondDifferential(const X& v, const Covector<X>& g, const Matrix<X>& hh) : _value(v), _gradient(g), _half_hessian(hh) {
         ARIADNE_ASSERT(hh.row_size() == g.size() && hh.column_size() == g.size());
     }
+    /** @brief Construct a \c SecondDifferential from v, g, hh. */
     explicit SecondDifferential(const X& v, const Covector<X>& g, const Matrix<X>& hh, SeriesTag) : _value(v), _gradient(g), _half_hessian(hh) {
         ARIADNE_ASSERT(hh.row_size() == g.size() && hh.column_size() == g.size());
     }
 
+    /** @brief Compose the outer object with the inner object. */
     static SecondDifferential<X> _compose(const UnivariateSecondDifferential<X>&, SecondDifferential<X>);
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream&) const;
 };
 
@@ -744,27 +823,33 @@ OutputStream& SecondDifferential<X>::_write(OutputStream& os) const {
     return os << " }";
 }
 
+/** @brief Operations supported by algebra objects. */
 template<class X>
 struct AlgebraOperations<SecondDifferential<X>, X> {
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Pos, const SecondDifferential<X>& x) {
         return SecondDifferential<X>(+x._value, +x._gradient, +x._half_hessian);
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Neg, const SecondDifferential<X>& x) {
         return SecondDifferential<X>(-x._value, -x._gradient, -x._half_hessian);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Add, SecondDifferential<X> x, const SecondDifferential<X>& y) {
         x._value += y._value;
         x._gradient += y._gradient;
         x._half_hessian += y._half_hessian;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Sub, SecondDifferential<X> x, const SecondDifferential<X>& y) {
         x._value -= y._value;
         x._gradient -= y._gradient;
         x._half_hessian -= y._half_hessian;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Mul, SecondDifferential<X> x, const SecondDifferential<X>& y) {
         x._half_hessian *= y._value;
         x._half_hessian += x._value * y._half_hessian;
@@ -778,24 +863,29 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         x._value *= y._value;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Div, const SecondDifferential<X>& x, SecondDifferential<X> y) {
         return mul(x, rec(std::move(y)));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Add, SecondDifferential<X> x, const X& c) {
         x._value += c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Sub, SecondDifferential<X> x, const X& c) {
         x._value -= c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Mul, SecondDifferential<X> x, const X& c) {
         x._value *= c;
         x._gradient *= c;
         x._half_hessian *= c;
         return x;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Div, SecondDifferential<X> x, const X& c) {
         x._value /= c;
         x._gradient /= c;
@@ -803,6 +893,7 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         return x;
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Min, const SecondDifferential<X>& x1, const SecondDifferential<X>& x2) {
         ARIADNE_ASSERT_MSG(x1.argument_size() == x2.argument_size(), "x1=" << x1 << " x2=" << x2);
         if (x1.value() == x2.value()) {
@@ -810,6 +901,7 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         }
         return x1.value() < x2.value() ? x1 : x2;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Max, const SecondDifferential<X>& x1, const SecondDifferential<X>& x2) {
         ARIADNE_ASSERT_MSG(x1.argument_size() == x2.argument_size(), "x1=" << x1 << " x2=" << x2);
         if (x1.value() == x2.value()) {
@@ -817,6 +909,7 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         }
         return x1.value() > x2.value() ? x1 : x2;
     }
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Abs, const SecondDifferential<X>& x) {
         if (x.value() == 0) {
             ARIADNE_THROW(std::runtime_error, "abs(SecondDifferential<X> x)", "x[0]==0");
@@ -824,11 +917,13 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         return x.value() > 0 ? pos(x) : neg(x);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     template<class OP>
     static SecondDifferential<X> apply(OP op, const SecondDifferential<X>& x) {
         return compose(UnivariateSecondDifferential<X>(op, x.value(), x));
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Rec, const SecondDifferential<X>& x) {
         X rec_val = rec(x._value);
         X neg_sqr_rec_val = neg(sqr(rec_val));
@@ -836,14 +931,17 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         return SecondDifferential<X>(rec_val, neg_sqr_rec_val * x._gradient, neg_sqr_rec_val * x._half_hessian + cub_rec_val * outer(x._gradient), SeriesTag());
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Sqr, const SecondDifferential<X>& x) {
         return SecondDifferential<X>(sqr(x._value), (2 * x._value) * x._gradient, (2 * x._value) * x._half_hessian + outer(x._gradient) / 2);
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Pow, const SecondDifferential<X>& x, Int n) {
         return SecondDifferential<X>(pow(x._value, n), (n * pow(x._value, n - 1)) * x._gradient, n * (n - 1) / 2 * pow(x._value, n - 2) * x._half_hessian, SeriesTag());
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Sqrt, const SecondDifferential<X>& x) {
         X sqrt_val = sqrt(x._value);
         X rec_dbl_sqrt_val = rec(2 * sqrt_val);
@@ -851,11 +949,13 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         return SecondDifferential<X>(sqrt_val, rec_dbl_sqrt_val * x._gradient, rec_dbl_sqrt_val * x._half_hessian + neg_rec_quad_pow_val * outer(x._gradient), SeriesTag());
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Exp, const SecondDifferential<X>& x) {
         X exp_val = exp(x._value);
         return SecondDifferential<X>(exp_val, exp_val * x._gradient, exp_val * x._half_hessian + exp_val * outer(x._gradient), SeriesTag());
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Log, const SecondDifferential<X>& x) {
         X log_val = log(x._value);
         X rec_val = rec(x._value);
@@ -863,6 +963,7 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         return SecondDifferential<X>(log_val, rec_val * x._gradient, rec_val * x._half_hessian + neg_sqr_rec_val * outer(x._gradient), SeriesTag());
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Sin, const SecondDifferential<X>& x) {
         X sin_val = sin(x._value);
         X cos_val = cos(x._value);
@@ -870,6 +971,7 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         return SecondDifferential<X>(sin_val, cos_val * x._gradient, cos_val * x._half_hessian + neg_sin_val * outer(x._gradient), SeriesTag());
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Cos, const SecondDifferential<X>& x) {
         X cos_val = cos(x._value);
         X neg_sin_val = neg(sin(x._value));
@@ -877,6 +979,7 @@ struct AlgebraOperations<SecondDifferential<X>, X> {
         return SecondDifferential<X>(cos_val, neg_sin_val * x._gradient, neg_sin_val * x._half_hessian + neg_cos_val * outer(x._gradient), SeriesTag());
     }
 
+    /** @brief Apply the supplied operation to the operands. */
     static SecondDifferential<X> apply(Tan, const SecondDifferential<X>& x) {
         X tan_val = tan(x._value);
         X sqr_sec_val = sqr(rec(cos(x._value)));
@@ -903,35 +1006,54 @@ class Vector<SecondDifferential<X>>
     // The type used for scalars.
     typedef X ScalarType;
 
+    /** @brief Construct a \c Vector from rs, as, prs. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     Vector(SizeType rs, SizeType as, PRS... prs)
         : _chars(as, prs...), _ary(rs, SecondDifferential<X>(as, prs...)) {}
+    /** @brief Construct a \c Vector from rs, d. */
     Vector(SizeType rs, const SecondDifferential<X>& d) : _chars(d), _ary(rs, d) {}
+    /** @brief Construct a \c Vector from rs, p. */
     Vector(SizeType rs, const SecondDifferential<X>* p) : _chars(p[0]), _ary(rs, p) {}
+    /** @brief Construct a \c Vector from ary. */
     Vector(const Array<SecondDifferential<X>>& ary) : _chars(ary[0]), _ary(ary) {}
+    /** @brief Copy-construct the object from the supplied instance. */
     template<class E>
     Vector(const VectorExpression<E>& ve);
+    /** @brief Assign the supplied value and return this object. */
     template<class E>
     Vector<SecondDifferential<X>>& operator=(const VectorExpression<E>& ve);
 
+    /** @brief Return the number of result components. */
     SizeType result_size() const { return this->size(); }
+    /** @brief Return the number of scalar arguments. */
     SizeType argument_size() const { return this->_chars.argument_size(); }
+    /** @brief Return the polynomial or expansion degree. */
     DegreeType degree() const { return 1u; }
+    /** @brief Return a zero with the element characteristics. */
     SecondDifferential<X> zero_element() const {
         return SecondDifferential<X>(this->argument_size(), this->_chars.zero_coefficient());
     }
+    /** @brief Return the underlying array. */
     const Array<SecondDifferential<X>>& array() const { return _ary; }
 
+    /** @brief Return the number of elements. */
     SizeType size() const { return this->_ary.size(); }
+    /** @brief Return the requested element or stored value. */
     const SecondDifferential<X>& get(SizeType i) const { return _ary[i]; }
+    /** @brief Return the element at the specified index. */
     SecondDifferential<X>& at(SizeType i) { return _ary[i]; }
+    /** @brief Replace the selected value. */
     Void set(SizeType i, const SecondDifferential<X>& d) const { _ary[i] = d; }
+    /** @brief Return the selected element or component. */
     const SecondDifferential<X>& operator[](SizeType i) const { return _ary[i]; }
+    /** @brief Return the selected element or component. */
     SecondDifferential<X>& operator[](SizeType i) { return _ary[i]; }
 
+    /** @brief Return the selected element or component. */
     VectorRange<const Vector<SecondDifferential<X>>> operator[](Range rng) const { return project(*this, rng); }
 
+    /** @brief Return the stored value. */
     Vector<X> value() const {
         Vector<X> r(this->result_size());
         for (SizeType i = 0; i != r.size(); ++i) {
@@ -939,6 +1061,7 @@ class Vector<SecondDifferential<X>>
         }
         return r;
     }
+    /** @brief Return the matrix of first partial derivatives. */
     Matrix<X> jacobian() const {
         Matrix<X> r(this->result_size(), this->argument_size(), this->_chars.zero_coefficient());
         for (SizeType i = 0; i != r.row_size(); ++i) {
@@ -949,7 +1072,9 @@ class Vector<SecondDifferential<X>>
         return r;
     }
 
+    /** @brief Return the stored value. */
     friend Vector<X> value(const Vector<SecondDifferential<X>>& x) { return x.value(); }
+    /** @brief Return the matrix of first partial derivatives. */
     friend Matrix<X> jacobian(const Vector<SecondDifferential<X>>& x) { return x.jacobian(); }
 };
 
@@ -961,29 +1086,37 @@ template<class X>
 inline FixedDifferentialCharacteristics<X>::FixedDifferentialCharacteristics(const SecondDifferential<X>& dx)
     : _argument_size(dx.argument_size()), _zero_coefficient(dx.zero_coefficient()) {}
 
+/** @brief Factory constructing compatible fixed differential. */
 template<class X>
 class FixedDifferentialFactory {
     typedef PrecisionType<X> PR;
     PR _pr;
 
   public:
+    /** @brief Construct a \c FixedDifferentialFactory from pr. */
     FixedDifferentialFactory(PR const& pr) : _pr(pr) {}
+    /** @brief Construct a compatible object from the supplied value and characteristics. */
     template<class Y>
         requires Constructible<X, Y, PR>
     X create(const Y& y) { return X(y, _pr); }
+    /** @brief Construct a compatible object from the supplied value and characteristics. */
     template<class Y>
     FirstDifferential<X> create(const FirstDifferential<Y>&);
+    /** @brief Construct a compatible object from the supplied value and characteristics. */
     template<class Y>
     SecondDifferential<X> create(const SecondDifferential<Y>&);
 };
+/** @brief Return a factory for compatible differential expansions. */
 template<class X>
 inline FixedDifferentialFactory<X> differential_factory(const X& x) {
     return FixedDifferentialFactory<X>(x.precision());
 }
+/** @brief Return a factory for compatible objects. */
 template<class X>
 inline FixedDifferentialFactory<X> factory(const FirstDifferential<X>& dx) {
     return FixedDifferentialFactory<X>(dx.value().precision());
 }
+/** @brief Return a factory for compatible objects. */
 template<class X>
 inline FixedDifferentialFactory<X> factory(const SecondDifferential<X>& dx) {
     return FixedDifferentialFactory<X>(dx.value().precision());

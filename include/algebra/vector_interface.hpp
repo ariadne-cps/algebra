@@ -43,11 +43,17 @@ class VectorInterface {
     typedef typename ScalarType::NumericType NumericType;
 
   public:
+    /** @brief Return the requested element or stored value. */
     virtual ScalarInterface* _get(SizeType i) const = 0;
+    /** @brief Replace the selected value. */
     virtual Void _set(SizeType i, const ScalarType& x) const = 0;
+    /** @brief Return the sum of the operands. */
     virtual VectorInterface* _add(const VectorInterface*) const = 0;
+    /** @brief Return the difference of the operands. */
     virtual VectorInterface* _sub(const VectorInterface*) const = 0;
+    /** @brief Return the product of the operands. */
     virtual VectorInterface* _mul(const ScalarType&) const = 0;
+    /** @brief Return the product of the operands. */
     virtual VectorInterface* _mul(const NumericType&) const = 0;
 };
 

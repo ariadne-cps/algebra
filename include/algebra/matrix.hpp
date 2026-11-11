@@ -77,6 +77,7 @@ struct PLUMatrix;
 template<class X>
 struct QRMatrix;
 
+/** @brief Exception reporting singular matrix. */
 class SingularMatrixException : public std::runtime_error {
   public:
     using std::runtime_error::runtime_error;
@@ -85,53 +86,74 @@ class SingularMatrixException : public std::runtime_error {
 template<class X>
 using UniformMatrixNormType = decltype(abs(declval<X>()) + abs(declval<X>()));
 
+/** @brief Declare matrix operations for the supported operand types. */
 class DeclareMatrixOperations {
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ProductType<Scalar<X1>, X2>> operator*(X1 const& s, const Matrix<X2>& A);
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ProductType<X1, Scalar<X2>>> operator*(const Matrix<X1>& A, X2 const& s);
+    /** @brief Return the quotient. */
     template<class X1, class X2>
     friend Matrix<QuotientType<X1, Scalar<X2>>> operator/(const Matrix<X1>& A, X2 const& s);
+    /** @brief Multiply by the operand in place. */
     template<class X1, class X2>
     friend Matrix<InplaceProductType<X1, X2>>& operator*=(Matrix<X1>& A, X2 const& s);
+    /** @brief Divide by the operand in place. */
     template<class X1, class X2>
     friend Matrix<InplaceQuotientType<X1, X2>>& operator/=(Matrix<X1>& A, X2 const& s);
 
+    /** @brief Return the sum or unary positive value. */
     template<class X>
     friend Matrix<X> operator+(Matrix<X> A);
+    /** @brief Return the difference or additive inverse. */
     template<class X>
     friend Matrix<X> operator-(Matrix<X> A);
+    /** @brief Return the sum or unary positive value. */
     template<class X1, class X2>
     friend Matrix<SumType<X1, X2>> operator+(const Matrix<X1>& A1, const Matrix<X2>& A2);
+    /** @brief Return the difference or additive inverse. */
     template<class X1, class X2>
     friend Matrix<DifferenceType<X1, X2>> operator-(const Matrix<X1>& A1, const Matrix<X2>& A2);
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ArithmeticType<X1, X2>> operator*(const Matrix<X1>& A1, const Matrix<X2>& A2);
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Vector<ArithmeticType<X1, X2>> operator*(const Matrix<X1>& A1, const Vector<X2>& v2);
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Covector<ArithmeticType<X1, X2>> operator*(const Covector<X1>& u1, const Matrix<X2>& A2);
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ProductType<X1, X2>> operator*(const Vector<X1>& v1, const Covector<X2>& u2);
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ArithmeticType<X1, X2>> operator*(const Matrix<X1>& A1, const Transpose<Matrix<X2>>& A2);
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ArithmeticType<X1, X2>> operator*(const Transpose<Matrix<X1>>& A1, const Matrix<X2>& A2);
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Vector<ArithmeticType<X1, X2>> operator*(const Transpose<Matrix<X1>>& A1, const Vector<X2>& v2);
 
+    /** @brief Return the norm. */
     template<class X>
     friend UniformMatrixNormType<X> norm(const Matrix<X>& A);
 
+    /** @brief Test equality of the operands. */
     template<class X1, class X2>
     friend decltype(declval<X1>() == declval<X2>()) operator==(const Matrix<X1>& A1, const Matrix<X2>& A2);
 };
 
 template<class M>
 struct MatrixExpression : DeclareMatrixOperations {
+    /** @brief Apply the callable to the supplied arguments. */
     const M& operator()() const { return static_cast<const M&>(*this); }
 };
+/** @brief Container interface for matrix elements. */
 template<class M>
 struct MatrixContainer : public MatrixExpression<M> {};
 
@@ -199,6 +221,7 @@ class Matrix
     template<class... PRS>
         requires Constructible<X, ExactDouble, PRS...>
     explicit Matrix(InitializerList<InitializerList<ExactDouble>> lst, PRS... prs);
+    /** @brief Construct a \c Matrix from lst, prs. */
     template<class... PRS>
         requires Constructible<X, Dbl, PRS...>
     explicit Matrix(InitializerList<InitializerList<Dbl>> lst, PRS... prs);
@@ -226,20 +249,26 @@ class Matrix
     static Matrix<X> identity(SizeType n, PRS... prs);
     //!@}
 
+    /** @brief Construct a \c Matrix from A. */
     template<AMatrixExpressionOver<X> M>
     Matrix(const M& A);
+    /** @brief Assign the supplied value and return this object. */
     template<AMatrixExpressionOver<X> M>
     Matrix<X>& operator=(const M& A);
+    /** @brief Construct a \c Matrix from A. */
     template<AMatrixExpression M>
         requires ExplicitlyConvertible<typename M::ScalarType, X>
     explicit Matrix(const M& A);
 
+    /** @brief Construct a \c Matrix from A, prs. */
     template<AMatrixExpression M, class... PRS>
         requires Constructible<X, typename M::ScalarType, PRS...>
     explicit Matrix(const M& A, PRS... prs);
 
+    /** @brief Add the operand in place. */
     template<class M>
     Matrix<X>& operator+=(const M& A);
+    /** @brief Subtract the operand in place. */
     template<class M>
     Matrix<X>& operator-=(const M& A);
 
@@ -251,11 +280,13 @@ class Matrix
     Void resize(SizeType m, SizeType n);
     //! \brief Get the value stored in the \a i<sup>th</sup> row and \a j<sup>th</sup> column.
     ElementReference<X>& at(SizeType i, SizeType j);
+    /** @brief Return the element at the specified index. */
     const X& at(SizeType i, SizeType j) const;
     //! \brief Get the value stored in the \a i<sup>th</sup> row and \a j<sup>th</sup> column.
     const X& get(SizeType i, SizeType j) const;
     //! \brief %Set the value stored in the \a i<sup>th</sup> row and \a j<sup>th</sup> column to \a x.
     Void set(SizeType i, SizeType j, const X& x);
+    /** @brief Replace the selected value. */
     template<AssignableTo<X> Y>
     Void set(SizeType i, SizeType j, const Y& y);
     //! \brief A pointer to the first element of the data storage.
@@ -271,9 +302,13 @@ class Matrix
     //! \brief C-style constant subscripting operator.
     const MatrixRange<Matrix<X>>& operator[][](Range i, Range js) const;
 #else
+    /** @brief Return the selected element or component. */
     MatrixRow<const Matrix<X>> operator[](SizeType i) const;
+    /** @brief Return the selected element or component. */
     MatrixRow<Matrix<X>> operator[](SizeType i);
+    /** @brief Return the selected element or component. */
     MatrixRows<const Matrix<X>> operator[](Range is) const;
+    /** @brief Return the selected element or component. */
     MatrixRows<Matrix<X>> operator[](Range is);
 #endif
     //! \brief The characteristic properties needed to create a zero element of the field/algebra of the matrix.
@@ -282,15 +317,19 @@ class Matrix
     X zero_element() const;
 
   private:
+    /** @brief Check that the element access is within the allocated data. */
     Void _check_data_access(SizeType i, SizeType j) const;
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 
+    /** @brief Write the value to the output stream. */
     template<class T>
     friend OutputStream& operator<<(OutputStream& os, const Matrix<T>& A);
 };
 
 template<class X>
 struct IsMatrix<Matrix<X>> : True {};
+/** @brief Compile-time predicate testing whether a type is matrix expression. */
 template<class X>
 struct IsMatrixExpression<Matrix<X>> : True {};
 
@@ -313,19 +352,27 @@ class PivotMatrix {
     Array<SizeType> _ary;
 
   public:
+    /** @brief Construct a \c PivotMatrix from n. */
     PivotMatrix(SizeType n = 0u) : _ary(n) {
         for (SizeType i = 0; i != n; ++i) {
             _ary[i] = i;
         }
     }
+    /** @brief Construct the identity. */
     static PivotMatrix identity(SizeType n) { return PivotMatrix(n); }
+    /** @brief Return the number of elements. */
     SizeType size() const { return _ary.size(); }
+    /** @brief Select or apply the matrix pivot. */
     const SizeType& pivot(SizeType i) const { return _ary[i]; }
+    /** @brief Select or apply the matrix pivot. */
     SizeType& pivot(SizeType i) { return _ary[i]; }
+    /** @brief Convert to matrix< x >. */
     template<class X>
     operator Matrix<X>() const;
 };
+/** @brief Write the value to the output stream. */
 OutputStream& operator<<(OutputStream& os, const PivotMatrix& pv);
+/** @brief Return the product. */
 template<class X>
 Vector<X> operator*(PivotMatrix, Vector<X>);
 template<class X>
@@ -342,6 +389,7 @@ struct PLUMatrix {
     Matrix<X> LU;
 };
 
+/** @brief Factors and pivot data of an orthogonal-triangular matrix decomposition. */
 template<class X>
 struct QRMatrix {
     Matrix<X> Q;
@@ -351,6 +399,7 @@ struct QRMatrix {
 /************ Matrix expressions *********************************************************/
 
 // NOTE: Can't just use project(MatrixRow,Range) as the MatrixRow lifetime is too short
+/** @brief View of selected columns of a matrix row. */
 template<class M>
 struct MatrixRowColumns
     : CovectorExpression<MatrixRowColumns<M>> {
@@ -361,11 +410,17 @@ struct MatrixRowColumns
 
   public:
     typedef typename M::ScalarType ScalarType;
+    /** @brief Construct a \c MatrixRowColumns from A, i, js. */
     MatrixRowColumns(M& A, SizeType i, Range js) : _A(A), _i(i), _js(js) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _js.size(); }
+    /** @brief Return a zero with the element characteristics. */
     auto zero_element() const -> decltype(_A.zero_element()) { return _A.zero_element(); }
+    /** @brief Return the selected element or component. */
     decltype(auto) operator[](SizeType j) { return _A[_i][_js[j]]; }
+    /** @brief Return the selected element or component. */
     decltype(auto) operator[](SizeType j) const { return _A[_i][_js[j]]; }
+    /** @brief Assign the supplied value and return this object. */
     MatrixRowColumns<M>& operator=(const Covector<ScalarType>& u) {
         for (SizeType j = 0; j != u.size(); ++j) {
             _A.set(_i, _js[j], u[j]);
@@ -373,6 +428,7 @@ struct MatrixRowColumns
         return *this;
     }
 };
+/** @brief Compile-time predicate testing whether a type is covector expression. */
 template<class M>
 struct IsCovectorExpression<MatrixRowColumns<M>> : True {};
 
@@ -384,12 +440,19 @@ struct MatrixRow
 
   public:
     typedef typename M::ScalarType ScalarType;
+    /** @brief Construct a \c MatrixRow from A, i. */
     MatrixRow(M& A, SizeType i) : _A(A), _i(i) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _A.column_size(); }
+    /** @brief Return a zero with the element characteristics. */
     auto zero_element() const -> decltype(_A.zero_element()) { return _A.zero_element(); }
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType j) const -> decltype(_A.at(_i, j)) { return _A.at(_i, j); }
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType j) -> decltype(_A.at(_i, j)) { return _A.at(_i, j); }
+    /** @brief Return the selected element or component. */
     MatrixRowColumns<M> operator[](Range js) { return MatrixRowColumns<M>(_A, _i, js); }
+    /** @brief Assign the supplied value and return this object. */
     MatrixRow<M>& operator=(const Covector<ScalarType>& u) {
         for (SizeType j = 0; j != u.size(); ++j) {
             _A.set(_i, j, u[j]);
@@ -397,9 +460,11 @@ struct MatrixRow
         return *this;
     }
 };
+/** @brief Compile-time predicate testing whether a type is covector expression. */
 template<class M>
 struct IsCovectorExpression<MatrixRow<M>> : True {};
 
+/** @brief View of a matrix column. */
 template<class M>
 struct MatrixColumn
     : public VectorExpression<MatrixColumn<M>> {
@@ -408,11 +473,17 @@ struct MatrixColumn
 
   public:
     typedef typename M::ScalarType ScalarType;
+    /** @brief Construct a \c MatrixColumn from A, j. */
     MatrixColumn(M& A, SizeType j) : _A(A), _j(j) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _A.row_size(); }
+    /** @brief Return a zero with the element characteristics. */
     auto zero_element() const -> decltype(_A.zero_element()) { return _A.zero_element(); }
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType i) const -> decltype(_A.at(i, _j)) { return _A[i][_j]; }
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType i) -> decltype(_A.at(i, _j)) { return _A.at(i, _j); }
+    /** @brief Convert to vector< scalar type >. */
     operator Vector<ScalarType>() const {
         Vector<ScalarType> r(size(), zero_element());
         for (SizeType i = 0; i != size(); ++i) {
@@ -420,6 +491,7 @@ struct MatrixColumn
         }
         return r;
     }
+    /** @brief Assign the supplied value and return this object. */
     template<class VE>
     MatrixColumn<M> operator=(const VectorExpression<VE>& ve) {
         for (SizeType i = 0; i != size(); ++i) {
@@ -427,27 +499,38 @@ struct MatrixColumn
         }
         return *this;
     }
+    /** @brief Copy-construct the object from the supplied instance. */
     MatrixColumn(const MatrixColumn<M>&) = default;
+    /** @brief Assign the supplied value and return this object. */
     MatrixColumn<M> operator=(const MatrixColumn<M>& mc) {
         return *this = static_cast<const VectorExpression<MatrixColumn<M>>&>(mc);
     }
 };
+/** @brief Compile-time predicate testing whether a type is vector expression. */
 template<class M>
 struct IsVectorExpression<MatrixColumn<M>> : True {};
 
+/** @brief Lazy expression for the transpose of a matrix. */
 template<class M>
 struct MatrixTranspose {
     const M& _AT;
 
   public:
     typedef typename M::ScalarType ScalarType;
+    /** @brief Construct a \c MatrixTranspose from AT. */
     MatrixTranspose(const M& AT) : _AT(AT) {}
+    /** @brief Return the number of rows. */
     SizeType row_size() const { return _AT.column_size(); }
+    /** @brief Return the number of columns. */
     SizeType column_size() const { return _AT.row_size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return _AT.zero_element(); }
+    /** @brief Return the element at the specified index. */
     const ScalarType& at(SizeType i, SizeType j) const { return _AT.at(j, i); }
+    /** @brief Return the requested element or stored value. */
     const ScalarType& get(SizeType i, SizeType j) const { return _AT.at(j, i); }
 };
+/** @brief Compile-time predicate testing whether a type is matrix expression. */
 template<class M>
 struct IsMatrixExpression<MatrixTranspose<M>> : True {};
 
@@ -458,10 +541,15 @@ struct MatrixMatrixProduct {
 
   public:
     typedef ArithmeticType<typename M1::ScalarType, typename M2::ScalarType> ScalarType;
+    /** @brief Construct a \c MatrixMatrixProduct from A1, A2. */
     MatrixMatrixProduct(M1 const& A1, M2 const& A2) : _A1(A1), _A2(A2) {}
+    /** @brief Return the number of rows. */
     SizeType row_size() const { return _A1.row_size(); }
+    /** @brief Return the number of columns. */
     SizeType column_size() const { return _A2.column_size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return _A1.zero_element() * _A2.zero_element(); }
+    /** @brief Return the element at the specified index. */
     ScalarType at(SizeType i, SizeType j) const {
         ScalarType r = this->zero_element();
         for (SizeType k = 0; k != _A1.row_size(); ++k) {
@@ -470,6 +558,7 @@ struct MatrixMatrixProduct {
         return r;
     }
 };
+/** @brief Compile-time predicate testing whether a type is matrix expression. */
 template<class M1, class M2>
 struct IsMatrixExpression<MatrixMatrixProduct<M1, M2>> : True {};
 
@@ -480,9 +569,13 @@ struct MatrixVectorProduct {
   public:
     M1 const& _A1;
     V2 const& _v2;
+    /** @brief Construct a \c MatrixVectorProduct from A1, v2. */
     MatrixVectorProduct(M1 const& A1, V2 const& v2) : _A1(A1), _v2(v2) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _A1.row_size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return _A1.zero_element() * _v2.zero_element(); }
+    /** @brief Return the selected element or component. */
     ScalarType operator[](SizeType i) const {
         ScalarType r = this->zero_element();
         for (SizeType j = 0; j != _v2.size(); ++j) {
@@ -491,6 +584,7 @@ struct MatrixVectorProduct {
         return r;
     }
 };
+/** @brief Compile-time predicate testing whether a type is vector expression. */
 template<class M1, class V2>
 struct IsVectorExpression<MatrixVectorProduct<M1, V2>> : True {};
 
@@ -501,11 +595,16 @@ struct MatrixScalarQuotient {
 
   public:
     typedef QuotientType<typename M1::ScalarType, X2> ScalarType;
+    /** @brief Construct a \c MatrixScalarQuotient from a1, x2. */
     MatrixScalarQuotient(const M1& a1, const X2& x2) : _a1(a1), _x2(x2) {}
+    /** @brief Return the number of rows. */
     SizeType row_size() const { return _a1.row_size(); }
+    /** @brief Return the number of columns. */
     SizeType column_size() const { return _a1.column_size(); }
+    /** @brief Return the element at the specified index. */
     auto at(SizeType i, SizeType j) const -> decltype(_a1.at(i, j) / _x2) { return _a1.at(i, j) / _x2; }
 };
+/** @brief Compile-time predicate testing whether a type is matrix expression. */
 template<class M1, class X2>
 struct IsMatrixExpression<MatrixScalarQuotient<M1, X2>> : True {};
 
@@ -521,13 +620,21 @@ struct MatrixRange
 
   public:
     typedef typename M::ScalarType ScalarType;
+    /** @brief Construct a \c MatrixRange from A, rng1, rng2. */
     MatrixRange(M& A, Range rng1, Range rng2) : _A(A), _rng1(rng1), _rng2(rng2) {}
+    /** @brief Return the number of rows. */
     SizeType row_size() const { return _rng1.size(); }
+    /** @brief Return the number of columns. */
     SizeType column_size() const { return _rng2.size(); }
+    /** @brief Return a zero with the element characteristics. */
     ScalarType zero_element() const { return _A.zero_element(); }
+    /** @brief Return the requested element or stored value. */
     ScalarType get(SizeType i, SizeType j) const { return _A.get(i + _rng1.start(), j + _rng2.start()); }
+    /** @brief Return the selected element or component. */
     decltype(auto) operator[](SizeType i) { return _A[_rng1[i]][_rng2]; }
+    /** @brief Replace the selected value. */
     Void set(SizeType i, SizeType j, const ScalarType& x) const { _A.set(i + _rng1.start(), j + _rng2.start(), x); }
+    /** @brief Assign the supplied value and return this object. */
     template<class ME>
     MatrixRange<M>& operator=(const MatrixExpression<ME>& Ae) {
         ARIADNE_PRECONDITION(this->row_size() == Ae().row_size() && this->column_size() == Ae().column_size());
@@ -539,9 +646,11 @@ struct MatrixRange
         return *this;
     }
 };
+/** @brief Compile-time predicate testing whether a type is matrix expression. */
 template<class M>
 struct IsMatrixExpression<MatrixRange<M>> : True {};
 
+/** @brief View of one column over selected matrix rows. */
 template<class M>
 struct MatrixRowsColumn
     : VectorExpression<MatrixRowsColumn<M>> {
@@ -552,11 +661,17 @@ struct MatrixRowsColumn
 
   public:
     typedef typename M::ScalarType ScalarType;
+    /** @brief Construct a \c MatrixRowsColumn from A, is, j. */
     MatrixRowsColumn(M& A, Range is, SizeType j) : _A(A), _is(is), _j(j) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _is.size(); }
+    /** @brief Return a zero with the element characteristics. */
     auto zero_element() const -> decltype(_A.zero_element()) { return _A.zero_element(); }
+    /** @brief Return the selected element or component. */
     decltype(auto) operator[](SizeType i) { return _A[_is[i]][_j]; }
+    /** @brief Return the selected element or component. */
     decltype(auto) operator[](SizeType i) const { return _A[_is[i]][_j]; }
+    /** @brief Assign the supplied value and return this object. */
     MatrixRowsColumn<M>& operator=(const Vector<ScalarType>& v) {
         for (SizeType i = 0; i != v.size(); ++i) {
             _A.set(_is[i], _j, v[i]);
@@ -564,9 +679,11 @@ struct MatrixRowsColumn
         return *this;
     }
 };
+/** @brief Compile-time predicate testing whether a type is vector expression. */
 template<class M>
 struct IsVectorExpression<MatrixRowsColumn<M>> : True {};
 
+/** @brief View of a selected range of matrix rows. */
 template<class M>
 struct MatrixRows {
   public:
@@ -575,13 +692,20 @@ struct MatrixRows {
 
   public:
     typedef typename M::ScalarType ScalarType;
+    /** @brief Construct a \c MatrixRows from A, is. */
     MatrixRows(M& A, Range is) : _A(A), _is(is) {}
+    /** @brief Return the number of rows. */
     SizeType row_size() const { return _is.size(); }
+    /** @brief Return the number of columns. */
     SizeType column_size() const { return _A.column_size(); }
+    /** @brief Return a zero with the element characteristics. */
     auto zero_element() const -> decltype(_A.zero_element()) { return _A.zero_element(); }
     // Note: Can't project to VectorExpression below since j in MatrixColumn(_A,j) would be destroyed before use
+    /** @brief Return the selected element or component. */
     MatrixRowsColumn<M> operator[](SizeType j) { return MatrixRowsColumn<M>(_A, _is, j); }
+    /** @brief Return the selected element or component. */
     MatrixRange<M> operator[](Range js) { return MatrixRange<M>(_A, _is, js); }
+    /** @brief Assign the supplied value and return this object. */
     MatrixRows<M>& operator=(const Matrix<ScalarType>& B) {
         for (SizeType i = 0; i != B.row_size(); ++i) {
             SizeType p_i = _is[i];
@@ -592,6 +716,7 @@ struct MatrixRows {
         return *this;
     }
 };
+/** @brief Compile-time predicate testing whether a type is matrix expression. */
 template<class M>
 struct IsMatrixExpression<MatrixRows<M>> : True {};
 
@@ -606,6 +731,7 @@ inline MatrixRows<Matrix<X>> Matrix<X>::operator[](Range is) {
 }
 #endif
 
+/** @brief Test equality of the operands. */
 template<AMatrixExpression M1, AMatrixExpression M2>
 inline auto operator==(M1 const& A1, M2 const& A2) -> decltype(declval<ScalarType<M1>>() == declval<ScalarType<M2>>()) {
     typedef ScalarType<M1> X1;
@@ -758,21 +884,25 @@ OutputStream& Matrix<X>::_write(OutputStream& os) const {
     return os << "]";
 }
 
+/** @brief Project onto the selected coordinates. */
 template<class M>
 inline MatrixRange<const M> project(const MatrixExpression<M>& Ae, Range rw_rng, Range cl_rng) {
     return MatrixRange<const M>(Ae(), rw_rng, cl_rng);
 }
 
+/** @brief Project onto the selected coordinates. */
 template<class X>
 inline MatrixRange<Matrix<X>> project(Matrix<X>& A, Range rw_rng, Range cl_rng) {
     return MatrixRange<Matrix<X>>(A, rw_rng, cl_rng);
 }
 
+/** @brief Return the selected matrix column. */
 template<class M>
 inline MatrixColumn<const M> column(const M& A, SizeType j) {
     return MatrixColumn<const M>(A, j);
 }
 
+/** @brief Return the selected matrix row. */
 template<class M>
 inline MatrixRow<const M> row(const M& A, SizeType j) {
     return MatrixRow<const M>(A, j);
@@ -837,6 +967,7 @@ Matrix<X>& Matrix<X>::operator=(const M& A) {
     return *this;
 }
 
+/** @brief Write the value to the output stream. */
 template<AMatrixExpression M>
 inline OutputStream& operator<<(OutputStream& os, const M& A) {
     return os << Matrix<ScalarType<M>>(A);
@@ -876,12 +1007,15 @@ Void _mul_assign(Matrix<X0>& A0, const Matrix<X1>& A1, const Matrix<X2>& A2) {
     }
 }
 
+/** @brief Provide matrix operations for the supported operand types. */
 struct ProvideMatrixOperations {
+    /** @brief Return the sum or unary positive value. */
     template<class X>
     friend inline Matrix<X> operator+(Matrix<X> A) {
         return A;
     }
 
+    /** @brief Return the difference or additive inverse. */
     template<class X>
     friend inline Matrix<X> operator-(Matrix<X> A) {
         for (SizeType i = 0; i != A.row_size(); ++i) {
@@ -892,6 +1026,7 @@ struct ProvideMatrixOperations {
         return A;
     }
 
+    /** @brief Return the sum or unary positive value. */
     template<class X1, class X2>
     friend inline Matrix<SumType<X1, X2>> operator+(const Matrix<X1>& A1, const Matrix<X2>& A2) {
         ARIADNE_PRECONDITION(A1.row_size() == A2.row_size());
@@ -905,6 +1040,7 @@ struct ProvideMatrixOperations {
         return R;
     }
 
+    /** @brief Return the difference or additive inverse. */
     template<class X1, class X2>
     friend inline Matrix<DifferenceType<X1, X2>> operator-(const Matrix<X1>& A1, const Matrix<X2>& A2) {
         ARIADNE_PRECONDITION(A1.row_size() == A2.row_size());
@@ -918,6 +1054,7 @@ struct ProvideMatrixOperations {
         return R;
     }
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend inline Matrix<ProductType<Scalar<X1>, X2>> operator*(X1 const& s1, const Matrix<X2>& A2) {
         Matrix<ProductType<X1, X2>> R(A2.row_size(), A2.column_size(), s1 * A2.zero_element());
@@ -929,6 +1066,7 @@ struct ProvideMatrixOperations {
         return R;
     }
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend inline Matrix<ProductType<X1, Scalar<X2>>> operator*(const Matrix<X1>& A1, X2 const& s2) {
         Matrix<ProductType<X1, X2>> R(A1.row_size(), A1.column_size(), A1.zero_element() * s2);
@@ -940,6 +1078,7 @@ struct ProvideMatrixOperations {
         return R;
     }
 
+    /** @brief Return the quotient. */
     template<class X1, class X2>
     friend inline Matrix<QuotientType<X1, Scalar<X2>>> operator/(const Matrix<X1>& A1, X2 const& s2) {
         Matrix<QuotientType<X1, X2>> R(A1.row_size(), A1.column_size(), A1.zero_element() / s2);
@@ -951,6 +1090,7 @@ struct ProvideMatrixOperations {
         return R;
     }
 
+    /** @brief Multiply by the operand in place. */
     template<class X1, class X2>
     friend inline Matrix<InplaceProductType<X1, X2>>& operator*=(Matrix<X1>& A1, X2 const& s2) {
         for (SizeType i = 0; i != A1.row_size(); ++i) {
@@ -961,6 +1101,7 @@ struct ProvideMatrixOperations {
         return A1;
     }
 
+    /** @brief Divide by the operand in place. */
     template<class X1, class X2>
     friend inline Matrix<InplaceQuotientType<X1, X2>>& operator/=(Matrix<X1>& A1, X2 const& s2) {
         for (SizeType i = 0; i != A1.row_size(); ++i) {
@@ -974,6 +1115,7 @@ struct ProvideMatrixOperations {
     // template<class X1, class X2> friend inline MatrixMatrixProduct<X1,X2> operator*(Matrix<X1> const& A1, Matrix<X2> const& A2) {
     //     return MatrixMatrixProduct<X1,X2>(A1,A2); }
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ArithmeticType<X1, X2>> operator*(const Matrix<X1>& A1, const Matrix<X2>& A2) {
         typedef ArithmeticType<X1, X2> X0;
@@ -989,6 +1131,7 @@ struct ProvideMatrixOperations {
         return A0;
     }
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Vector<ArithmeticType<X1, X2>> operator*(const Matrix<X1>& A1, const Vector<X2>& v2) {
         typedef ArithmeticType<X1, X2> X0;
@@ -1002,6 +1145,7 @@ struct ProvideMatrixOperations {
         return v0;
     }
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Covector<ArithmeticType<X1, X2>> operator*(const Covector<X1>& u1, const Matrix<X2>& A2) {
         typedef ArithmeticType<X1, X2> X0;
@@ -1015,6 +1159,7 @@ struct ProvideMatrixOperations {
         return u0;
     }
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ArithmeticType<X1, X2>> operator*(const Matrix<X1>& A1, const Transpose<Matrix<X2>>& A2) {
         typedef ArithmeticType<X1, X2> X0;
@@ -1030,6 +1175,7 @@ struct ProvideMatrixOperations {
         return A0;
     }
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Matrix<ArithmeticType<X1, X2>> operator*(const Transpose<Matrix<X1>>& A1, const Matrix<X2>& A2) {
         const Matrix<X1>& A1T = A1._AT;
@@ -1045,6 +1191,7 @@ struct ProvideMatrixOperations {
         return A0;
     }
 
+    /** @brief Return the product. */
     template<class X1, class X2>
     friend Vector<ArithmeticType<X1, X2>> operator*(const MatrixTranspose<Matrix<X1>>& A1, const Vector<X2>& v2) {
         const Matrix<X1>& A1T = A1._AT;
@@ -1058,6 +1205,7 @@ struct ProvideMatrixOperations {
         return v0;
     }
 
+    /** @brief Multiply by the operand in place. */
     template<class X>
     friend inline Matrix<X>& operator*=(Matrix<X>& A, const typename Matrix<X>::ScalarType& s) {
         for (SizeType i = 0; i != A.row_size(); ++i) {
@@ -1068,6 +1216,7 @@ struct ProvideMatrixOperations {
         return A;
     }
 
+    /** @brief Test equality of the operands. */
     template<class X1, class X2>
     friend inline auto operator==(const Matrix<X1>& A1, const Matrix<X2>& A2) -> decltype(declval<X1>() == declval<X2>()) {
         if (A1.row_size() != A2.row_size() || A1.column_size() != A2.column_size()) {
@@ -1082,6 +1231,7 @@ struct ProvideMatrixOperations {
         return r;
     }
 
+    /** @brief Return the norm. */
     template<class X>
     friend UniformMatrixNormType<X> norm(const Matrix<X>& A) {
         typedef UniformMatrixNormType<X> R;
@@ -1158,9 +1308,12 @@ Void Matrix<X>::set(SizeType i, SizeType j, const Y& y) {
     this->at(i, j) = y;
 }
 
+/** @brief Return the midpoint. */
 Rational midpoint(Rational);
+/** @brief Return the midpoint. */
 template<class X>
 Matrix<MidpointType<X>> midpoint(const Matrix<X>&);
+/** @brief Return the rational matrix unchanged as its exact midpoint matrix. */
 template<>
 Matrix<Rational> midpoint<Rational>(const Matrix<Rational>&);
 template<class X>
@@ -1220,8 +1373,10 @@ template<class X>
 Vector<X> gs_solve(const Matrix<X>& A, const Vector<X>& b);
 
 // Use Gauss-Seidel iteration hotstarted by iX
+/** @brief Solve the linear system using Gauss–Seidel iteration. */
 template<class X>
 Vector<X> gs_solve(const Matrix<X>& A, const Vector<X>& b, Vector<X> iX);
+/** @brief Perform one Gauss–Seidel iteration step. */
 template<class X>
 Void gs_step(const Matrix<X>& A, const Vector<X>& b, Vector<X>& iX);
 
@@ -1241,10 +1396,13 @@ using RowNormType = decltype(abs(declval<X>()) + abs(declval<X>()));
 
 template<class X>
 Vector<RowNormType<X>> row_norms(const Matrix<X>& A);
+/** @brief Scale matrix rows to the normalization used by the solver. */
 template<class X>
 Matrix<X> normalise_rows(const Matrix<X>& A);
 
+/** @brief Return the triangular factor of the matrix decomposition. */
 Tuple<Matrix<FloatDPApproximation>, PivotMatrix> triangular_factor(const Matrix<FloatDPApproximation>& A);
+/** @brief Return the triangular multiplier used in elimination. */
 Matrix<FloatDPApproximation> triangular_multiplier(const Matrix<FloatDPApproximation>& A);
 
 //!@{

@@ -109,66 +109,112 @@ concept AnInplaceAlgebraOver = Field<X> and requires(A& r, const X& c, const A& 
 template<class A>
 concept AnAlgebra = requires { typename A::NumericType; } and AnAlgebraOver<A, typename A::NumericType>;
 
+/** @brief Reference type specifying the requirements of algebra. */
 template<class X>
 class AlgebraArchetype {
     using ALG = AlgebraArchetype<X>;
 
   public:
     typedef X NumericType;
+    /** @brief Assign the supplied value and return this object. */
     ALG& operator=(const X&);
+    /** @brief Return the sum or unary positive value. */
     friend ALG operator+(ALG const&);
+    /** @brief Return the difference or additive inverse. */
     friend ALG operator-(ALG const&);
+    /** @brief Return the sum or unary positive value. */
     friend ALG operator+(ALG const&, ALG const&);
+    /** @brief Return the difference or additive inverse. */
     friend ALG operator-(ALG const&, ALG const&);
+    /** @brief Return the product. */
     friend ALG operator*(ALG const&, ALG const&);
+    /** @brief Return the sum or unary positive value. */
     friend ALG operator+(const X&, ALG const&);
+    /** @brief Return the difference or additive inverse. */
     friend ALG operator-(const X&, ALG const&);
+    /** @brief Return the product. */
     friend ALG operator*(const X&, ALG const&);
+    /** @brief Return the sum or unary positive value. */
     friend ALG operator+(ALG const&, const X&);
+    /** @brief Return the difference or additive inverse. */
     friend ALG operator-(ALG const&, const X&);
+    /** @brief Return the product. */
     friend ALG operator*(ALG const&, const X&);
+    /** @brief Return the quotient. */
     friend ALG operator/(ALG const&, const X&);
 
+    /** @brief Add the operand in place. */
     friend ALG& operator+=(ALG&, ALG const&);
+    /** @brief Subtract the operand in place. */
     friend ALG& operator-=(ALG&, ALG const&);
+    /** @brief Add the operand in place. */
     friend ALG& operator+=(ALG&, const X&);
+    /** @brief Subtract the operand in place. */
     friend ALG& operator-=(ALG&, const X&);
+    /** @brief Multiply by the operand in place. */
     friend ALG& operator*=(ALG&, const X&);
+    /** @brief Divide by the operand in place. */
     friend ALG& operator/=(ALG&, const X&);
 
+    /** @brief Return the additive zero with the operand characteristics. */
     friend ALG nul(ALG const&);
+    /** @brief Return the unary positive value. */
     friend ALG pos(ALG const&);
+    /** @brief Return the additive inverse. */
     friend ALG neg(ALG const&);
+    /** @brief Return the square. */
     friend ALG sqr(ALG const&);
+    /** @brief Divide the value by two. */
     friend ALG hlf(ALG const&);
+    /** @brief Return the sum of the operands. */
     friend ALG add(ALG const&, ALG const&);
+    /** @brief Return the difference of the operands. */
     friend ALG sub(ALG const&, ALG const&);
+    /** @brief Return the product of the operands. */
     friend ALG mul(ALG const&, ALG const&);
+    /** @brief Return the sum of the operands. */
     friend ALG add(const X&, ALG const&);
+    /** @brief Return the difference of the operands. */
     friend ALG sub(const X&, ALG const&);
+    /** @brief Return the product of the operands. */
     friend ALG mul(const X&, ALG const&);
+    /** @brief Return the sum of the operands. */
     friend ALG add(ALG const&, const X&);
+    /** @brief Return the difference of the operands. */
     friend ALG sub(ALG const&, const X&);
+    /** @brief Return the product of the operands. */
     friend ALG mul(ALG const&, const X&);
+    /** @brief Return the quotient of the operands. */
     friend ALG div(ALG const&, const X&);
+    /** @brief Raise the value to the specified power. */
     friend ALG pow(ALG const&, const Nat&);
 
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const AlgebraArchetype<X>&);
 };
 
+/** @brief Reference type specifying the requirements of inplace algebra. */
 template<class X>
 class InplaceAlgebraArchetype {
     using ALG = InplaceAlgebraArchetype<X>;
 
   public:
     typedef X NumericType;
+    /** @brief Assign the supplied value and return this object. */
     ALG& operator=(const X&);
+    /** @brief Construct a compatible object from the supplied value and characteristics. */
     ALG create() const;
+    /** @brief Construct a constant object with the supplied value. */
     ALG create_constant(const X&) const;
+    /** @brief Add the operand in place. */
     ALG& iadd(const X&);
+    /** @brief Multiply by the operand in place. */
     ALG& imul(const X&);
+    /** @brief Accumulate the scaled value in place. */
     ALG& isma(const X&, ALG const&);
+    /** @brief Accumulate the product in place. */
     ALG& ifma(ALG const&, ALG const&);
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, ALG const& a);
 };
 

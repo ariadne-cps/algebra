@@ -419,16 +419,19 @@ auto MultivariateChebyshevPolynomial<X>::apply(Sqr, ChebyshevPolynomial<X> cm) -
     return cm * cm;
 }
 
+/** @brief Workspace of Chebyshev basis values for polynomial evaluation. */
 template<class X>
 class ChebyshevValues {
     mutable List<X> _lst;
 
   public:
+    /** @brief Construct a \c ChebyshevValues from x. */
     ChebyshevValues(const X& x) : _lst() {
         _lst.reserve(16);
         _lst.append(X(1, x.precision()));
         _lst.append(x);
     }
+    /** @brief Return the selected element or component. */
     const X& operator[](SizeType i) const {
         for (SizeType j = _lst.size(); j <= i; ++j) {
             _lst.append(2 * _lst[1] * _lst[j - 1] - _lst[j - 2]);

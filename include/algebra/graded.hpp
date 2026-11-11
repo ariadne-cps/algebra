@@ -36,65 +36,83 @@
 
 namespace Ariadne {
 
+/** @brief Convert to the sign representation. */
 template<class R, class A>
 inline R cast_sign(A&& a) { return static_cast<R>(std::forward<A>(a)); }
 
+/** @brief Antidifferentiation operation used by differential expansions. */
 struct AntiDiff {};
 
+/** @brief Lazy expression representing closure operations. */
 template<class Op, class... AS>
 struct ClosureExpression;
 
+/** @brief Lazy expression representing closure operations. */
 template<class Op, class A>
 struct ClosureExpression<Op, A> {
     const A& arg;
+    /** @brief Construct a \c ClosureExpression from a. */
     ClosureExpression(const A& a) : arg(a) {}
 };
 
+/** @brief Lazy expression representing closure operations. */
 template<class Op, class A1, class A2>
 struct ClosureExpression<Op, A1, A2> {
     const A1& arg1;
     const A2& arg2;
+    /** @brief Construct a \c ClosureExpression from a1, a2. */
     ClosureExpression(const A1& a1, const A2& a2) : arg1(a1), arg2(a2) {}
 };
 
+/** @brief Lazy expression representing closure operations. */
 template<class Op, class A1, class A2, class A3>
 struct ClosureExpression<Op, A1, A2, A3> {
     const A1& arg1;
     const A2& arg2;
     const A2& arg3;
+    /** @brief Construct a \c ClosureExpression from a1, a2, a3. */
     ClosureExpression(const A1& a1, const A2& a2, const A3& a3) : arg1(a1), arg2(a2), arg3(a3) {}
 };
 
+/** @brief Construct expression from the supplied arguments. */
 template<class Op, class A>
 ClosureExpression<Op, A>
     make_expression(Op, const A& a) {
     return ClosureExpression<Op, A>(a);
 }
 
+/** @brief Construct expression from the supplied arguments. */
 template<class Op, class A1, class A2>
 ClosureExpression<Op, A1, A2>
     make_expression(Op, const A1& a1, const A2& a2) {
     return ClosureExpression<Op, A1, A2>(a1, a2);
 }
 
+/** @brief Construct expression from the supplied arguments. */
 template<class Op, class A1, class A2, class A3>
 ClosureExpression<Op, A1, A2, A3>
     make_expression(Op, const A1& a1, const A2& a2, const A3& a3) {
     return ClosureExpression<Op, A1, A2, A3>(a1, a2, a3);
 }
 
+/** @brief Test whether the supplied objects have compatible characteristics. */
 inline Bool compatible(const FloatDP&, const FloatDP&) { return true; }
+/** @brief Test whether the supplied objects have compatible characteristics. */
 template<class X>
 inline Bool compatible(const Differential<X>& x1, const Differential<X>& x2) { return x1.argument_size() == x2.argument_size(); }
 
+/** @brief Construct a compatible object from the supplied value and characteristics. */
 inline FloatDP create(const FloatDP&) { return FloatDP(0, dp); }
 // inline ExactIntervalType create(const ExactIntervalType& x) { return ExactIntervalType(0); }
+/** @brief Construct a compatible object from the supplied value and characteristics. */
 template<class X>
 inline Differential<X> create(const Differential<X>& x) { return Differential<X>(x.argument_size(), x.degree(), x.zero_coefficient()); }
 
+/** @brief Construct a compatible object from the supplied value and characteristics. */
 template<class X>
 inline X create(const X& x) { return nul(x); }
 
+/** @brief Algebra element represented by homogeneous components of successive degrees. */
 template<class A>
 class Graded : public UniformList<A> {
   public:
@@ -103,10 +121,15 @@ class Graded : public UniformList<A> {
     typedef Ariadne::CharacteristicsType<A> CharacteristicsType;
     typedef Graded<A> SelfType;
 
+    /** @brief Construct a \c Graded from a. */
     Graded(const A& a) : UniformList<A>(1u, a) {}
+    /** @brief Construct a \c Graded from lst. */
     Graded(const List<A>& lst) : UniformList<A>(lst) {}
+    /** @brief Construct a \c Graded from lst. */
     Graded(const UniformList<A>& lst) : UniformList<A>(lst) {}
+    /** @brief Construct a \c Graded from lst. */
     Graded(const InitializerList<A>& lst) : Graded(List<A>(lst)) {}
+    /** @brief Construct a \c Graded from lst, prs. */
     template<class... PRS>
         requires Constructible<UniformList<A>, PRS...> and Constructible<A, ExactDouble, PRS...>
     Graded(const InitializerList<ExactDouble>& lst, PRS... prs)
@@ -115,17 +138,23 @@ class Graded : public UniformList<A> {
             this->UniformList<A>::append(A(x, prs...));
         }
     }
+    /** @brief Construct a \c Graded from deg, prs. */
     Graded(DegreeType deg, Ariadne::CharacteristicsType<A> prs) : UniformList<A>(deg + 1u, prs) {}
+    /** @brief Construct a \c Graded from prs. */
     Graded(Ariadne::CharacteristicsType<A> prs) : UniformList<A>(prs) {}
+    /** @brief Copy-construct the object from the supplied instance. */
     Graded(const Graded<A>& a) : UniformList<A>(static_cast<const UniformList<A>&>(a)) {}
+    /** @brief Assign the supplied value and return this object. */
     Graded<A>& operator=(const Graded<A>& a) {
         this->UniformList<A>::operator=(a);
         return *this;
     }
+    /** @brief Assign the supplied value and return this object. */
     Graded<A>& operator=(Graded<A>&& a) {
         this->UniformList<A>::operator=(a);
         return *this;
     }
+    /** @brief Assign the supplied value and return this object. */
     Graded<A>& operator=(const NumericType& x) {
         this->append(this->zero_element());
         if (this->size() == 1) {
@@ -133,6 +162,7 @@ class Graded : public UniformList<A> {
         }
         return *this;
     }
+    /** @brief Assign the supplied value and return this object. */
     template<class Y>
         requires Assignable<Y, NumericType>
     Graded<A>& operator=(const Y& y) {
@@ -142,13 +172,18 @@ class Graded : public UniformList<A> {
         }
         return *this;
     }
+    /** @brief Assign the supplied value. */
     template<class Op>
     Void operator=(const ClosureExpression<Op, SelfType>& expr);
+    /** @brief Assign the supplied value. */
     template<class Op>
     Void operator=(const ClosureExpression<Op, SelfType, SelfType>& expr);
+    /** @brief Assign the supplied value. */
     template<class Op, class N>
     Void operator=(const ClosureExpression<Op, SelfType, N>& expr);
+    /** @brief Assign the supplied value. */
     Void operator=(const ClosureExpression<AntiDiff, SelfType>& ad);
+    /** @brief Construct a constant with the supplied value. */
     static Graded<A> constant(const A& c, DegreeType deg) {
         assert(deg >= 1);
         A z = nul(c);
@@ -158,6 +193,7 @@ class Graded : public UniformList<A> {
         }
         return r;
     }
+    /** @brief Construct the selected independent variable. */
     static Graded<A> variable(const A& a0, DegreeType deg) {
         ARIADNE_PRECONDITION(deg >= 1);
         A z = nul(a0);
@@ -168,13 +204,19 @@ class Graded : public UniformList<A> {
         }
         return r;
     }
+    /** @brief Construct a zero object with compatible characteristics. */
     Graded<A> create_zero() const { return Graded<A>(UniformList<A>(this->degree() + 1u, Ariadne::create_zero((*this)[0u]))); }
     //    CharacteristicsType characteristics() const {
     //        return std::make_tuple(this->degree(),get_characteristics((*this)[0])); }
+    /** @brief Return the characteristics required to construct compatible values. */
     Ariadne::CharacteristicsType<A> characteristics() const { return this->UniformList<A>::element_characteristics(); }
+    /** @brief Return the polynomial or expansion degree. */
     DegreeType degree() const { return static_cast<DegreeType>(this->size() - 1u); }
+    /** @brief Extend the object to the supplied size or argument space. */
     Void extend(const A& a) { this->UniformList<A>::append(a); }
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const Graded<A>& g) { return g._write(os); }
 };
 
@@ -196,6 +238,7 @@ OutputStream& Graded<A>::_write(OutputStream& os) const {
     return os;
 }
 
+/** @brief Write the value to the output stream. */
 template<>
 inline OutputStream& Graded<FloatDP>::_write(OutputStream& os) const {
     const Graded<FloatDP>& g = *this;
@@ -254,49 +297,71 @@ template<> inline OutputStream& Graded<ExactIntervalType>::_write(OutputStream& 
 }
 */
 
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Nul&, const X& a) { return nul(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Pos&, const X& a) { return pos(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Neg&, const X& a) { return neg(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Hlf&, const X& a) { return hlf(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Add&, const X& a1, const X& a2) { return add(r, a1, a2); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Sub&, const X& a1, const X& a2) { return sub(r, a1, a2); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Mul&, const X& a1, const X& a2) { return mul(r, a1, a2); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Div&, const X& a1, const X& a2) { return div(r, a1, a2); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Pow&, const X& a, const Int& n) { return pow(r, a, n); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Sqr&, const X& a) { return sqr(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Sqrt&, const X& a) { return sqrt(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Exp&, const X& a) { return exp(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Log&, const X& a) { return log(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Rec&, const X& a) { return rec(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Sin&, const X& a) { return sin(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Cos&, const X& a) { return cos(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Tan&, const X& a) { return tan(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Tanh&, const X& a) { return tanh(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Asin&, const X& a) { return asin(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Acos&, const X& a) { return acos(r, a); }
+/** @brief Compute the value at the requested accuracy or effort. */
 template<class X>
 Void compute(X& r, const Atan&, const X& a) { return atan(r, a); }
 
+/** @brief Add the operand in place. */
 template<class A, class B>
 Graded<A>& operator+=(Graded<A>& a, const B& c) {
     ARIADNE_ASSERT(a.size() > 0);
@@ -305,45 +370,60 @@ Graded<A>& operator+=(Graded<A>& a, const B& c) {
     }
     return a;
 }
+/** @brief Multiply by the operand in place. */
 template<class A, class B>
 Graded<A>& operator*=(Graded<A>& a, const B& c) {
     a.back() *= c;
     return a;
 }
 
+/** @brief Return the sum or unary positive value. */
 template<class A, class B>
 Graded<A> operator+(const Graded<A>& a, const B& c) { return add(a, c); }
+/** @brief Return the product. */
 template<class A, class B>
 Graded<A> operator*(const Graded<A>& a, const B& c) { return mul(a, c); }
 
+/** @brief Return the sum or unary positive value. */
 template<class A>
 Graded<A> operator+(const GenericNumericType<A>& c, const Graded<A>& a) { return add(c, a); }
+/** @brief Return the difference or additive inverse. */
 template<class A>
 Graded<A> operator-(const GenericNumericType<A>& c, const Graded<A>& a) { return sub(c, a); }
+/** @brief Return the product. */
 template<class A>
 Graded<A> operator*(const GenericNumericType<A>& c, const Graded<A>& a) { return mul(c, a); }
+/** @brief Return the quotient. */
 template<class A>
 Graded<A> operator/(const GenericNumericType<A>& c, const Graded<A>& a) { return div(c, a); }
 
+/** @brief Return the sum or unary positive value. */
 template<class A>
 inline ClosureExpression<Pos, Graded<A>> operator+(const Graded<A>& a) { return pos(a); }
+/** @brief Return the difference or additive inverse. */
 template<class A>
 inline ClosureExpression<Neg, Graded<A>> operator-(const Graded<A>& a) { return neg(a); }
+/** @brief Return the sum or unary positive value. */
 template<class A>
 inline ClosureExpression<Add, Graded<A>, Graded<A>> operator+(const Graded<A>& a1, const Graded<A>& a2) { return add(a1, a2); }
+/** @brief Return the difference or additive inverse. */
 template<class A>
 inline ClosureExpression<Sub, Graded<A>, Graded<A>> operator-(const Graded<A>& a1, const Graded<A>& a2) { return sub(a1, a2); }
+/** @brief Return the product. */
 template<class A>
 inline ClosureExpression<Mul, Graded<A>, Graded<A>> operator*(const Graded<A>& a1, const Graded<A>& a2) { return mul(a1, a2); }
+/** @brief Return the quotient. */
 template<class A>
 inline ClosureExpression<Div, Graded<A>, Graded<A>> operator/(const Graded<A>& a1, const Graded<A>& a2) { return div(a1, a2); }
 
+/** @brief Return the sum of the operands. */
 template<class A, class B>
 Graded<A> add(const Graded<A>& a, const B& c) {
     Graded<A> r(a);
     r[0] += c;
     return r;
 }
+/** @brief Return the product of the operands. */
 template<class A, class B>
 Graded<A> mul(const Graded<A>& a, const B& c) {
     Graded<A> r(a);
@@ -351,136 +431,166 @@ Graded<A> mul(const Graded<A>& a, const B& c) {
     return r;
 }
 
+/** @brief Return the sum of the operands. */
 template<class A>
 Graded<A> add(const GenericNumericType<A>& c, const Graded<A>& a) {
     Graded<A> r(a);
     r[0] += c;
     return r;
 }
+/** @brief Return the difference of the operands. */
 template<class A>
 Graded<A> sub(const GenericNumericType<A>&, const Graded<A>&) {
     ARIADNE_NOT_IMPLEMENTED;
 }
+/** @brief Return the product of the operands. */
 template<class A>
 Graded<A> mul(const GenericNumericType<A>& c, const Graded<A>& a) {
     Graded<A> r(a);
     r[0] *= c;
     return r;
 }
+/** @brief Return the quotient of the operands. */
 template<class A>
 Graded<A> div(const GenericNumericType<A>&, const Graded<A>&) {
     ARIADNE_NOT_IMPLEMENTED;
 }
 
+/** @brief Return the sum of the operands. */
 template<class A>
 ClosureExpression<Add, Graded<A>, Graded<A>> add(const Graded<A>& a1, const Graded<A>& a2) {
     return make_expression(Add(), a1, a2);
 }
+/** @brief Return the difference of the operands. */
 template<class A>
 ClosureExpression<Sub, Graded<A>, Graded<A>> sub(const Graded<A>& a1, const Graded<A>& a2) {
     return make_expression(Sub(), a1, a2);
 }
+/** @brief Return the product of the operands. */
 template<class A>
 ClosureExpression<Mul, Graded<A>, Graded<A>> mul(const Graded<A>& a1, const Graded<A>& a2) {
     return make_expression(Mul(), a1, a2);
 }
+/** @brief Return the quotient of the operands. */
 template<class A>
 ClosureExpression<Div, Graded<A>, Graded<A>> div(const Graded<A>& a1, const Graded<A>& a2) {
     return make_expression(Div(), a1, a2);
 }
+/** @brief Return the additive zero with the operand characteristics. */
 template<class A>
 ClosureExpression<Nul, Graded<A>> nul(const Graded<A>& a) {
     return make_expression(Nul(), a);
 }
+/** @brief Return the unary positive value. */
 template<class A>
 ClosureExpression<Pos, Graded<A>> pos(const Graded<A>& a) {
     return make_expression(Pos(), a);
 }
+/** @brief Return the additive inverse. */
 template<class A>
 ClosureExpression<Neg, Graded<A>> neg(const Graded<A>& a) {
     return make_expression(Neg(), a);
 }
+/** @brief Divide the value by two. */
 template<class A>
 ClosureExpression<Hlf, Graded<A>> hlf(const Graded<A>& a) {
     return make_expression(Hlf(), a);
 }
+/** @brief Return the square. */
 template<class A>
 ClosureExpression<Sqr, Graded<A>> sqr(const Graded<A>& a) {
     return make_expression(Sqr(), a);
 }
+/** @brief Raise the value to the specified power. */
 template<class A>
 ClosureExpression<Pow, Graded<A>, Int> pow(const Graded<A>& a, const Int& n) {
     return make_expression(Pow(), a, n);
 }
+/** @brief Return the square root. */
 template<class A>
 ClosureExpression<Sqrt, Graded<A>> sqrt(const Graded<A>& a) {
     return make_expression(Sqrt(), a);
 }
+/** @brief Return the exponential. */
 template<class A>
 ClosureExpression<Exp, Graded<A>> exp(const Graded<A>& a) {
     return make_expression(Exp(), a);
 }
+/** @brief Return the natural logarithm. */
 template<class A>
 ClosureExpression<Log, Graded<A>> log(const Graded<A>& a) {
     return make_expression(Log(), a);
 }
+/** @brief Return the multiplicative inverse. */
 template<class A>
 ClosureExpression<Rec, Graded<A>> rec(const Graded<A>& a) {
     return make_expression(Rec(), a);
 }
+/** @brief Return the sine. */
 template<class A>
 ClosureExpression<Sin, Graded<A>> sin(const Graded<A>& a) {
     return make_expression(Sin(), a);
 }
+/** @brief Return the cosine. */
 template<class A>
 ClosureExpression<Cos, Graded<A>> cos(const Graded<A>& a) {
     return make_expression(Cos(), a);
 }
+/** @brief Return the tangent. */
 template<class A>
 ClosureExpression<Tan, Graded<A>> tan(const Graded<A>& a) {
     return make_expression(Tan(), a);
 }
+/** @brief Return the hyperbolic tangent. */
 template<class A>
 ClosureExpression<Tanh, Graded<A>> tanh(const Graded<A>& a) {
     return make_expression(Tanh(), a);
 }
+/** @brief Return the inverse sine. */
 template<class A>
 ClosureExpression<Asin, Graded<A>> asin(const Graded<A>& a) {
     return make_expression(Asin(), a);
 }
+/** @brief Return the inverse cosine. */
 template<class A>
 ClosureExpression<Acos, Graded<A>> acos(const Graded<A>& a) {
     return make_expression(Acos(), a);
 }
+/** @brief Return the inverse tangent. */
 template<class A>
 ClosureExpression<Atan, Graded<A>> atan(const Graded<A>& a) {
     return make_expression(Atan(), a);
 }
 
+/** @brief Return the additive zero with the operand characteristics. */
 template<class A>
 Void nul(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_ASSERT(r.degree() + 1u == a.degree());
     r.append(nul(a.back()));
 }
 
+/** @brief Return the unary positive value. */
 template<class A>
 Void pos(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_ASSERT(r.degree() + 1u == a.degree());
     r.append(pos(a.back()));
 }
 
+/** @brief Return the additive inverse. */
 template<class A>
 Void neg(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
     r.append(-a.back());
 }
 
+/** @brief Divide the value by two. */
 template<class A>
 Void hlf(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_ASSERT(r.degree() + 1u == a.degree());
     r.append(hlf(a.back()));
 }
 
+/** @brief Return the sum of the operands. */
 template<class A>
 Void add(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a2) {
     ARIADNE_ASSERT(r.size() + 1u == a1.size());
@@ -488,6 +598,7 @@ Void add(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a2) {
     r.append(a1.back() + a2.back());
 }
 
+/** @brief Return the difference of the operands. */
 template<class A>
 Void sub(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a2) {
     ARIADNE_ASSERT(r.size() + 1u == a1.size());
@@ -495,6 +606,7 @@ Void sub(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a2) {
     r.append(a1.back() - a2.back());
 }
 
+/** @brief Return the product of the operands. */
 template<class A>
 Void mul(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a2) {
     ARIADNE_ASSERT_MSG(r.size() + 1u == a1.size(), "r=" << r << ", a1=" << a1 << ", a2=" << a2);
@@ -507,6 +619,7 @@ Void mul(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a2) {
     }
 }
 
+/** @brief Return the quotient of the operands. */
 template<class A>
 Void div(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a2) {
     ARIADNE_ASSERT(r.size() + 1u == a1.size());
@@ -521,6 +634,7 @@ Void div(Graded<A>& r, const Graded<A>& a1, const Graded<A>& a2) {
     r[d] = r[d] / a2[0];
 }
 
+/** @brief Return the square. */
 template<class A>
 Void sqr(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
@@ -531,6 +645,7 @@ Void sqr(Graded<A>& r, const Graded<A>& a) {
     }
 }
 
+/** @brief Return the multiplicative inverse. */
 template<class A>
 Void rec(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
@@ -547,6 +662,7 @@ Void rec(Graded<A>& r, const Graded<A>& a) {
 }
 
 // Use formula d*a[0]*r[d] = sum_{i=0}^{d-1} ((d-i)*n-i)*a[d-i]*r[i] for d>0
+/** @brief Raise the value to the specified power. */
 template<class A>
 Void pow(Graded<A>& r, const Graded<A>& a, Int n) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
@@ -562,6 +678,7 @@ Void pow(Graded<A>& r, const Graded<A>& a, Int n) {
     r[d] = r[d] / d / a[0];
 }
 
+/** @brief Return the square root. */
 template<class A>
 Void sqrt(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
@@ -578,6 +695,7 @@ Void sqrt(Graded<A>& r, const Graded<A>& a) {
     r[d] = r[d] / (2 * r[0]);
 }
 
+/** @brief Return the exponential. */
 template<class A>
 Void exp(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
@@ -593,6 +711,7 @@ Void exp(Graded<A>& r, const Graded<A>& a) {
     r[d] /= d;
 }
 
+/** @brief Return the natural logarithm. */
 template<class A>
 Void log(Graded<A>& r, const Graded<A>& a) {
     // y=log x; r=1/x; s=r^2;
@@ -643,6 +762,7 @@ template<class A> Void sin(Graded<A>& r, const Graded<A>& a) {
 }
 */
 
+/** @brief Compute the sine and cosine together. */
 template<class A>
 Void sincos(Graded<A>& s, Graded<A>& c, const Graded<A>& a) {
     // Let f[0](t)=f(t), s[0](t)=sin(f(t)), c[0](t)=cos(f(t))
@@ -668,6 +788,7 @@ Void sincos(Graded<A>& s, Graded<A>& c, const Graded<A>& a) {
     }
 }
 
+/** @brief Return the sine. */
 template<class A>
 Void sin(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
@@ -677,6 +798,7 @@ Void sin(Graded<A>& r, const Graded<A>& a) {
     r = s;
 }
 
+/** @brief Return the cosine. */
 template<class A>
 Void cos(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
@@ -686,11 +808,13 @@ Void cos(Graded<A>& r, const Graded<A>& a) {
     r = c;
 }
 
+/** @brief Return the tangent. */
 template<class A>
 Void tan(Graded<A>&, const Graded<A>&) {
     ARIADNE_NOT_IMPLEMENTED;
 }
 
+/** @brief Return the hyperbolic tangent. */
 template<class A>
 Void tanh(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_PRECONDITION(r.size() + 1u <= a.size());
@@ -716,38 +840,46 @@ Void tanh(Graded<A>& r, const Graded<A>& a) {
     r[d] = coefficient / d;
 }
 
+/** @brief Return the inverse sine. */
 template<class A>
 Void asin(Graded<A>&, const Graded<A>&) {
     ARIADNE_NOT_IMPLEMENTED;
 }
 
+/** @brief Return the inverse cosine. */
 template<class A>
 Void acos(Graded<A>&, const Graded<A>&) {
     ARIADNE_NOT_IMPLEMENTED;
 }
 
+/** @brief Return the inverse tangent. */
 template<class A>
 Void atan(Graded<A>&, const Graded<A>&) {
     ARIADNE_NOT_IMPLEMENTED;
 }
 
+/** @brief Return the maximum of the operands. */
 template<class A>
 Graded<A> max(const GenericNumericType<A>&, const Graded<A>&) {
     ARIADNE_THROW(std::runtime_error, "max(GenericNumericType<A>,Graded<A>)", "Cannot apply non-analytic operation to Graded.");
 }
+/** @brief Return the minimum of the operands. */
 template<class A>
 Graded<A> min(const GenericNumericType<A>&, const Graded<A>&) {
     ARIADNE_THROW(std::runtime_error, "min(GenericNumericType<A>,Graded<A>)", "Cannot apply non-analytic operation to Graded.");
 }
 
+/** @brief Return the maximum of the operands. */
 template<class A>
 Graded<A> max(const Graded<A>&, const Graded<A>&) {
     ARIADNE_THROW(std::runtime_error, "max(Graded<A>,Graded<A>)", "Cannot apply non-analytic operation to Graded.")
 }
+/** @brief Return the minimum of the operands. */
 template<class A>
 Graded<A> min(const Graded<A>&, const Graded<A>&) {
     ARIADNE_THROW(std::runtime_error, "min(Graded<A>,Graded<A>)", "Cannot apply non-analytic operation to Graded.")
 }
+/** @brief Return the absolute value. */
 template<class A>
 Graded<A> abs(const Graded<A>&) {
     ARIADNE_THROW(std::runtime_error, "abs(Graded<A>)", "Cannot apply non-analytic operation to Graded.")
@@ -776,21 +908,25 @@ Void Graded<A>::operator=(const ClosureExpression<AntiDiff, Graded<A>>& expr) {
     antidifferentiate(*this, expr.arg);
 }
 
+/** @brief Integrate the differential expansion with respect to the selected argument. */
 template<class A>
 Void antidifferentiate(Graded<A>& r, const Graded<A>& a) {
     ARIADNE_ASSERT_MSG(r.size() == a.size(), "r=" << r << ", a=" << a);
     r.append(a.back() / (r.degree() + 1u));
 }
 
+/** @brief Return an integrated differential expansion. */
 template<class A>
 ClosureExpression<AntiDiff, Graded<A>> antidifferential(const Graded<A>& a) {
     return ClosureExpression<AntiDiff, Graded<A>>(a);
 }
 
+/** @brief Construct differential variable from the supplied arguments. */
 template<class X>
 Differential<X> make_differential_variable(SizeType as, DegreeType deg, X val, SizeType ind) {
     return Differential<X>::variable(as, deg, val, ind);
 }
+/** @brief Construct graded constant from the supplied arguments. */
 template<class X>
 Graded<X> make_graded_constant(const X& val, DegreeType deg) {
     Graded<X> res(val);
@@ -800,6 +936,7 @@ Graded<X> make_graded_constant(const X& val, DegreeType deg) {
     }
     return res;
 }
+/** @brief Construct graded variable from the supplied arguments. */
 template<class X>
 Graded<X> make_graded_variable(const X& val, DegreeType deg) {
     ARIADNE_PRECONDITION(deg >= 1u);
@@ -812,10 +949,12 @@ Graded<X> make_graded_variable(const X& val, DegreeType deg) {
     return res;
 }
 
+/** @brief Construct graded from the supplied arguments. */
 template<class X>
 Graded<X> make_graded(const X& val) {
     return Graded<X>(val);
 }
+/** @brief Create a graded expansion with the supplied initial value. */
 template<class X>
 Graded<X> create_graded(const X&) {
     return Graded<X>();

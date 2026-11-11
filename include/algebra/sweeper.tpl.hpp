@@ -116,6 +116,7 @@ Void SweeperBase<F>::_sweep(Expansion<MultiIndex, FloatUpperInterval<PR>>& p, Fl
 
 namespace {
 
+/** @brief Return the radius used by the sweeping policy. */
 template<class I, class X>
 decltype(auto) sweeper_radius(const Expansion<I, X>& p) {
     typedef decltype(mag(declval<X>())) R;

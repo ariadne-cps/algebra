@@ -58,8 +58,11 @@ class TensorRow {
     SizeType _i;
 
   public:
+    /** @brief Construct a \c TensorRow from t, i. */
     TensorRow(T& t, SizeType i) : _t(t), _i(i) {};
+    /** @brief Return the selected element or component. */
     const T& operator[](SizeType j) const { return _t[Array<SizeType>({_i, j})]; }
+    /** @brief Return the selected element or component. */
     T& operator[](SizeType j) { return _t[Array<SizeType>({_i, j})]; }
 };
 
@@ -73,22 +76,32 @@ class Tensor {
 
   public:
     typedef X ValueType;
+    /** @brief Construct a \c Tensor from ns, z. */
     Tensor(const Array<SizeType>& ns, const X& z) : _ns(ns), _a(_total_size(), z) {}
+    /** @brief Construct a \c Tensor from ns, g. */
     template<class G>
         requires InvocableReturning<X, G, Array<SizeType>>
     Tensor(const Array<SizeType>& ns, const G& g);
+    /** @brief Return the matrix rank. */
     constexpr SizeType rank() const { return _ns.size(); }
+    /** @brief Return the extents of the dimensions. */
     Array<SizeType> sizes() const { return _ns; }
+    /** @brief Return the number of elements. */
     SizeType size(SizeType i) const { return _ns[i]; }
+    /** @brief Return the selected element or component. */
     const X& operator[](const Array<SizeType>& is) const { return _a[_index(is)]; }
+    /** @brief Return the selected element or component. */
     X& operator[](const Array<SizeType>& is) { return _a[_index(is)]; }
 
+    /** @brief Return the selected element or component. */
     TensorRow<const Tensor<N, X>&> operator[](const SizeType& i) const { return TensorRow<const Tensor<N, X>&>(*this, i); }
+    /** @brief Return the selected element or component. */
     TensorRow<Tensor<N, X>&> operator[](const SizeType& i) { return TensorRow<Tensor<N, X>&>(*this, i); }
 
   private:
 
   public:
+    /** @brief Return the selected index. */
     SizeType _index(Array<SizeType> is) const {
         SizeType k = 0;
         SizeType r = is[k];
@@ -100,6 +113,7 @@ class Tensor {
         }
         return r;
     }
+    /** @brief Return the total number of storage units required. */
     SizeType _total_size() const {
         SizeType r = 1;
         for (SizeType i = 0; i != N; ++i) {
@@ -107,9 +121,11 @@ class Tensor {
         }
         return r;
     }
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 };
 
+/** @brief Apply the transformation to the supplied elements. */
 template<class X, class F>
     requires Invocable<F, X>
 auto transform(const Tensor<2, X>& t, const F& f) -> Tensor<2, ResultOf<F(X)>> {

@@ -53,12 +53,15 @@ ArithmeticType<X, A> horner_evaluate(const Expansion<DegreeType, X>& e, const A&
 template<class X, class A>
 ArithmeticType<X, A> power_evaluate(const Expansion<MultiIndex, X>& e, const Vector<A>& y);
 
+/** @brief Evaluate at the supplied argument. */
 template<class X, class A>
 ArithmeticType<X, A> evaluate(const Expansion<MultiIndex, X>& e, const Vector<A>& y);
 
+/** @brief Evaluate by directly summing the stored terms. */
 template<class X, class A>
 ArithmeticType<X, A> simple_evaluate(const Expansion<MultiIndex, X>& e, const Vector<A>& y);
 
+/** @brief Evaluate at the supplied argument. */
 template<class X, class A>
 Vector<ArithmeticType<X, A>> evaluate(const Vector<Expansion<MultiIndex, X>>& e, const Vector<A>& y);
 

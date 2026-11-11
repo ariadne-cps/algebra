@@ -37,23 +37,29 @@
 #include "ariadne-testing.hpp"
 namespace AlgebraTesting {
 inline thread_local Ariadne::Testing::Context* active = nullptr;
+/** @brief Return the active test or benchmark context. */
 inline Ariadne::Testing::Context& context() {
     if (!active)
         throw std::logic_error("No active algebra testing context");
     return *active;
 }
+/** @brief Scoped diagnostic context for an algebra test case. */
 struct CaseScope {
     Ariadne::Testing::Context& ctx;
     Ariadne::Testing::Context* previous;
     std::ostringstream output, errors;
     std::streambuf* oldout;
     std::streambuf* olderr;
+    /** @brief Construct a \c CaseScope from c. */
     explicit CaseScope(Ariadne::Testing::Context& c)
         : ctx(c), previous(active),
           oldout(std::cout.rdbuf(output.rdbuf())),
           olderr(std::cerr.rdbuf(errors.rdbuf())) { active = &c; }
+    /** @brief Disallow this construction to preserve the ownership contract. */
     CaseScope(const CaseScope&) = delete;
+    /** @brief Disallow assignment to preserve the ownership contract. */
     CaseScope& operator=(const CaseScope&) = delete;
+    /** @brief Destroy the object and release its owned resources. */
     ~CaseScope() noexcept {
         std::cout.rdbuf(oldout);
         std::cerr.rdbuf(olderr);
@@ -72,6 +78,7 @@ struct CaseScope {
 // the pre-migration ARIADNE_TEST_EQUAL(S) and ARIADNE_TEST_ASSERT macros.
 // "decide" is an approximate/domain decision, NOT a mathematical proof.
 // Use the standard Ariadne::Testing evidence macros for new tests instead.
+/** @brief Convert the legacy predicate result to a test decision. */
 template<class T>
 bool legacy_decision(const T& value) {
     if constexpr (requires(const T& v) { decide(v); })
@@ -80,6 +87,7 @@ bool legacy_decision(const T& value) {
         return static_cast<bool>(value);
 }
 
+/** @brief Compare the operands and decide the resulting equality predicate. */
 template<class A, class B>
 void decided_equal(Ariadne::Testing::Context& context, const A& actual,
                    const B& expected, const char* description,
@@ -101,6 +109,7 @@ void decided_equal(Ariadne::Testing::Context& context, const A& actual,
     context.check([&] { return decision; }, description);
 }
 
+/** @brief Decide whether the operands have the same represented value. */
 template<class A, class B>
 void decided_same(Ariadne::Testing::Context& context, const A& actual,
                   const B& expected, const char* description,
@@ -113,6 +122,7 @@ void decided_same(Ariadne::Testing::Context& context, const A& actual,
     context.check([&] { return decision; }, description);
 }
 
+/** @brief Record a legacy assertion through the test context. */
 template<class T>
 void legacy_assert(Ariadne::Testing::Context& context, const T& proposition,
                    const char* expression) {

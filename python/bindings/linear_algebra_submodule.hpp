@@ -34,6 +34,7 @@ using namespace Ariadne;
 
 namespace Ariadne {
 
+/** @brief Return the selected elements through the Python indexing interface. */
 template<class X>
 X __vgetitem__(const Vector<X>& v, Nat i) {
     if (i < 0) {
@@ -43,6 +44,7 @@ X __vgetitem__(const Vector<X>& v, Nat i) {
     return v[static_cast<Nat>(i)];
 }
 
+/** @brief Return the selected elements through the Python indexing interface. */
 template<class X>
 Vector<X> __vgetslice__(const Vector<X>& v, Nat start, Nat stop) {
     if (start < 0) {
@@ -55,6 +57,7 @@ Vector<X> __vgetslice__(const Vector<X>& v, Nat start, Nat stop) {
     return project(v, range(static_cast<Nat>(start), static_cast<Nat>(stop)));
 }
 
+/** @brief Replace the selected elements through the Python indexing interface. */
 template<class X>
 Void __vsetitem__(Vector<X>& v, Nat i, const X& x) {
     if (i < 0) {
@@ -64,6 +67,7 @@ Void __vsetitem__(Vector<X>& v, Nat i, const X& x) {
     v[static_cast<Nat>(i)] = x;
 }
 
+/** @brief Return the selected covector component through Python indexing. */
 template<class X>
 X __cvgetitem__(const Covector<X>& u, Nat i) {
     if (i < 0) {
@@ -73,6 +77,7 @@ X __cvgetitem__(const Covector<X>& u, Nat i) {
     return u[static_cast<Nat>(i)];
 }
 
+/** @brief Replace the selected covector component through Python indexing. */
 template<class X>
 Void __cvsetitem__(Covector<X>& u, Nat i, const X& x) {
     if (i < 0) {
@@ -82,6 +87,7 @@ Void __cvsetitem__(Covector<X>& u, Nat i, const X& x) {
     u[static_cast<Nat>(i)] = x;
 }
 
+/** @brief Return the selected elements through the Python indexing interface. */
 template<class X>
 X __mgetitem__(const Matrix<X>& A, const std::tuple<Nat, Nat>& ind) {
     Nat i = std::get<0>(ind);
@@ -89,6 +95,7 @@ X __mgetitem__(const Matrix<X>& A, const std::tuple<Nat, Nat>& ind) {
     return A[i][j];
 }
 
+/** @brief Replace the selected elements through the Python indexing interface. */
 template<class X>
 Void __msetitem__(Matrix<X>& A, const std::tuple<Nat, Nat>& ind, const X& x) {
     Nat i = std::get<0>(ind);

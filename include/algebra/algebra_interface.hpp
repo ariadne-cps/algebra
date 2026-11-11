@@ -57,9 +57,11 @@ class ElementaryAlgebra;
 template<class X>
 class Series;
 
+/** @brief Compile-time traits for algebra. */
 template<class X>
 struct AlgebraTraits;
 
+/** @brief Compile-time traits for algebra. */
 template<>
 struct AlgebraTraits<ApproximateNumber> {
     typedef ApproximateNumber ValueType;
@@ -69,6 +71,7 @@ struct AlgebraTraits<ApproximateNumber> {
     typedef ApproximateNumber NumericType;
 };
 
+/** @brief Compile-time traits for algebra. */
 template<>
 struct AlgebraTraits<ValidatedNumber> {
     typedef ExactNumber ValueType;
@@ -78,6 +81,7 @@ struct AlgebraTraits<ValidatedNumber> {
     typedef ValidatedNumber NumericType;
 };
 
+/** @brief Compile-time traits for algebra. */
 template<>
 struct AlgebraTraits<EffectiveNumber> {
     typedef EffectiveNumber ValueType;
@@ -87,6 +91,7 @@ struct AlgebraTraits<EffectiveNumber> {
     typedef EffectiveNumber NumericType;
 };
 
+/** @brief Compile-time traits for algebra. */
 template<class F>
 struct AlgebraTraits<Approximation<F>> {
     typedef Approximation<F> ValueType;
@@ -96,6 +101,7 @@ struct AlgebraTraits<Approximation<F>> {
     typedef Approximation<F> NumericType;
 };
 
+/** @brief Compile-time traits for algebra. */
 template<class F>
 struct AlgebraTraits<Bounds<F>> {
     typedef F ValueType;
@@ -105,6 +111,7 @@ struct AlgebraTraits<Bounds<F>> {
     typedef Bounds<F> NumericType;
 };
 
+/** @brief Compile-time traits for algebra. */
 template<>
 struct AlgebraTraits<Real> {
     typedef FloatDP ValueType;
@@ -143,10 +150,15 @@ class AlgebraInterface
     //! \brief Fused multiply and add \c r+=x1*x2 .
     virtual Void _ifma(const AlgebraInterface<X>& x1, const AlgebraInterface<X>& x2) = 0;
 
+    /** @brief Apply the supplied operation to the operands. */
     virtual AlgebraInterface<X>* _apply(UnaryRingOperator) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual AlgebraInterface<X>* _apply(BinaryRingOperator, const AlgebraInterface<X>&) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual AlgebraInterface<X>* _apply(BinaryFieldOperator, const X&) const = 0;
+    /** @brief Apply the operation with reversed operand order. */
     virtual AlgebraInterface<X>* _rapply(BinaryRingOperator, const X&) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual AlgebraInterface<X>* _apply(GradedRingOperator, Nat m) const = 0;
 };
 
@@ -159,17 +171,25 @@ class ElementaryAlgebraInterface
 
   public:
     // Overrides for AlgebraInterface operations
+    /** @brief Construct a compatible copy of the supplied object. */
     virtual ElementaryAlgebraInterface<X>* _create_copy() const = 0;
+    /** @brief Construct a zero object with compatible characteristics. */
     virtual ElementaryAlgebraInterface<X>* _create_zero() const = 0;
+    /** @brief Construct a constant object with the supplied value. */
     virtual ElementaryAlgebraInterface<X>* _create_constant(const X& c) const = 0;
 
     //! FIXME: Remove this; currently used to allow copy of Handle
     virtual ElementaryAlgebraInterface<X>* _copy() const { return this->_create_copy(); }
 
+    /** @brief Apply the supplied operation to the operands. */
     virtual ElementaryAlgebraInterface<X>* _apply(BinaryElementaryOperator, const ElementaryAlgebraInterface<X>&) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual ElementaryAlgebraInterface<X>* _apply(BinaryElementaryOperator, const X&) const = 0;
+    /** @brief Apply the operation with reversed operand order. */
     virtual ElementaryAlgebraInterface<X>* _rapply(BinaryElementaryOperator, const X&) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual ElementaryAlgebraInterface<X>* _apply(UnaryElementaryOperator) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual ElementaryAlgebraInterface<X>* _apply(GradedElementaryOperator, Int) const = 0;
 };
 
@@ -185,17 +205,25 @@ class TranscendentalAlgebraInterface
 
   public:
     // Overrides for AlgebraInterface operations
+    /** @brief Construct a compatible copy of the supplied object. */
     virtual TranscendentalAlgebraInterface<X>* _create_copy() const = 0;
+    /** @brief Construct a zero object with compatible characteristics. */
     virtual TranscendentalAlgebraInterface<X>* _create_zero() const = 0;
+    /** @brief Construct a constant object with the supplied value. */
     virtual TranscendentalAlgebraInterface<X>* _create_constant(const X& c) const = 0;
 
     //! FIXME: Remove this; currently used to allow copy of Handle
     virtual TranscendentalAlgebraInterface<X>* _copy() const { return this->_create_copy(); }
 
+    /** @brief Apply the supplied operation to the operands. */
     virtual TranscendentalAlgebraInterface<X>* _apply(BinaryFieldOperator, const TranscendentalAlgebraInterface<X>&) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual TranscendentalAlgebraInterface<X>* _apply(BinaryFieldOperator, const X&) const = 0;
+    /** @brief Apply the operation with reversed operand order. */
     virtual TranscendentalAlgebraInterface<X>* _rapply(BinaryFieldOperator, const X&) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual TranscendentalAlgebraInterface<X>* _apply(UnaryTranscendentalOperator) const = 0;
+    /** @brief Apply the supplied operation to the operands. */
     virtual TranscendentalAlgebraInterface<X>* _apply(GradedFieldOperator, Int) const = 0;
 };
 
@@ -210,7 +238,9 @@ class NormedAlgebraInterface
     typedef typename AlgebraTraits<X>::RangeType RangeType;
 
   public:
+    /** @brief Construct a compatible object from the supplied value and characteristics. */
     NormedAlgebra<X> create() const;
+    /** @brief Return a dynamically allocated copy preserving the concrete type. */
     NormedAlgebra<X> clone() const;
 
   public:
@@ -218,6 +248,7 @@ class NormedAlgebraInterface
     virtual NormedAlgebraInterface<X>* _create_copy() const = 0;
     virtual NormedAlgebraInterface<X>* _create_zero() const = 0;
     virtual NormedAlgebraInterface<X>* _create_constant(const X& c) const = 0;
+    /** @brief Construct a value with the supplied error bound. */
     virtual NormedAlgebraInterface<X>* _create_ball(const ErrorType& r) const = 0;
 
     //! \brief A value \c e such that analytic functions are evaluated to a tolerance of \c e.
@@ -237,7 +268,9 @@ template<class X>
 class GradedAlgebraInterface
     : public virtual AlgebraInterface<X> {
   public:
+    /** @brief Construct a compatible object from the supplied value and characteristics. */
     GradedAlgebra<X> create() const;
+    /** @brief Return a dynamically allocated copy preserving the concrete type. */
     GradedAlgebra<X> clone() const;
 
   public:
@@ -245,7 +278,9 @@ class GradedAlgebraInterface
     virtual GradedAlgebraInterface<X>* _create_copy() const = 0;
     virtual GradedAlgebraInterface<X>* _create_zero() const = 0;
 
+    /** @brief Return the polynomial or expansion degree. */
     virtual Nat degree() const = 0;
+    /** @brief Return the stored value. */
     virtual const X& value() const = 0;
 };
 
@@ -254,7 +289,9 @@ template<class X>
 class SymbolicAlgebraInterface
     : public virtual AlgebraInterface<X> {
   public:
+    /** @brief Construct a compatible object from the supplied value and characteristics. */
     SymbolicAlgebra<X> create() const;
+    /** @brief Return a dynamically allocated copy preserving the concrete type. */
     SymbolicAlgebra<X> clone() const;
 
   public:
@@ -263,16 +300,21 @@ class SymbolicAlgebraInterface
     virtual SymbolicAlgebraInterface<X>* _create_zero() const = 0;
 
     using AlgebraInterface<X>::_apply;
+    /** @brief Apply the supplied operation to the operands. */
     virtual SymbolicAlgebraInterface<X>* _apply(UnaryElementaryOperator op) = 0;
 };
 
+/** @brief Polymorphic interface for vector algebra. */
 template<class X>
 class VectorAlgebraInterface
     : public virtual WritableInterface {
   public:
+    /** @brief Return the ptr. */
     virtual AlgebraInterface<X>* get_ptr(Nat i) const = 0;
+    /** @brief Set the ptr. */
     virtual Void set_ptr(Nat i, AlgebraInterface<X>*) = 0;
 
+    /** @brief Return the selected element or component. */
     Algebra<X> operator[](Nat i) const;
 };
 

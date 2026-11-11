@@ -32,15 +32,21 @@
 
 namespace Ariadne {
 
+/** @brief Test whether the index or value is zero. */
 template<class X>
 inline bool is_null(const X& x) { return decide(x == 0); }
+/** @brief Test whether the index or value is a unit. */
 template<class X>
 inline bool is_unit(const X& x) { return decide(x == 1); }
 
+/** @brief Construct the zero-degree index. */
 inline MultiIndex zero_index(SizeType as) { return MultiIndex::zero(as); }
+/** @brief Construct the zero-degree index. */
 inline DegreeType zero_index(SizeOne) { return 0u; }
 
+/** @brief Construct the index of the selected first-degree monomial. */
 inline MultiIndex unit_index(SizeType as, SizeType k) { return MultiIndex::unit(as, k); }
+/** @brief Construct the index of the selected first-degree monomial. */
 inline DegreeType unit_index(SizeOne, IndexZero) { return 1u; }
 
 template<class I, class X>
@@ -223,6 +229,7 @@ Polynomial<I, X>& Polynomial<I, X>::truncate(DegreeType d) {
     return *this;
 }
 
+/** @brief Return the key identifying this index or term. */
 template<class FwdIter, class Op>
 FwdIter unique_key(FwdIter first, FwdIter last, Op op) {
     FwdIter curr = first;
@@ -509,10 +516,12 @@ OutputStream& operator<<(OutputStream& os, const Polynomial<I,X>& p) {
 }
 */
 
+/** @brief Return the standard display names for the function arguments. */
 inline String canonical_argument_names(SizeOne) {
     return "x";
 }
 
+/** @brief Return the standard display names for the function arguments. */
 inline Array<String> canonical_argument_names(SizeType n) {
     Array<String> argument_names(n);
     for (SizeType i = 0; i != n; ++i) {

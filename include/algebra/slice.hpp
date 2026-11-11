@@ -33,19 +33,27 @@
 
 namespace Ariadne {
 
+/** @brief Half-open strided index range. */
 class Slice {
     SizeType _size;
     SizeType _start;
     SizeType _stride;
 
   public:
+    /** @brief Construct a \c Slice from size, start, stride. */
     Slice(SizeType size, SizeType start, SizeType stride) : _size(size), _start(start), _stride(stride) {}
+    /** @brief Return the selected element or component. */
     SizeType operator[](SizeType i) { return _start + i * _stride; }
+    /** @brief Return the number of elements. */
     SizeType size() const { return this->_size; }
+    /** @brief Return the first index of the range. */
     SizeType start() const { return this->_start; }
+    /** @brief Return the spacing between successive indices. */
     SizeType stride() const { return this->_stride; }
+    /** @brief Return the exclusive upper index of the range. */
     SizeType stop() const { return this->_start + this->_size * this->_stride; }
 };
+/** @brief Return the selected strided range. */
 inline Slice slice(SizeType size_, SizeType start, SizeType stride) { return Slice(size_, start, stride); }
 
 } // namespace Ariadne

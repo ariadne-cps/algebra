@@ -71,6 +71,7 @@ inline DegreeType* MultiIndexData::end() { return _p + _n; }
 inline const DegreeType* MultiIndexData::begin() const { return _p; }
 inline const DegreeType* MultiIndexData::end() const { return _p + _n; }
 
+/** @brief Test equality of the operands. */
 inline Bool operator==(const MultiIndexData& a1, const MultiIndexData& a2) {
     if (a1._n != a2._n) {
         return false;
@@ -82,10 +83,12 @@ inline Bool operator==(const MultiIndexData& a1, const MultiIndexData& a2) {
     }
     return true;
 }
+/** @brief Test inequality of the operands. */
 inline Bool operator!=(const MultiIndexData& a1, const MultiIndexData& a2) {
     return !(a1 == a2);
 }
 
+/** @brief Compare indices by total degree and then by the graded ordering. */
 inline Bool graded_less(const MultiIndexData& a1, const MultiIndexData& a2) {
     ARIADNE_PRECONDITION(a1.size() == a2.size());
     DegreeType d1 = a1.degree();
@@ -100,6 +103,7 @@ inline Bool graded_less(const MultiIndexData& a1, const MultiIndexData& a2) {
     }
     return false;
 }
+/** @brief Compare indices in lexicographic order. */
 inline Bool lexicographic_less(const MultiIndexData& a1, const MultiIndexData& a2) {
     ARIADNE_PRECONDITION(a1.size() == a2.size());
     for (SizeType i = 0; i != a1.size(); ++i) {
@@ -109,6 +113,7 @@ inline Bool lexicographic_less(const MultiIndexData& a1, const MultiIndexData& a
     }
     return false;
 }
+/** @brief Compare indices in reverse lexicographic order. */
 inline Bool reverse_lexicographic_less(const MultiIndexData& a1, const MultiIndexData& a2) {
     ARIADNE_PRECONDITION(a1.size() == a2.size());
     SizeType i = a1.size();
@@ -121,6 +126,7 @@ inline Bool reverse_lexicographic_less(const MultiIndexData& a1, const MultiInde
     return false;
 }
 
+/** @brief Write the value to the output stream. */
 inline OutputStream& operator<<(OutputStream& os, const MultiIndexData& a) {
     os << "(";
     for (SizeType i = 0; i != a.size(); ++i) {
@@ -215,23 +221,28 @@ inline MultiIndex& MultiIndex::operator*=(const DegreeType& s) {
     return *this;
 }
 
+/** @brief Return the sum or unary positive value. */
 inline MultiIndex operator+(MultiIndex a1, const MultiIndex& a2) {
     a1 += a2;
     return a1;
 }
+/** @brief Return the difference or additive inverse. */
 inline MultiIndex operator-(MultiIndex a1, const MultiIndex& a2) {
     a1 -= a2;
     return a1;
 }
+/** @brief Return the product. */
 inline MultiIndex operator*(MultiIndex a, DegreeType s) {
     a *= s;
     return a;
 }
+/** @brief Return the product. */
 inline MultiIndex operator*(DegreeType s, MultiIndex a) {
     a *= s;
     return a;
 }
 
+/** @brief Exchange the contents of the operands. */
 inline Void swap(MultiIndex& a1, MultiIndex& a2) {
     ARIADNE_PRECONDITION(a1._n == a2._n);
     for (SizeType i = 0; i != a1._n; ++i) {
@@ -268,6 +279,7 @@ inline MultiIndexReference& MultiIndexReference::operator+=(const MultiIndexData
     return *this;
 }
 
+/** @brief Exchange the contents of the operands. */
 inline Void swap(MultiIndexReference a1, MultiIndexReference a2) {
     ARIADNE_PRECONDITION(a1.size() == a2.size());
     for (SizeType i = 0; i != a1.size(); ++i) {
@@ -279,7 +291,9 @@ inline MultiIndexConstReference::MultiIndexConstReference(SizeType n, const Inde
 inline MultiIndexConstReference::MultiIndexConstReference(const MultiIndexReference& r) : MultiIndexData(r._n, const_cast<IndexType*>(r._p)) {}
 inline MultiIndexConstReference::operator const MultiIndex&() const { return static_cast<const MultiIndex&>(static_cast<const MultiIndexData&>(*this)); }
 
+/** @brief Write the value to the output stream. */
 inline OutputStream& operator<<(OutputStream& os, const MultiIndexPointer& p) { return os << p._r._p; }
+/** @brief Write the value to the output stream. */
 inline OutputStream& operator<<(OutputStream& os, const MultiIndexConstPointer& p) { return os << p._r._p; }
 
 inline MultiIndexListIterator::MultiIndexListIterator(SizeType n, DegreeType* p) : _r(n, p) {}

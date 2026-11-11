@@ -43,11 +43,13 @@ class Series;
 template<class X>
 class SeriesGeneratorInterface {
   public:
+    /** @brief Destroy the object and release its owned resources. */
     virtual ~SeriesGeneratorInterface() = default;
     //! \brief Compute the \a d-th term of a power series, given centering at \a x and previous terms \a s.
     virtual X _next(DegreeType d, const X& x, List<X>& s) const = 0;
 };
 
+/** @brief Generator computing successive power-series coefficients. */
 template<class OP, class X>
 class SeriesGenerator : public SeriesGeneratorInterface<X> {
     virtual X _next(DegreeType d, const X& c, List<X>& y) const final {
@@ -57,35 +59,41 @@ class SeriesGenerator : public SeriesGeneratorInterface<X> {
     }
 };
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Pow, DegreeType d, const X& c, DegreeType n, const X* y) {
     return (d == 0) ? pow(c, n) : (d > n) ? nul(c)
                                           : y[d - 1] / c * (n - d + 1) / d;
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Pos, DegreeType d, const X& c, const X*) {
     return (d == 0) ? c : (d == 1) ? nul(c) + 1
                                    : nul(c);
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Nul, DegreeType, const X& c, const X*) {
     return nul(c);
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Neg, DegreeType d, const X& c, const X*) {
     return (d == 0) ? -c : (d == 1) ? nul(c) - 1
                                     : nul(c);
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Hlf, DegreeType d, const X& c, const X*) {
     return (d == 0) ? hlf(c) : (d == 1) ? hlf(nul(c) + 1)
                                         : nul(c);
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Sqr, DegreeType d, const X& c, const X*) {
     switch (d) {
@@ -100,39 +108,46 @@ inline X next_series_coefficient(Sqr, DegreeType d, const X& c, const X*) {
     }
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Rec, DegreeType d, const X& c, const X* y) {
     return (d == 0) ? rec(c) : y[d - 1] * (-y[0]);
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Sqrt, DegreeType d, const X& c, const X* y) {
     return (d == 0) ? sqrt(c) : ((2 * (Int)d - 3) * (-1 / c) / 2) / d * y[d - 1];
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Exp, DegreeType d, const X& c, const X* y) {
     return (d == 0) ? exp(c) : y[d - 1] / d;
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Log, DegreeType d, const X& c, const X* y) {
     return (d == 0) ? log(c) : (d == 1) ? 1 / c
                                         : -y[d - 1] * y[1] * (d - 1) / d;
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Sin, DegreeType d, const X& c, const X* y) {
     return (d == 0) ? sin(c) : (d == 1) ? cos(c)
                                         : -y[d - 2] / (d * (d - 1));
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Cos, DegreeType d, const X& c, const X* y) {
     return (d == 0) ? cos(c) : (d == 1) ? -sin(c)
                                         : -y[d - 2] / (d * (d - 1));
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Tan, DegreeType d, const X& c, const X* y) {
     switch (d) {
@@ -152,16 +167,19 @@ inline X next_series_coefficient(Tan, DegreeType d, const X& c, const X* y) {
     }
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Asin, DegreeType, const X&, const X*) {
     ARIADNE_NOT_IMPLEMENTED;
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Acos, DegreeType, const X&, const X*) {
     ARIADNE_NOT_IMPLEMENTED;
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Tanh, DegreeType d, const X& c, const X* y) {
     if (d == 0) {
@@ -174,6 +192,7 @@ inline X next_series_coefficient(Tanh, DegreeType d, const X& c, const X* y) {
     return d == 1 ? 1 - convolution : -convolution / d;
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Atan, DegreeType d, const X& c, const X* y) {
     switch (d) {
@@ -188,6 +207,7 @@ inline X next_series_coefficient(Atan, DegreeType d, const X& c, const X* y) {
     }
 }
 
+/** @brief Compute the next coefficient in the power series. */
 template<class X>
 inline X next_series_coefficient(Abs, DegreeType, const X&, const X*) {
     ARIADNE_NOT_IMPLEMENTED;
@@ -202,36 +222,49 @@ class Series {
 
   private:
     friend class AnalyticFunction;
+    /** @brief Construct a \c Series from p, c, dummy. */
     Series(std::shared_ptr<const SeriesGeneratorInterface<X>> p, const X& c, std::nullptr_t dummy);
+    /** @brief Compute the value at the requested accuracy or effort. */
     Void _compute(DegreeType n) const;
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 
   public:
+    /** @brief Construct a \c Series from x. */
     template<class OP>
     Series(OP, const X& x);
+    /** @brief Construct a \c Series from op, x. */
     template<class OP, class XX>
         requires Constructible<X, XX>
     Series(OP op, XX const& x) : Series(op, X(x)) {}
+    /** @brief Return the selected element or component. */
     const X& operator[](DegreeType n) const;
+    /** @brief Return the coefficients. */
     const List<X>& coefficients(DegreeType n) const;
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const Series<X>& s) { return s._write(os); }
 };
 
+/** @brief Finite sequence of coefficients of a power series. */
 template<class X, DegreeType D>
 class FiniteSeries {
     X _data[D + 1u];
 
   private:
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 
   public:
+    /** @brief Construct a \c FiniteSeries from op, c. */
     template<class OP>
     FiniteSeries(OP op, const X& c) {
         for (DegreeType d = 0; d <= D; ++d) {
             next_series_coefficient(op, d, c, _data);
         }
     }
+    /** @brief Return the selected element or component. */
     const X& operator[](DegreeType n) const { return _data[n]; }
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const FiniteSeries<X, D>& s) { return s._write(os); }
 };
 
@@ -271,11 +304,14 @@ inline OutputStream& Series<X>::_write(OutputStream& os) const {
     return os << "Series( centre=" << this->_centre << ", terms=" << this->_data << " )";
 }
 
+/** @brief Construct series from the supplied arguments. */
 template<class OP, class X>
 inline Series<X> make_series(OP op, DegreeType, const X& x) { return Series<X>(op, x); }
+/** @brief Construct series from the supplied arguments. */
 template<class OP, class X>
 inline Series<X> make_series(OP op, const X& x) { return Series<X>(op, x); }
 
+/** @brief Analytic function represented by its local series coefficients. */
 class AnalyticFunction {
     typedef FloatDPApproximation ApproximateNumericType; // [[deprecated]]
     typedef FloatDPBounds ValidatedNumericType;          // [[deprecated]]
@@ -287,18 +323,23 @@ class AnalyticFunction {
     std::shared_ptr<const SeriesGeneratorInterface<ValidatedNumericType>> _vsg_ptr;
 
   public:
+    /** @brief Construct a \c AnalyticFunction from op. */
     template<class OP>
     explicit AnalyticFunction(OP op)
         : _op(op), _asg_ptr(new SeriesGenerator<OP, ApproximateNumericType>()), _vsg_ptr(new SeriesGenerator<OP, ValidatedNumericType>()) {}
+    /** @brief Return the series representation. */
     Series<ApproximateNumericType> series(ApproximateNumericType c) const {
         return Series<ApproximateNumericType>(_asg_ptr, c, nullptr);
     }
+    /** @brief Return the series representation. */
     Series<ValidatedNumericType> series(ValidatedNumericType c) const {
         return Series<ValidatedNumericType>(_vsg_ptr, c, nullptr);
     }
+    /** @brief Return the series representation. */
     Series<ValidatedNumericType> series(ExactNumericType c) const {
         return Series<ValidatedNumericType>(_vsg_ptr, c, nullptr);
     }
+    /** @brief Write the value to the output stream. */
     friend OutputStream& operator<<(OutputStream& os, const AnalyticFunction& af) {
         return os << "AnalyticFunction( " << af._op << " )";
     }

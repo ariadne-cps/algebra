@@ -47,12 +47,15 @@ class SymmetricMatrix;
 template<class X>
 class DiagonalMatrix;
 
+/** @brief Operations supported by diagonal matrix objects. */
 struct DiagonalMatrixOperations {
+    /** @brief Write the value to the output stream. */
     template<class X>
     friend OutputStream& operator<<(OutputStream& os, const DiagonalMatrix<X>& A) {
         return A._write(os);
     }
 
+    /** @brief Return the difference or additive inverse. */
     template<class X>
     friend DiagonalMatrix<NegationType<X>> operator-(DiagonalMatrix<X> A) {
         for (SizeType i = 0; i != A.size(); ++i) {
@@ -61,6 +64,7 @@ struct DiagonalMatrixOperations {
         return A;
     }
 
+    /** @brief Return the sum or unary positive value. */
     template<class X>
     friend DiagonalMatrix<ProductType<X, X>> operator+(DiagonalMatrix<X> A1, const DiagonalMatrix<X>& A2) {
         ARIADNE_PRECONDITION(A1.size() == A2.size());
@@ -70,6 +74,7 @@ struct DiagonalMatrixOperations {
         return A1;
     }
 
+    /** @brief Return the difference or additive inverse. */
     template<class X>
     friend DiagonalMatrix<ProductType<X, X>> operator-(DiagonalMatrix<X> A1, const DiagonalMatrix<X>& A2) {
         ARIADNE_PRECONDITION(A1.size() == A2.size());
@@ -79,6 +84,7 @@ struct DiagonalMatrixOperations {
         return A1;
     }
 
+    /** @brief Return the product. */
     template<class X>
     friend DiagonalMatrix<ProductType<X, X>> operator*(const X& s1, DiagonalMatrix<X> A2) {
         for (SizeType i = 0; i != A2.size(); ++i) {
@@ -87,6 +93,7 @@ struct DiagonalMatrixOperations {
         return A2;
     }
 
+    /** @brief Return the product. */
     template<class X>
     friend DiagonalMatrix<ProductType<X, X>> operator*(DiagonalMatrix<X> A1, const X& s2) {
         for (SizeType i = 0; i != A1.size(); ++i) {
@@ -95,6 +102,7 @@ struct DiagonalMatrixOperations {
         return A1;
     }
 
+    /** @brief Return the quotient. */
     template<class X>
     friend DiagonalMatrix<ProductType<X, X>> operator/(DiagonalMatrix<X> A1, const X& s2) {
         for (SizeType i = 0; i != A1.size(); ++i) {
@@ -103,6 +111,7 @@ struct DiagonalMatrixOperations {
         return A1;
     }
 
+    /** @brief Return the product. */
     template<class X>
     friend DiagonalMatrix<ProductType<X, X>> operator*(DiagonalMatrix<X> A1, const DiagonalMatrix<X>& A2) {
         if (A1.size() != A2.size()) {
@@ -115,6 +124,7 @@ struct DiagonalMatrixOperations {
         return A1;
     }
 
+    /** @brief Return the quotient. */
     template<class X>
     friend DiagonalMatrix<ProductType<X, X>> operator/(DiagonalMatrix<X> A1, const DiagonalMatrix<X>& A2) {
         if (A1.size() != A2.size()) {
@@ -127,6 +137,7 @@ struct DiagonalMatrixOperations {
         return A1;
     }
 
+    /** @brief Return the inverse. */
     template<class X>
     friend DiagonalMatrix<X> inverse(DiagonalMatrix<X> A) {
         for (SizeType i = 0; i != A.size(); ++i) {
@@ -135,6 +146,7 @@ struct DiagonalMatrixOperations {
         return A;
     }
 
+    /** @brief Return the sum or unary positive value. */
     template<class X>
     friend Matrix<X> operator+(Matrix<X> A, const DiagonalMatrix<X>& D) {
         ARIADNE_PRECONDITION(A.row_size() == D.size() && A.column_size() == D.size());
@@ -144,6 +156,7 @@ struct DiagonalMatrixOperations {
         return A;
     }
 
+    /** @brief Return the sum or unary positive value. */
     template<class X>
     friend Matrix<X> operator+(const DiagonalMatrix<X>& D, Matrix<X> A) {
         ARIADNE_PRECONDITION(A.row_size() == D.size() && A.column_size() == D.size());
@@ -153,6 +166,7 @@ struct DiagonalMatrixOperations {
         return A;
     }
 
+    /** @brief Return the difference or additive inverse. */
     template<class X>
     friend Matrix<X> operator-(Matrix<X> A, const DiagonalMatrix<X>& D) {
         ARIADNE_PRECONDITION(A.row_size() == D.size() && A.column_size() == D.size());
@@ -162,6 +176,7 @@ struct DiagonalMatrixOperations {
         return A;
     }
 
+    /** @brief Return the difference or additive inverse. */
     template<class X>
     friend Matrix<X> operator-(const DiagonalMatrix<X>& D, Matrix<X> A) {
         ARIADNE_PRECONDITION(A.row_size() == D.size() && A.column_size() == D.size());
@@ -174,6 +189,7 @@ struct DiagonalMatrixOperations {
         return A;
     }
 
+    /** @brief Return the product. */
     template<class X>
     friend Matrix<X> operator*(Matrix<X> A, const DiagonalMatrix<X>& D) {
         ARIADNE_PRECONDITION(A.column_size() == D.size());
@@ -185,6 +201,7 @@ struct DiagonalMatrixOperations {
         return A;
     }
 
+    /** @brief Return the product. */
     template<class X>
     friend Matrix<X> operator*(const DiagonalMatrix<X>& D, Matrix<X> A) {
         ARIADNE_PRECONDITION(D.size() == A.row_size())
@@ -196,6 +213,7 @@ struct DiagonalMatrixOperations {
         return A;
     }
 
+    /** @brief Return the product. */
     template<class X>
     friend Matrix<X> operator*(const DiagonalMatrix<X>& D, const Transpose<Matrix<X>>& A) {
         ARIADNE_PRECONDITION(D.size() == A.row_size())
@@ -208,6 +226,7 @@ struct DiagonalMatrixOperations {
         return R;
     }
 
+    /** @brief Return the product. */
     template<class X>
     friend Vector<X> operator*(const DiagonalMatrix<X>& D, Vector<X> v) {
         ARIADNE_PRECONDITION(D.size() == v.size())
@@ -217,6 +236,7 @@ struct DiagonalMatrixOperations {
         return v;
     }
 
+    /** @brief Return the product. */
     template<class X>
     friend Vector<X> operator*(Vector<X> v, const DiagonalMatrix<X>& D) {
         ARIADNE_PRECONDITION(D.size() == v.size())
@@ -226,6 +246,7 @@ struct DiagonalMatrixOperations {
         return v;
     }
 
+    /** @brief Return the quotient. */
     template<class X>
     friend Vector<X> operator/(Vector<X> v, const DiagonalMatrix<X>& D) {
         ARIADNE_PRECONDITION(D.size() == v.size())
@@ -245,31 +266,49 @@ class DiagonalMatrix
     UniformArray<X> _ary;
 
   public:
+    /** @brief Construct a \c DiagonalMatrix from n. */
     template<class... PRS>
         requires Constructible<X, Nat, PRS...>
     explicit DiagonalMatrix(SizeType n, PRS...);
+    /** @brief Construct a \c DiagonalMatrix with the specified characteristics. */
     explicit DiagonalMatrix(Array<X>);
+    /** @brief Construct a \c DiagonalMatrix with the specified characteristics. */
     explicit DiagonalMatrix(UniformArray<X>);
+    /** @brief Construct a \c DiagonalMatrix with the specified characteristics. */
     explicit DiagonalMatrix(Vector<X>);
+    /** @brief Construct a \c DiagonalMatrix with the specified characteristics. */
     template<class Y, class... PRS>
         requires Constructible<X, Y, PRS...>
     explicit DiagonalMatrix(const DiagonalMatrix<Y>&, PRS...);
+    /** @brief Return the number of elements. */
     SizeType size() const;
+    /** @brief Return the number of rows. */
     SizeType row_size() const;
+    /** @brief Return the number of columns. */
     SizeType column_size() const;
+    /** @brief Return a zero with the element characteristics. */
     const X& zero_element() const;
+    /** @brief Return the selected element or component. */
     const X& operator[](SizeType i) const;
+    /** @brief Return the element at the specified index. */
     const X& at(SizeType i, SizeType j) const;
+    /** @brief Return the requested element or stored value. */
     const X& get(SizeType i, SizeType j) const;
+    /** @brief Return the selected element or component. */
     ElementReference<X>& operator[](SizeType i);
+    /** @brief Replace the selected value. */
     Void set(SizeType i, SizeType j, const X& x);
+    /** @brief Return the diagonal entries. */
     Vector<X> diagonal() const;
+    /** @brief Convert to matrix< x >. */
     operator Matrix<X>() const;
+    /** @brief Convert to symmetric matrix< x >. */
     operator SymmetricMatrix<X>() const;
 
   private:
 
   public:
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream&) const;
 };
 

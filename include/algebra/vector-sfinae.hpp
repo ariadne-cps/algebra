@@ -36,13 +36,17 @@ namespace Ariadne {
 
 /************ Vector *********************************************************/
 
+/** @brief Compile-time predicate testing whether a type is vector. */
 template<class V>
 struct IsVector : False {};
+/** @brief Compile-time predicate testing whether a type is covector. */
 template<class V>
 struct IsCovector : False {};
+/** @brief Compile-time predicate testing whether a type is matrix. */
 template<class M>
 struct IsMatrix : False {};
 
+/** @brief Compile-time predicate testing whether a type is scalar. */
 template<class S>
 struct IsScalar {
     static const Bool value = not(IsVector<S>::value or IsCovector<S>::value or IsMatrix<S>::value);
@@ -54,15 +58,25 @@ struct Vector {
     Array<X> _ary;
 
   public:
+    /** @brief Construct a \c Vector with the specified characteristics. */
     Vector() : _zero(), _ary() {}
+    /** @brief Construct a \c Vector from n. */
     Vector(SizeType n) : _zero(), _ary(n) {}
+    /** @brief Construct a \c Vector from n, x. */
     Vector(SizeType n, const X& x) : _zero(x * 0), _ary(n, x) {}
+    /** @brief Construct a \c Vector from ary. */
     Vector(Array<X> ary) : _zero(*ary.begin() * 0), _ary(std::move(ary)) {}
+    /** @brief Construct a \c Vector from lst. */
     Vector(InitializerList<X> lst) : _zero(*lst.begin() * 0), _ary(lst.begin(), lst.end()) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _ary.size(); }
+    /** @brief Return the selected element or component. */
     const X& operator[](SizeType i) const { return _ary.at(i); }
+    /** @brief Return the selected element or component. */
     X& operator[](SizeType i) { return _ary.at(i); }
+    /** @brief Return a zero with the element characteristics. */
     X zero_element() const { return _zero; }
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 };
 template<class X>
@@ -79,6 +93,7 @@ template<class X>
 OutputStream& operator<<(OutputStream& os, const Vector<X>& v) {
     return v._write(os);
 }
+/** @brief Compile-time predicate testing whether a type is vector. */
 template<class X>
 struct IsVector<Vector<X>> : True {};
 
@@ -86,30 +101,42 @@ template<class V1, class V2>
 struct VectorSum {
     const V1& _v1;
     const V2& _v2;
+    /** @brief Construct a \c VectorSum from v1, v2. */
     VectorSum(const V1& v1, const V2& v2) : _v1(v1), _v2(v2) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _v1.size(); }
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType i) const -> decltype(_v1[i] + _v2[i]) { return _v1[i] + _v2[i]; }
 };
+/** @brief Compile-time predicate testing whether a type is vector. */
 template<class V1, class V2>
 struct IsVector<VectorSum<V1, V2>> : True {};
 
+/** @brief Return the sum or unary positive value. */
 template<AVector V1, AVector V2>
 inline VectorSum<V1, V2> operator+(const V1& v1, const V2& v2) { return VectorSum<V1, V2>(v1, v2); }
 
+/** @brief Lazy expression for a scalar multiplying a vector. */
 template<class X1, class V2>
 struct ScalarVectorProduct {
     const X1& _x1;
     const V2& _v2;
+    /** @brief Construct a \c ScalarVectorProduct from x1, v2. */
     ScalarVectorProduct(const X1& x1, const V2& v2) : _x1(x1), _v2(v2) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _v2.size(); }
+    /** @brief Return the selected element or component. */
     auto operator[](SizeType i) const -> decltype(_x1 * _v2[i]) { return _x1 * _v2[i]; }
 };
+/** @brief Compile-time predicate testing whether a type is vector. */
 template<class X1, class V2>
 struct IsVector<ScalarVectorProduct<X1, V2>> : True {};
 
+/** @brief Return the product. */
 template<AScaler X1, AVector V2>
 inline ScalarVectorProduct<X1, V2> operator*(const X1& x1, const V2& v2) { return ScalarVectorProduct<X1, V2>(x1, v2); }
 
+/** @brief Test equality of the operands. */
 template<class X1, class X2>
 auto operator==(const Vector<X1>& v1, const Vector<X2>& v2)
     -> decltype(v1[0] == v2[0]) {
@@ -129,12 +156,19 @@ struct Covector {
     Array<X> _ary;
 
   public:
+    /** @brief Construct a \c Covector from n. */
     Covector(SizeType n) : _zero(), _ary(n) {}
+    /** @brief Construct a \c Covector from n, x. */
     Covector(SizeType n, const X& x) : _zero(x * 0), _ary(n, x) {}
+    /** @brief Return the number of elements. */
     SizeType size() const { return _ary.size(); }
+    /** @brief Return the selected element or component. */
     const X& operator[](SizeType i) const { return _ary.at(i); }
+    /** @brief Return the selected element or component. */
     X& operator[](SizeType i) { return _ary.at(i); }
+    /** @brief Return a zero with the element characteristics. */
     X zero_element() const { return _zero; }
+    /** @brief Write the value to the output stream. */
     OutputStream& _write(OutputStream& os) const;
 };
 template<class X>
@@ -151,6 +185,7 @@ template<class X>
 OutputStream& operator<<(OutputStream& os, const Covector<X>& v) {
     return v._write(os);
 }
+/** @brief Compile-time predicate testing whether a type is covector. */
 template<class X>
 struct IsCovector<Covector<X>> : True {};
 
