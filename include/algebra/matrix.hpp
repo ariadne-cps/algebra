@@ -32,6 +32,8 @@
 
 #include <initializer_list>
 
+#include "numeric/numeric.hpp"
+
 #include "covector.hpp"
 #include "vector.hpp"
 

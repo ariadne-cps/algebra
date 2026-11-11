@@ -29,6 +29,7 @@
 #ifndef ARIADNE_SERIES_HPP
 #define ARIADNE_SERIES_HPP
 
+#include "numeric/numeric.hpp"
 #include "numeric/operators.hpp"
 #include "utility/array.hpp"
 #include "utility/container.hpp"

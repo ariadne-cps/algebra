@@ -26,6 +26,7 @@
  *  @brief Template implementations of polynomial operations.
  */
 #include "algebra/evaluate.tpl.hpp"
+#include "interval/interval.hpp"
 #include "algebra/expansion.inl.hpp"
 #include "algebra/expansion.tpl.hpp"
 
