@@ -26,8 +26,8 @@
  *  @brief Template implementations of matrix operations.
  */
 #include "algebra/covector.hpp"
-#include "numeric/numeric.hpp"
 #include "algebra/vector.hpp"
+#include "numeric/numeric.hpp"
 
 namespace Ariadne {
 

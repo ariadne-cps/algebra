@@ -32,9 +32,8 @@
 
 #include <initializer_list>
 
-#include "numeric/numeric.hpp"
-
 #include "covector.hpp"
+#include "numeric/numeric.hpp"
 #include "vector.hpp"
 
 namespace Ariadne {
