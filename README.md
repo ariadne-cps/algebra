@@ -31,10 +31,3 @@ A C++20 compiler and CMake are required.
 ## Python bindings
 
 When a compatible Python development environment is available, the build produces a standalone `pyariadne` module containing the lower Interval/Numeric/Foundation bindings plus Algebra bindings for linear algebra, sparse expansions and series, polynomial representations, and differential algebra. The public `pyariadne-algebra` interface consumes only the direct lower `pyariadne-interval` interface.
-
-## Tutorials
-
-- C++: `tutorial/tutorial_algebra.cpp`
-- Python: `python/tutorial.py`
-
-Both progress through linear algebra, multi-indices and sparse expansions, power-basis and Chebyshev polynomials, power series, and multivariate and univariate differential algebra.
