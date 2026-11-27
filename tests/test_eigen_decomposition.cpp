@@ -118,6 +118,30 @@ Void test_real_examples(PR pr) {
     v[0u][0u] = VX(0u, pr);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), validated(v).status == Status::SUCCESS);
 
+    // Avoid losing the small eigenvalue to subtraction cancellation.
+    // Both examples have one eigenvalue very close to +1 or -1, while
+    // the other has magnitude 1e16.
+    Matrix<AX> ill_conditioned(2u, 2u, AX(0u, pr));
+    ill_conditioned[0u][0u] = AX(1e16, pr);
+    ill_conditioned[0u][1u] = AX(1u, pr);
+    ill_conditioned[1u][0u] = AX(1u, pr);
+    ill_conditioned[1u][1u] = AX(1u, pr);
+    const auto stable_positive = approximate(ill_conditioned);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), stable_positive.status == Status::SUCCESS);
+    if (stable_positive.data) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         std::abs(stable_positive.data->eigenvalues[0u].get_d() - 1.0) < 1e-6);
+    }
+
+    ill_conditioned[0u][0u] = AX(-1e16, pr);
+    ill_conditioned[1u][1u] = AX(-1, pr);
+    const auto stable_negative = approximate(ill_conditioned);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), stable_negative.status == Status::SUCCESS);
+    if (stable_negative.data) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         std::abs(stable_negative.data->eigenvalues[1u].get_d() + 1.0) < 1e-6);
+    }
+
     // A 1x1 matrix is decomposable even with an interval entry.
     Matrix<VX> scalar(1u, 1u, VX(0u, pr));
     scalar[0u][0u] = VX(1, 2, pr);

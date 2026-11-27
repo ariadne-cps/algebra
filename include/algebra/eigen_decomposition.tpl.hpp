@@ -106,8 +106,29 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
     }
 
     const X root = sqrt(discriminant);
-    values[0u] = (a + d - root) / two_value;
-    values[1u] = (a + d + root) / two_value;
+    const X trace = a + d;
+    const X characteristic_determinant = a * d - b * c;
+
+    // Compute the dominant eigenvalue without cancellation and derive the
+    // other from their product. With interval inputs, the quotient still
+    // encloses the corresponding exact eigenvalue for every input matrix.
+    // A trace interval crossing zero uses the direct formulas instead.
+    if (this->_positive(trace)) {
+        values[1u] = (trace + root) / two_value;
+        if (!this->_nonzero(values[1u])) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+        values[0u] = characteristic_determinant / values[1u];
+    } else if (this->_negative(trace)) {
+        values[0u] = (trace - root) / two_value;
+        if (!this->_nonzero(values[0u])) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+        values[1u] = characteristic_determinant / values[0u];
+    } else {
+        values[0u] = (trace - root) / two_value;
+        values[1u] = (trace + root) / two_value;
+    }
 
     // A diagonal matrix has a canonical exact eigenbasis even if both
     // off-diagonal coefficients are identically zero.
@@ -143,9 +164,9 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
     // For validated arithmetic, certification that the interval determinant
     // excludes zero implies invertibility of every enclosed eigenvector
     // matrix. A failed test is inconclusive, not proof of singularity.
-    const X determinant = vectors[0u][0u] * vectors[1u][1u]
-                        - vectors[0u][1u] * vectors[1u][0u];
-    if (!this->_nonzero(determinant)) {
+    const X eigenvector_determinant = vectors[0u][0u] * vectors[1u][1u]
+                                     - vectors[0u][1u] * vectors[1u][0u];
+    if (!this->_nonzero(eigenvector_determinant)) {
         return {Status::INCONCLUSIVE, std::nullopt};
     }
 

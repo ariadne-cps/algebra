@@ -90,3 +90,12 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - CI macOS/arm64 with Clang and `-Werror -Wshadow` rejected the local `const X two` in `EigenDecomposition<P,PR>::operator()`; `Ariadne::two` is already declared in `numeric/twoexp.hpp`.
 - Renamed the local constant to `two_value` and updated both eigenvalue formulas. This is a naming-only correction; no change to numerical behavior or test coverage.
 - **Verification:** inspected the reported diagnostic and the relevant source; checked the replacement locations. Full compilation and regression results for this new commit remain pending; the earlier CI build was stopped before the test binary could be produced.
+
+### 2026-11-27 — stable 2x2 eigenvalue computation (this commit)
+
+- **Baseline CI verified:** commit `16fdf00` passed Ubuntu, macOS, Windows, sanitizers and coverage jobs. `Format` failed; the external Codecov project/patch checks also report failure, independently of the passing coverage jobs.
+- **Numerical change:** for a positive or negative provable trace, compute the dominant real eigenvalue using the cancellation-free branch of the quadratic formula, then recover the other from the characteristic determinant. When the trace sign is not known, retain the direct quadratic formula. A quotient is used only when the denominator is provably nonzero.
+- **Regression coverage added:** real 2x2 matrices with widely separated eigenvalues, testing both positive and negative dominant eigenvalues; check the small eigenvalue explicitly.
+- **Mathematical contract:** interval arithmetic still encloses the exact characteristic determinant and both eigenvalues for every represented matrix. This improves conditioning of the computed candidate but does not guarantee that every validated input will pass the final basis-invertibility certificate.
+- **Verification at commit creation:** source edits inspected and new cases registered, but new commit has not yet been compiled or executed. Do not claim tests pass for this change.
+- **Outstanding:** `check-format` uses clang-format 23 from the shared Build submodule. The current environment cannot execute that binary; resolve the format failure separately without changing the numerical algorithm. General-order eigendecomposition and fully validated eigenvectors remain future work.
