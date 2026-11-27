@@ -206,3 +206,11 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Kept the established CSV column names and order, constructing each CSV record with `std::ostringstream` at 17-digit precision and printing each complete record through `LOGGING_PRINTLN`. This keeps CSV data together per line and avoids introducing extra diagnostics in CSV mode; CSV output now follows the Logger's configured destination and verbosity.
 - No benchmark timing, workload construction, numeric semantics, status checks, or benchmarking linkage changed. All presentation remains outside measured callbacks.
 - **Verification:** source references and exact replacements inspected; compilation/CLI output for this commit remain to be checked. `check-format` remains deferred until pre-merge.
+
+### 2026-11-27 — compile and exercise eigendecomposition benchmarks in Ubuntu Release CI (this commit)
+
+- Audited the Algebra and Numeric Ubuntu workflows. The earlier Algebra release jobs built the library and bindings but **never compiled the new benchmark target**; in contrast, Numeric explicitly built `benchmarks`. Therefore a green Algebra CI was not evidence that `benchmark_eigen_decomposition` compiled or produced output.
+- Mirrored Numeric's Release-only `cmake --build ... --target benchmarks` step in Algebra's Ubuntu workflow (GCC/Clang, x86/arm).
+- Added a short Release execution exercising both formatted reporting and CSV with `--sizes 3 --bits 80 --iterations 1 --samples 3 --warmups 0`. This exercises DP and MP, ApproximateTag and ValidatedTag, and each matrix-workload family, while keeping timings outside correctness tests.
+- Documented the smoke check in README. CI timing results are **not performance benchmarks**: accurate A/B measurements require controlled Release runs on the same stable machine.
+- **Verification:** inspected workflow syntax and CMake/build target contracts; GitHub Actions results for this commit still pending. `check-format` remains deferred until the merge; no formatting or workflow changes related to Format.
