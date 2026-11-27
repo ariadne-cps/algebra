@@ -344,6 +344,57 @@ Void test_validated_uncertainty() {
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !jordan.data.has_value());
 }
 
+
+//! \brief Regression for an MP-visible but binary64-invisible coupling.
+Void test_jacobi_multiprecision() {
+    const MultiplePrecision pr(160u);
+    using AX = FloatMPApproximation;
+    using Raw = typename AX::RawType;
+    const AX zero(0u, pr);
+    const AX one(1u, pr);
+    const AX two_value(2u, pr);
+    AX coupling(one);
+    for (SizeType k = 0u; k != 75u; ++k) {
+        coupling = coupling / two_value;
+    }
+
+    Matrix<AX> A(3u, 3u, zero);
+    A[0u][0u] = one;
+    A[1u][1u] = two_value;
+    A[2u][2u] = AX(4u, pr);
+    A[0u][1u] = coupling;
+    A[1u][0u] = coupling;
+
+    EigenDecomposition<ApproximateTag, MultiplePrecision> solver(pr);
+    const auto computed = solver(A);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     computed.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     computed.data.has_value());
+    if (computed.data) {
+        // A binary64-based stopping rule accepts the identity matrix as
+        // an eigenbasis; an MP-aware rule must resolve this coupling.
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            abs(computed.data->eigenvectors[1u][0u]).raw() >
+            (coupling / two_value).raw());
+
+        const AX tolerance = AX(4096u, pr) * AX(Raw::eps(pr)) *
+                             AX(4u, pr) * AX(3u, pr);
+        for (SizeType col = 0u; col != 3u; ++col) {
+            for (SizeType row = 0u; row != 3u; ++row) {
+                AX applied(zero);
+                for (SizeType k = 0u; k != 3u; ++k) {
+                    applied += A[row][k] * computed.data->eigenvectors[k][col];
+                }
+                const AX residual = abs(applied -
+                    computed.data->eigenvalues[col] * computed.data->eigenvectors[row][col]);
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                                 residual.raw() <= tolerance.raw());
+            }
+        }
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -353,6 +404,7 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_real_examples(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_real_examples(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_validated_uncertainty());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_jacobi_multiprecision());
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

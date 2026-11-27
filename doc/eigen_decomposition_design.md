@@ -136,3 +136,12 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Added DP and MP regression tests for a symmetric tridiagonal 3x3 with exact known spectrum `2,2±sqrt(2)`, a 4x4 dense symmetric construction with known spectrum `1,2,3,4`, and rejection of nonsymmetric/uncertified cases.
 - **CI status at preparation:** earlier commit `0bd47a6` has passed Ubuntu/macOS/Sanitizers/Coverage; newer branch CI still ongoing. Tests for this new implementation have not yet been executed. `check-format` deferred per user instruction.
 - **Next:** address CI findings, test near-degenerate and ill-conditioned symmetric systems, then introduce a robust nonsymmetric approximate backend and verified simple-eigenpair certification.
+
+### 2026-11-27 — native-precision Jacobi convergence and residuals (this commit)
+
+- Confirmed `ac3598e` passes Ubuntu, macOS, Sanitizers and Coverage workflows; Windows remained in progress when checked. Per user instruction, ignore `check-format` until the merge.
+- Removed binary64 `get_d()` conversions from the Jacobi algorithm: finite checks, matrix scale, pivot choice, convergence threshold, rotation sign, eigenvalue sorting, gap rejection and residual checks now use the native raw DP/MP representation.
+- Derived thresholds from `RawFloatType<PR>::eps(precision)`, so an MP run can resolve spectral couplings far below binary64 roundoff. These remain *heuristic* numerical acceptance thresholds; no validated guarantee is implied.
+- Updated the shared `ApproximateTag` sign/zero tests to use raw arithmetic rather than `get_d()`; extremely small or large finite MP values can no longer be mistaken for zero or infinity solely during a double conversion.
+- Added an MP160 regression with a dense symmetric matrix containing an off-diagonal coupling `2^-75`, demonstrating detection of a nontrivial eigenvector and checking residuals against an MP-dependent budget. Existing DP and MP tests remain.
+- **Verification:** inspected edits and test coverage, but no CI execution for this new commit is claimed. Further stress tests (tight clusters, large exponents, finite overflow) are warranted before using the algorithm in production.
