@@ -1020,6 +1020,54 @@ Void test_nonsymmetric_approximate(PR precision) {
         !defective_answer.data.has_value());
 }
 
+//! \brief Certify dense nonsymmetric matrices using actual-midpoint QR seeds.
+template<class PR>
+Void test_validated_nonsymmetric_qr_seeds(PR precision) {
+    using X = FloatBounds<PR>;
+    const X zero(0u, precision);
+    // The exact spectrum of this fully coupled nonsymmetric 3x3
+    // matrix is {1,3,5}; the symmetric part is not its eigenbasis.
+    const Int entries[3][3] = {
+        {0, 1, 0},
+        {-2, 3, 1},
+        {3, -3, 6}
+    };
+    Matrix<X> A(3u, 3u, zero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            A[row][col] = X(entries[row][col], precision);
+        }
+    }
+    const EigenDecomposition<ValidatedTag, PR> solver(precision);
+    const auto verify = [&](const Matrix<X>& matrix) {
+        const auto result = solver(matrix);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         result.status == Status::SUCCESS);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         result.data.has_value());
+        if (result.data) {
+            const auto& data = *result.data;
+            const Int expected[3] = {1, 3, 5};
+            const auto lhs = matrix * data.eigenvectors;
+            const auto rhs = data.eigenvectors * data.diagonal_matrix();
+            for (SizeType col = 0u; col != 3u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    encloses(data.eigenvalues[col], expected[col], precision));
+                for (SizeType row = 0u; row != 3u; ++row) {
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        lhs[row][col].lower_raw() <= rhs[row][col].upper_raw() &&
+                        lhs[row][col].upper_raw() >= rhs[row][col].lower_raw());
+                }
+            }
+        }
+    };
+    verify(A);
+
+    // The exact original matrix belongs to this interval family.
+    A[0u][0u] += X(0, 1, precision) / X(1048576u, precision);
+    verify(A);
+}
+
 //! \brief Non-normal dense example with known spectrum that defeats Gershgorin.
 template<class PR>
 Void test_krawczyk_nonnormal(PR precision) {
@@ -1206,6 +1254,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_real_examples(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_validated_uncertainty());
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_jacobi_multiprecision());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_validated_nonsymmetric_qr_seeds(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_validated_nonsymmetric_qr_seeds(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_diagnostics(dp));

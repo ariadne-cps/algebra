@@ -208,8 +208,10 @@ class EigenDecomposition {
 
     //! \brief Certify each real simple eigenpair via a Krawczyk root box.
     //! \details Fixes one eigenvector component to one, performs approximate
-    //! Newton refinement only for seeding, and verifies pointwise-real
-    //! eigenpairs using the shared interval Krawczyk root predicate.
+    //! Newton refinement only for seeding, preferring a QR eigenbasis of
+    //! the actual midpoint and falling back to symmetrized Jacobi, then
+    //! verifies pointwise-real eigenpairs using the shared interval
+    //! Krawczyk root predicate.
     ResultType _krawczyk(const Matrix<NumericType>& A,
                           EigenDecompositionDiagnostics* diagnostics) const;
 
