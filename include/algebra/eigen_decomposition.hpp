@@ -47,7 +47,8 @@ enum class EigenDecompositionStatus {
 //! \brief Eigenvalues (in ascending order) and eigenvectors stored by columns.
 //! \details For validated coefficients, each entry encloses the corresponding
 //! eigenvalue or normalized eigenvector component for every represented matrix.
-//! The eigenvectors are normalized to have one component exactly equal to one.
+//! The closed-form and triangular implementations use a unit pivot;
+//! the Jacobi approximate implementation uses norm-one eigenvectors.
 template<class P, class PR>
 struct EigenDecompositionData {
     using NumericType = FloatType<P, PR>;
@@ -68,12 +69,11 @@ struct EigenDecompositionResult {
 //! \details Real triangular matrices of arbitrary positive dimension with
 //! pairwise strictly separated diagonal entries are supported. Dense matrices
 //! of order one or two are supported when the spectrum is real and simple.
-//! Dense real symmetric matrices of order greater than two are additionally
-//! supported for ApproximateTag, using Jacobi rotations. That solver is not
-//! an algorithm for general nonsymmetric matrices and provides no enclosure. ApproximateTag produces
-//! approximate eigenpairs; ValidatedTag uses outward-rounded interval
-//! arithmetic and succeeds only when real eigenvalues, normalized
-//! eigenvectors, and invertibility of their interval matrix can be certified.
+//! For dense higher-order matrices, ApproximateTag supports exactly symmetric
+//! real matrices by Jacobi rotations; ValidatedTag supports matrices with
+//! rigorously isolated Gershgorin disks (also nonsymmetric). The latter is a
+//! sufficient condition, not a general-purpose spectral certificate.
+//! An approximate result is never claimed to be validated.
 //! Interval input denotes a family of matrices; a successful validated
 //! result encloses eigenpairs of every member, with consistent ascending
 //! eigenvalue order. This is not yet a general-purpose eigensolver.
@@ -88,8 +88,8 @@ class EigenDecomposition {
 
     //! \brief Attempt real diagonalization of the square matrix M.
     //! \details A non-square matrix violates the precondition. Orders
-    //! greater than two must be triangular, or symmetric with
-    //! ApproximateTag. Other structures return UNSUPPORTED_DIMENSION.
+    //! greater than two may be triangular, symmetric in ApproximateTag,
+//! or have separated Gershgorin disks in ValidatedTag.
     ResultType operator()(const Matrix<NumericType>& M) const;
 
   private:
@@ -106,6 +106,12 @@ class EigenDecomposition {
     //! \details Implemented using Jacobi plane rotations for ApproximateTag.
     //! Other paradigms or inconclusive numerical convergence report failure.
     ResultType _symmetric(const Matrix<NumericType>& A) const;
+
+    //! \brief Certify a dense matrix with pairwise disjoint Gershgorin disks.
+    //! \details Encloses a real eigenpair for every disk and every matrix in
+    //! the interval input; succeeds only after interval linear solves and
+    //! strict column-diagonal-dominance verification of the eigenvector basis.
+    ResultType _gershgorin(const Matrix<NumericType>& A) const;
 
     PR _precision;
 };

@@ -101,7 +101,7 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
             if constexpr (std::is_same_v<P, ApproximateTag>) {
                 return this->_symmetric(M);
             } else {
-                return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+                return this->_gershgorin(M);
             }
         }
 
@@ -420,6 +420,147 @@ EigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) const {
             }
         }
         return {Status::SUCCESS, EigenDecompositionData<P, PR>{std::move(eigenvalues), std::move(eigenvectors)}};
+    }
+}
+
+
+/** @brief Certify dense interval eigenpairs using separated Gershgorin disks. */
+template<class P, class PR>
+typename EigenDecomposition<P, PR>::ResultType
+EigenDecomposition<P, PR>::_gershgorin(const Matrix<NumericType>& input) const {
+    using Status = EigenDecompositionStatus;
+    if constexpr (!std::is_same_v<P, ValidatedTag>) {
+        return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+    } else {
+        using X = NumericType;
+        const SizeType n = input.row_size();
+        const X zero(0u, _precision);
+        const X one(1u, _precision);
+        Vector<X> disks(n, zero);
+
+        // Every entry of the input interval matrix varies independently.
+        // The real projection of Gershgorin disk i is contained in
+        // A_ii + [-sum_{j != i} |A_ij|, +sum_{j != i} |A_ij|].
+        for (SizeType row = 0u; row != n; ++row) {
+            X radius(zero);
+            for (SizeType col = 0u; col != n; ++col) {
+                if (!is_finite(input[row][col].lower_raw()) ||
+                    !is_finite(input[row][col].upper_raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                if (col != row) {
+                    radius += abs(input[row][col]);
+                }
+            }
+            if (!is_finite(radius.upper_raw())) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            disks[row] = input[row][row] +
+                         X(-radius.upper_raw(), radius.upper_raw());
+        }
+
+        // Strictly separated *real projections* imply separated complex
+        // Gershgorin disks for every matrix in the input family. Each
+        // disk contains one eigenvalue with algebraic multiplicity one.
+        // It must be real: nonreal conjugate eigenvalues would both
+        // belong to the same isolated disk of a real matrix.
+        std::vector<SizeType> order;
+        order.reserve(n);
+        for (SizeType row = 0u; row != n; ++row) {
+            SizeType position = 0u;
+            for (; position != order.size(); ++position) {
+                const SizeType previous = order[position];
+                if (disks[row].upper_raw() < disks[previous].lower_raw()) {
+                    break;
+                }
+                if (!(disks[row].lower_raw() > disks[previous].upper_raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+            order.insert(order.begin() + static_cast<std::ptrdiff_t>(position), row);
+        }
+
+        // For the eigenvalue in disk i, the principal submatrix obtained by
+        // deleting row and column i has no eigenvalue in that disk. Thus the
+        // ith eigenvector component is nonzero and may be fixed to exactly
+        // one. Solve the remaining equations with interval Gaussian
+        // elimination; if an interval pivot contains zero, do not certify.
+        Matrix<X> unsorted(n, n, zero);
+        const SizeType m = n - 1u;
+        for (SizeType pivot = 0u; pivot != n; ++pivot) {
+            unsorted[pivot][pivot] = one;
+            const X eigenvalue = disks[pivot];
+            Matrix<X> system(m, m, zero);
+            Vector<X> right(m, zero);
+
+            for (SizeType r = 0u; r != m; ++r) {
+                const SizeType original_row = r < pivot ? r : r + 1u;
+                right[r] = input[original_row][pivot];
+                for (SizeType c = 0u; c != m; ++c) {
+                    const SizeType original_col = c < pivot ? c : c + 1u;
+                    system[r][c] = (r == c ? eigenvalue : zero) -
+                                   input[original_row][original_col];
+                }
+            }
+
+            for (SizeType k = 0u; k != m; ++k) {
+                const X diagonal = system[k][k];
+                if (!this->_nonzero(diagonal)) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                for (SizeType r = k + 1u; r != m; ++r) {
+                    const X multiplier = system[r][k] / diagonal;
+                    system[r][k] = zero;
+                    for (SizeType c = k + 1u; c != m; ++c) {
+                        system[r][c] -= multiplier * system[k][c];
+                    }
+                    right[r] -= multiplier * right[k];
+                }
+            }
+
+            Vector<X> solution(m, zero);
+            for (SizeType r = m; r > 0u;) {
+                --r;
+                X numerator = right[r];
+                for (SizeType c = r + 1u; c != m; ++c) {
+                    numerator -= system[r][c] * solution[c];
+                }
+                const X diagonal = system[r][r];
+                if (!this->_nonzero(diagonal)) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                solution[r] = numerator / diagonal;
+            }
+            for (SizeType r = 0u; r != m; ++r) {
+                const SizeType original_row = r < pivot ? r : r + 1u;
+                unsorted[original_row][pivot] = solution[r];
+            }
+        }
+
+        // V=I+E before column ordering. Strict ||E||_1 < 1 certifies
+        // that every possible V is invertible (Neumann series).
+        for (SizeType col = 0u; col != n; ++col) {
+            X off_diagonal_sum(zero);
+            for (SizeType row = 0u; row != n; ++row) {
+                if (row != col) {
+                    off_diagonal_sum += abs(unsorted[row][col]);
+                }
+            }
+            if (!(off_diagonal_sum.upper_raw() < one.lower_raw())) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+        }
+
+        Vector<X> values(n, zero);
+        Matrix<X> vectors(n, n, zero);
+        for (SizeType col = 0u; col != n; ++col) {
+            const SizeType source = order[col];
+            values[col] = disks[source];
+            for (SizeType row = 0u; row != n; ++row) {
+                vectors[row][col] = unsorted[row][source];
+            }
+        }
+        return {Status::SUCCESS, EigenDecompositionData<P, PR>{std::move(values), std::move(vectors)}};
     }
 }
 

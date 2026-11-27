@@ -194,8 +194,8 @@ Void test_real_examples(PR pr) {
         }
     }
 
-    // Approximate nonsymmetric dense matrices remain unsupported. Validated
-    // dense symmetric matrices must never be passed off as certified.
+    // Approximate nonsymmetric dense matrices remain unsupported.
+    // Dense overlapping Gershgorin disks do not constitute a certificate.
     symmetric[0u][1u] = AX(3u, pr);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                                      approximate(symmetric).status == Status::UNSUPPORTED_DIMENSION);
@@ -208,7 +208,81 @@ Void test_real_examples(PR pr) {
     symmetric_bounds[1u][2u] = VX(1u, pr);
     symmetric_bounds[2u][1u] = VX(1u, pr);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-                                     validated(symmetric_bounds).status == Status::UNSUPPORTED_DIMENSION);
+                                     validated(symmetric_bounds).status == Status::INCONCLUSIVE);
+
+
+    // A symmetric dense interval family with pairwise disjoint Gershgorin
+    // disks. Certify real eigenvalue enclosures and normalized eigenvectors
+    // of every member, not merely the midpoint matrix.
+    Matrix<VX> dense(3u, 3u, VX(0u, pr));
+    dense[0u][0u] = VX(1, 2, pr);
+    dense[1u][1u] = VX(4u, pr);
+    dense[2u][2u] = VX(7u, pr);
+    const VX coupling = VX(1u, pr) / VX(16u, pr);
+    dense[0u][1u] = coupling;
+    dense[1u][0u] = coupling;
+    dense[1u][2u] = coupling;
+    dense[2u][1u] = coupling;
+    const auto dense_certificate = validated(dense);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     dense_certificate.status == Status::SUCCESS);
+    if (dense_certificate.data) {
+        const auto& eigen = *dense_certificate.data;
+        for (SizeType col = 0u; col != 3u; ++col) {
+            // Sorted eigenvalue intervals are strictly disjoint.
+            if (col > 0u) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    eigen.eigenvalues[col - 1u].upper_raw() <
+                    eigen.eigenvalues[col].lower_raw());
+            }
+        }
+        const auto applied = dense * eigen.eigenvectors;
+        for (SizeType row = 0u; row != 3u; ++row) {
+            for (SizeType col = 0u; col != 3u; ++col) {
+                const VX expected = eigen.eigenvalues[col] * eigen.eigenvectors[row][col];
+                // The two independently evaluated expressions contain
+                // the same exact residual even if their intervals differ.
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    applied[row][col].lower_raw() <= expected.upper_raw() &&
+                    applied[row][col].upper_raw() >= expected.lower_raw());
+            }
+        }
+    }
+
+    // The same rigorous method also applies to a nonsymmetric dense
+    // matrix with an isolated real spectrum.
+    Matrix<VX> nonsymmetric(4u, 4u, VX(0u, pr));
+    for (SizeType row = 0u; row != 4u; ++row) {
+        nonsymmetric[row][row] = VX(static_cast<unsigned>(2u * row + 1u), pr);
+    }
+    nonsymmetric[0u][1u] = VX(1u, pr) / VX(8u, pr);
+    nonsymmetric[1u][0u] = -coupling;
+    nonsymmetric[1u][2u] = coupling;
+    nonsymmetric[2u][1u] = coupling;
+    nonsymmetric[2u][3u] = VX(1u, pr) / VX(8u, pr);
+    nonsymmetric[3u][2u] = -coupling;
+    const auto general = validated(nonsymmetric);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     general.status == Status::SUCCESS);
+    if (general.data) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            const VX& value = general.data->eigenvalues[col];
+            const VX integer(static_cast<unsigned>(2u * col + 1u), pr);
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                value.lower_raw() < integer.lower_raw() &&
+                value.upper_raw() > integer.upper_raw());
+        }
+    }
+
+    // Loss of Gershgorin separation is inconclusive rather than evidence
+    // of complex eigenvalues or a defective matrix.
+    nonsymmetric[0u][0u] = VX(1u, pr);
+    nonsymmetric[1u][1u] = VX(1u, pr);
+    const auto overlapping_disks = validated(nonsymmetric);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     overlapping_disks.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     !overlapping_disks.data.has_value());
 
     // A 1x1 matrix is decomposable even with an interval entry.
     Matrix<VX> scalar(1u, 1u, VX(0u, pr));
@@ -282,7 +356,6 @@ Void test_real_examples(PR pr) {
     const auto separated = validated(overlapping);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), separated.status == Status::SUCCESS);
 
-    // A dense 3x3 matrix still requires a general spectral backend.
     // Dimension zero has no individual eigenpairs and is deliberately
     // excluded from this diagonalization API.
     Matrix<VX> empty(0u, 0u, VX(0u, pr));
@@ -295,7 +368,7 @@ Void test_real_examples(PR pr) {
     unsupported[1u][0u] = VX(1u, pr);
 
     const auto no_dimension = validated(unsupported);
-    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_dimension.status == Status::UNSUPPORTED_DIMENSION);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_dimension.status == Status::INCONCLUSIVE);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !no_dimension.data.has_value());
 }
 
