@@ -155,7 +155,70 @@ Void test_real_examples(PR pr) {
             one_by_one.data->eigenvalues[0u].upper_raw() >= VX(2u, pr).upper_raw());
     }
 
+    // Real upper triangular matrix of order four. Its eigenvalues are
+    // the diagonal entries, independent of the off-diagonal coefficients.
+    Matrix<VX> upper(4u, 4u, VX(0u, pr));
+    upper[0u][0u] = VX(4u, pr);
+    upper[1u][1u] = VX(1u, pr);
+    upper[2u][2u] = VX(3u, pr);
+    upper[3u][3u] = VX(2u, pr);
+    upper[0u][1u] = VX(2u, pr);
+    upper[0u][2u] = VX(1u, pr);
+    upper[1u][2u] = VX(-1, pr);
+    upper[2u][3u] = VX(1u, pr);
+    const auto upper_result = validated(upper);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), upper_result.status == Status::SUCCESS);
+    if (upper_result.data) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                             encloses(upper_result.data->eigenvalues[col], static_cast<Int>(col + 1u), pr));
+        }
+        const auto lhs = upper * upper_result.data->eigenvectors;
+        for (SizeType row = 0u; row != 4u; ++row) {
+            for (SizeType col = 0u; col != 4u; ++col) {
+                const VX rhs = upper_result.data->eigenvalues[col] * upper_result.data->eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                                 lhs[row][col].lower_raw() <= rhs.upper_raw() &&
+                                                 lhs[row][col].upper_raw() >= rhs.lower_raw());
+            }
+        }
+    }
+
+    // Lower triangular case with the same pairwise distinct spectrum.
+    Matrix<VX> lower(4u, 4u, VX(0u, pr));
+    for (SizeType row = 0u; row != 4u; ++row) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            lower[row][col] = upper[col][row];
+        }
+    }
+    const auto lower_result = validated(lower);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), lower_result.status == Status::SUCCESS);
+    if (lower_result.data) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                             encloses(lower_result.data->eigenvalues[col], static_cast<Int>(col + 1u), pr));
+        }
+    }
+
+    // Wide diagonal intervals prevent a consistent eigenvalue ordering.
+    Matrix<VX> overlapping(3u, 3u, VX(0u, pr));
+    overlapping[0u][0u] = VX(0, 2, pr);
+    overlapping[1u][1u] = VX(1, 3, pr);
+    overlapping[2u][2u] = VX(4, 5, pr);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     validated(overlapping).status == Status::INCONCLUSIVE);
+
+    // An interval family with strictly separated diagonal values.
+    overlapping[0u][0u] = VX(0, 1, pr);
+    overlapping[1u][1u] = VX(2, 3, pr);
+    const auto separated = validated(overlapping);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), separated.status == Status::SUCCESS);
+
+    // A dense 3x3 matrix still requires a general spectral backend.
     Matrix<VX> unsupported(3u, 3u, VX(0u, pr));
+    unsupported[0u][1u] = VX(1u, pr);
+    unsupported[1u][0u] = VX(1u, pr);
+
     const auto no_dimension = validated(unsupported);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_dimension.status == Status::UNSUPPORTED_DIMENSION);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !no_dimension.data.has_value());

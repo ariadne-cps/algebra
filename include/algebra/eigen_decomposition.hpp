@@ -41,7 +41,7 @@ namespace Ariadne {
 enum class EigenDecompositionStatus {
     SUCCESS,              //!< All real eigenpairs and an invertible eigenvector basis were obtained.
     INCONCLUSIVE,         //!< The requested real diagonalization was not established.
-    UNSUPPORTED_DIMENSION //!< Only 1x1 and 2x2 matrices are currently implemented.
+    UNSUPPORTED_DIMENSION //!< Dense matrices of dimension greater than two are not yet implemented.
 };
 
 //! \brief Eigenvalues (in ascending order) and eigenvectors stored by columns.
@@ -65,8 +65,9 @@ struct EigenDecompositionResult {
 };
 
 //! \brief Compute a real eigendecomposition in the requested paradigm and precision.
-//! \details First milestone: square matrices of order one or two. For order
-//! two, the eigenvalues must be real and distinct. ApproximateTag produces
+//! \details Real triangular matrices of arbitrary positive dimension with
+//! pairwise strictly separated diagonal entries are supported. Dense matrices
+//! of order one or two are supported when the spectrum is real and simple. ApproximateTag produces
 //! approximate eigenpairs; ValidatedTag uses outward-rounded interval
 //! arithmetic and succeeds only when real eigenvalues, normalized
 //! eigenvectors, and invertibility of their interval matrix can be certified.
@@ -84,7 +85,7 @@ class EigenDecomposition {
 
     //! \brief Attempt real diagonalization of the square matrix M.
     //! \details A non-square matrix violates the precondition. Orders
-    //! other than one and two return UNSUPPORTED_DIMENSION.
+    //! greater than two must be triangular, otherwise return UNSUPPORTED_DIMENSION.
     ResultType operator()(const Matrix<NumericType>& M) const;
 
   private:

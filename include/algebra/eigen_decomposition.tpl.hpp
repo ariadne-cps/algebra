@@ -30,6 +30,7 @@
 #define ARIADNE_EIGEN_DECOMPOSITION_TPL_HPP
 
 #include <cmath>
+#include <vector>
 #include <type_traits>
 #include <utility>
 
@@ -76,14 +77,89 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
     ARIADNE_PRECONDITION(M.row_size() == M.column_size());
 
     const SizeType n = M.row_size();
-    if (n != 1u && n != 2u) {
-        return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
-    }
-
     const X zero(0u, _precision);
     const X one(1u, _precision);
     Vector<X> values(n, zero);
     Matrix<X> vectors(n, n, zero);
+
+    if (n > 2u) {
+        bool upper_triangular = true;
+        bool lower_triangular = true;
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = 0u; col != n; ++col) {
+                if (row > col && !this->_zero(M[row][col])) {
+                    upper_triangular = false;
+                }
+                if (row < col && !this->_zero(M[row][col])) {
+                    lower_triangular = false;
+                }
+            }
+        }
+        if (!upper_triangular && !lower_triangular) {
+            return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+        }
+
+        // An interval-independent ordering is necessary to identify the
+        // eigenpair belonging to each output column across the entire
+        // represented family of real matrices.
+        std::vector<SizeType> order;
+        order.reserve(n);
+        for (SizeType row = 0u; row != n; ++row) {
+            SizeType position = 0u;
+            for (; position != order.size(); ++position) {
+                const X difference = M[row][row] - M[order[position]][order[position]];
+                if (this->_negative(difference)) {
+                    break;
+                }
+                if (!this->_positive(difference)) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+            order.insert(order.begin() + static_cast<std::ptrdiff_t>(position), row);
+        }
+
+        for (SizeType col = 0u; col != n; ++col) {
+            const SizeType pivot = order[col];
+            const X eigenvalue = M[pivot][pivot];
+            values[col] = eigenvalue;
+            vectors[pivot][col] = one;
+
+            if (upper_triangular) {
+                // The eigenvector has zero components above the pivot index;
+                // solve the remaining equations by backward substitution.
+                for (SizeType row = pivot; row > 0u;) {
+                    --row;
+                    X numerator(zero);
+                    for (SizeType k = row + 1u; k <= pivot; ++k) {
+                        numerator += M[row][k] * vectors[k][col];
+                    }
+                    const X divisor = M[row][row] - eigenvalue;
+                    if (!this->_nonzero(divisor)) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    vectors[row][col] = -numerator / divisor;
+                }
+            } else {
+                // Lower triangular analogue: forward substitution.
+                for (SizeType row = pivot + 1u; row != n; ++row) {
+                    X numerator(zero);
+                    for (SizeType k = pivot; k < row; ++k) {
+                        numerator += M[row][k] * vectors[k][col];
+                    }
+                    const X divisor = M[row][row] - eigenvalue;
+                    if (!this->_nonzero(divisor)) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    vectors[row][col] = -numerator / divisor;
+                }
+            }
+        }
+
+        // The eigenvector matrix is triangular after a column permutation,
+        // with exact unit pivots and exact structural zero entries. This
+        // proves invertibility without a pessimistic interval determinant.
+        return {Status::SUCCESS, EigenDecompositionData<P, PR>{std::move(values), std::move(vectors)}};
+    }
 
     if (n == 1u) {
         values[0u] = M[0u][0u];

@@ -110,3 +110,12 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - **Verification:** Source and test definitions reviewed, but this commit has not yet run CI or a local build. No pass is claimed. The preceding `e4fa739` commit passed Ubuntu, macOS, Sanitizers and Coverage CI; Windows was still running at inspection.
 - Per user request, `check-format` is explicitly deferred to pre-merge work; no formatting intervention is required during implementation.
 - **Open:** stronger numerical pivots and scaling for ill-conditioned approximate determinants, tight validated determinant enclosures, and general-order eigenvector computation.
+
+### 2026-11-27 — triangular matrices of arbitrary dimension (this commit)
+
+- Extended `EigenDecomposition<P,PR>` to square real **upper/lower triangular** matrices of order >= 3 when the diagonal eigenvalue intervals admit a strict common increasing order (or numeric strict order for ApproximateTag). The current 1x1/2x2 dense algorithm is unchanged.
+- Computed normalized eigenvectors using backward substitution for upper triangular inputs and forward substitution for lower triangular inputs. Each column uses the corresponding diagonal position as an exact unit pivot; entries beyond the triangular support are exact zero.
+- **Validated contract:** all involved denominators exclude zero for every represented matrix, each recurrence uses outward-rounded operations and hence encloses the normalized eigenvector family. With columns ordered by disjoint diagonal eigenvalue intervals, the eigenvector matrix is a column permutation of a unit triangular matrix; invertibility is structural and does not depend on an overestimated interval determinant.
+- Diagonal intervals that cannot be ordered consistently return `INCONCLUSIVE`. Dense higher-order matrices continue to return `UNSUPPORTED_DIMENSION`; complex or repeated eigenvalues remain outside the milestone.
+- Added DP/MP tests for upper and lower triangular 4x4 matrices, matrix-eigenpair residual inclusion, strictly separated interval diagonal families, overlapping intervals and unsupported dense 3x3 inputs.
+- **Verification:** code and tests published for CI, with runtime results still pending at commit time. `check-format` is intentionally deferred until pre-merge, as requested.
