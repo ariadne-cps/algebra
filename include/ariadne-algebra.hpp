@@ -33,6 +33,7 @@
 #include "algebra/covector.hpp"
 #include "algebra/declarations.hpp"
 #include "algebra/diagonal_matrix.hpp"
+#include "algebra/determinant.hpp"
 #include "algebra/differential.hpp"
 #include "algebra/eigen_decomposition.hpp"
 #include "algebra/expansion.hpp"

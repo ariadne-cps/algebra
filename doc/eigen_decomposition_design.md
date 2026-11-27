@@ -99,3 +99,14 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - **Mathematical contract:** interval arithmetic still encloses the exact characteristic determinant and both eigenvalues for every represented matrix. This improves conditioning of the computed candidate but does not guarantee that every validated input will pass the final basis-invertibility certificate.
 - **Verification at commit creation:** source edits inspected and new cases registered, but new commit has not yet been compiled or executed. Do not claim tests pass for this change.
 - **Outstanding:** `check-format` uses clang-format 23 from the shared Build submodule. The current environment cannot execute that binary; resolve the format failure separately without changing the numerical algorithm. General-order eigendecomposition and fully validated eigenvectors remain future work.
+
+### 2026-11-27 — general matrix determinant API (this commit)
+
+- Introduced `determinant(const Matrix<X>&)` in `algebra/determinant.hpp` with a separate template implementation and `Copyright 2026 Luca Geretti` headers. Registered it in the umbrella header.
+- The **approximate** implementation performs partial-row-pivot Gaussian elimination in O(n^3), tracking row permutation parity. This is a numerical approximation; no certified error bound is claimed.
+- The **validated** implementation applies the Faddeev-LeVerrier characteristic-polynomial recurrence in O(n^4), avoiding uncertain pivots and division by input-dependent intervals. All operations are outward-rounded, thus the result encloses the determinant of **every** represented matrix, including singular matrices. Overestimation is expected for wide interval inputs.
+- The empty matrix convention is `det([])=1`. Nonsquare input violates the precondition.
+- Added the standalone `test_determinant` target, testing 0x0, 1x1, 3x3, 4x4 row permutation, singularity, a 2x2 interval matrix family and 6x6 diagonal matrix, in DP and MP.
+- **Verification:** Source and test definitions reviewed, but this commit has not yet run CI or a local build. No pass is claimed. The preceding `e4fa739` commit passed Ubuntu, macOS, Sanitizers and Coverage CI; Windows was still running at inspection.
+- Per user request, `check-format` is explicitly deferred to pre-merge work; no formatting intervention is required during implementation.
+- **Open:** stronger numerical pivots and scaling for ill-conditioned approximate determinants, tight validated determinant enclosures, and general-order eigenvector computation.
