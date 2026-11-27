@@ -436,15 +436,44 @@ Void test_real_examples(PR pr) {
         }
     }
 
-    // Changing only the isolated third diagonal entry to one creates a
-    // repeated eigenvalue: {-1, 1, 1}. The simple-eigenpair contract must
-    // remain inconclusive rather than reporting a spurious certificate.
+    // Changing only the isolated third diagonal entry to one gives
+    // spectrum {-1, 1, 1}. Although the eigenvalue 1 is repeated,
+    // the two invariant blocks contribute independent eigenvectors.
+    // The block-decomposition algorithm must certify a full real basis.
     decoupled[2u][2u] = VX(1u, pr);
     const auto repeated_spectrum = validated(decoupled);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-                                     repeated_spectrum.status == Status::INCONCLUSIVE);
+                                     repeated_spectrum.status == Status::SUCCESS);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-                                     !repeated_spectrum.data.has_value());
+                                     repeated_spectrum.data.has_value());
+    if (repeated_spectrum.data) {
+        const auto& result = *repeated_spectrum.data;
+        const Int expected[3] = {-1, 1, 1};
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                encloses(result.eigenvalues[col], expected[col], pr));
+        }
+        const auto lhs = decoupled * result.eigenvectors;
+        for (SizeType row = 0u; row != 3u; ++row) {
+            for (SizeType col = 0u; col != 3u; ++col) {
+                const VX rhs = result.eigenvalues[col] * result.eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    lhs[row][col].lower_raw() <= rhs.upper_raw() &&
+                    lhs[row][col].upper_raw() >= rhs.lower_raw());
+            }
+        }
+    }
+
+    // A truly defective repeated eigenvalue remains inconclusive even
+    // when an independent one-dimensional block is also present.
+    Matrix<VX> defective(3u, 3u, VX(0u, pr));
+    defective[0u][1u] = VX(1u, pr);
+    defective[2u][2u] = VX(1u, pr);
+    const auto defective_spectrum = validated(defective);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     defective_spectrum.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     !defective_spectrum.data.has_value());
 }
 
 Void test_validated_uncertainty() {
