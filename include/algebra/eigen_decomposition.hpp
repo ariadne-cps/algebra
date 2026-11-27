@@ -51,6 +51,7 @@ enum class EigenDecompositionStrategy {
     ANALYTIC,      //!< 1x1/2x2 closed form.
     TRIANGULAR,    //!< Triangular eigenvector substitution.
     JACOBI,        //!< Approximate symmetric Jacobi rotations.
+    SHIFTED_QR,    //!< Approximate nonsymmetric real QR and Newton refinement.
     GERSHGORIN,    //!< Direct validated disk separation.
     SIMILARITY,    //!< Verified similarity plus disk separation.
     KRAWCZYK      //!< Verified eigenpair root inclusion.
@@ -95,8 +96,10 @@ struct EigenDecompositionResult {
 //! \details Real triangular matrices of arbitrary positive dimension with
 //! pairwise strictly separated diagonal entries are supported. Dense matrices
 //! of order one or two are supported when the spectrum is real and simple.
-//! For dense higher-order matrices, ApproximateTag supports exactly symmetric
-//! real matrices by Jacobi rotations; ValidatedTag supports matrices with
+//! For dense higher-order matrices, ApproximateTag uses Jacobi rotations
+//! for symmetric inputs and shifted real QR with Newton refinement for
+//! nonsymmetric inputs having a resolvable simple real spectrum.
+//! ValidatedTag supports matrices with
 //! rigorously isolated Gershgorin disks, possibly after a certified
 //! similarity using a point-matrix basis seeded by approximate Jacobi
 //! rotations, or through a Krawczyk certificate on individually normalized
@@ -141,6 +144,13 @@ class EigenDecomposition {
     //! \details Implemented using Jacobi plane rotations for ApproximateTag.
     //! Other paradigms or inconclusive numerical convergence report failure.
     ResultType _symmetric(const Matrix<NumericType>& A) const;
+
+    //! \brief Approximate a complete simple real spectrum of a dense matrix.
+    //! \details Uses shifted real Householder QR followed by normalized
+    //! Newton eigenpair refinement; does not enclose or certify eigenpairs.
+    //! Non-real, multiple, unresolved or ill-conditioned spectra return
+    //! INCONCLUSIVE rather than an incorrect real diagonalization.
+    ResultType _nonsymmetric(const Matrix<NumericType>& A) const;
 
     //! \brief Certify a dense matrix with pairwise disjoint Gershgorin disks.
     //! \details Encloses a real eigenpair for every disk and every matrix in

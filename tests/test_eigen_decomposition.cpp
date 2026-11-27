@@ -27,6 +27,7 @@
  */
 
 #include <cmath>
+#include <vector>
 
 #include "algebra/eigen_decomposition.hpp"
 #include "algebra_testing_context.hpp"
@@ -194,11 +195,22 @@ Void test_real_examples(PR pr) {
         }
     }
 
-    // Approximate nonsymmetric dense matrices remain unsupported.
-    // Dense overlapping Gershgorin disks do not constitute a certificate.
+    // This now enters the general nonsymmetric QR path. Its independent
+    // characteristic roots are {0,2,4}, not the former Jacobi spectrum.
     symmetric[0u][1u] = AX(3u, pr);
+    EigenDecompositionDiagnostics qr_diagnostics;
+    const auto asymmetric = approximate(symmetric, &qr_diagnostics);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-                                     approximate(symmetric).status == Status::UNSUPPORTED_DIMENSION);
+                                     asymmetric.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        qr_diagnostics.strategy == EigenDecompositionStrategy::SHIFTED_QR);
+    if (asymmetric.data) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            const double exact = 2.0 * static_cast<double>(col);
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(asymmetric.data->eigenvalues[col].get_d() - exact) < 1e-8);
+        }
+    }
     Matrix<VX> symmetric_bounds(3u, 3u, VX(0u, pr));
     symmetric_bounds[0u][0u] = VX(2u, pr);
     symmetric_bounds[1u][1u] = VX(2u, pr);
@@ -481,6 +493,99 @@ Void test_validated_uncertainty() {
 }
 
 
+
+/** @brief Test dense nonsymmetric approximate simple real eigendecompositions. */
+template<class PR>
+Void test_nonsymmetric_approximate(PR precision) {
+    using X = FloatApproximation<PR>;
+    const X zero(0u, precision);
+    EigenDecomposition<ApproximateTag, PR> solver(precision);
+
+    // Neither matrix is upper/lower triangular, and both have independent
+    // integer spectra by exact characteristic-polynomial factorization.
+    const Int three_coefficients[3][3] = {
+        {0, 1, 0},
+        {-2, 3, 1},
+        {3, -3, 6}
+    };
+    Matrix<X> three(3u, 3u, zero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            three[row][col] = X(three_coefficients[row][col], precision);
+        }
+    }
+
+    const Int four_coefficients[4][4] = {
+        {1, 2, 0, 0},
+        {0, 3, 0, 0},
+        {-8, 10, 5, 0},
+        {-6, 2, 0, 7}
+    };
+    Matrix<X> four(4u, 4u, zero);
+    for (SizeType row = 0u; row != 4u; ++row) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            four[row][col] = X(four_coefficients[row][col], precision);
+        }
+    }
+
+    const auto verify = [&](const Matrix<X>& A,
+                            const std::vector<Int>& expected) {
+        EigenDecompositionDiagnostics diagnostics;
+        const auto answer = solver(A, &diagnostics);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            answer.status == Status::SUCCESS);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            diagnostics.strategy == EigenDecompositionStrategy::SHIFTED_QR);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            answer.data.has_value());
+        if (answer.data) {
+            const auto& data = *answer.data;
+            for (SizeType col = 0u; col != expected.size(); ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs(data.eigenvalues[col].get_d() -
+                             static_cast<double>(expected[col])) < 1e-8);
+                for (SizeType row = 0u; row != A.row_size(); ++row) {
+                    X action(zero);
+                    for (SizeType k = 0u; k != A.row_size(); ++k) {
+                        action += A[row][k] * data.eigenvectors[k][col];
+                    }
+                    const X residual = action -
+                        data.eigenvalues[col] * data.eigenvectors[row][col];
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        std::abs(residual.get_d()) < 1e-8);
+                }
+            }
+        }
+    };
+    verify(three, {1, 3, 5});
+    verify(four, {1, 3, 5, 7});
+
+    // The eigenvalues +-i and 2 are not a complete real spectrum.
+    Matrix<X> complex(3u, 3u, zero);
+    complex[0u][1u] = X(-1, precision);
+    complex[1u][0u] = X(1u, precision);
+    complex[2u][2u] = X(2u, precision);
+    const auto complex_answer = solver(complex);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        complex_answer.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !complex_answer.data.has_value());
+
+    // Double eigenvalue 2, plus eigenvalue 0: a simple-spectrum method
+    // must not claim a full eigenbasis even if this matrix is diagonalizable.
+    Matrix<X> repeated(3u, 3u, zero);
+    repeated[0u][0u] = X(1u, precision);
+    repeated[0u][1u] = X(1u, precision);
+    repeated[1u][0u] = X(1u, precision);
+    repeated[1u][1u] = X(1u, precision);
+    repeated[2u][2u] = X(2u, precision);
+    const auto repeated_answer = solver(repeated);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        repeated_answer.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !repeated_answer.data.has_value());
+}
+
 //! \brief Non-normal dense example with known spectrum that defeats Gershgorin.
 template<class PR>
 Void test_krawczyk_nonnormal(PR precision) {
@@ -671,6 +776,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_diagnostics(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_diagnostics(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonsymmetric_approximate(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonsymmetric_approximate(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

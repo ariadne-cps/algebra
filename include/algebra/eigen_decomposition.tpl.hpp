@@ -140,7 +140,14 @@ EigenDecomposition<P, PR>::operator()(
                 }
                 EigenDecompositionSectionTimer candidate(
                     diagnostics ? &diagnostics->candidate_time : nullptr);
-                return this->_symmetric(M);
+                const auto symmetric = this->_symmetric(M);
+                if (symmetric.status != Status::UNSUPPORTED_DIMENSION) {
+                    return symmetric;
+                }
+                if (diagnostics) {
+                    diagnostics->strategy = EigenDecompositionStrategy::SHIFTED_QR;
+                }
+                return this->_nonsymmetric(M);
             } else {
                 if (diagnostics) {
                     diagnostics->strategy = EigenDecompositionStrategy::GERSHGORIN;
@@ -1041,5 +1048,7 @@ EigenDecomposition<P, PR>::_krawczyk(
 }
 
 } // namespace Ariadne
+
+#include "algebra/eigen_nonsymmetric.tpl.hpp"
 
 #endif // ARIADNE_EIGEN_DECOMPOSITION_TPL_HPP

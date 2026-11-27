@@ -336,12 +336,10 @@ void measure_backend(const char* backend, unsigned bits, PR precision,
         measure<P>(backend, bits, precision, Workload::Rotated, size,
                    selection, runner, results);
     }
+    // Compare the same non-normal point matrix in both paradigms.
+    measure<P>(backend, bits, precision, Workload::Nonnormal4, 4u,
+               selection, runner, results);
     if constexpr(std::is_same_v<P, ValidatedTag>) {
-        // These deliberately non-normal problems are not supported by the
-        // symmetric ApproximateTag Jacobi solver. Do not compare "unsupported"
-        // runs with successful validated eigenpair certificates.
-        measure<P>(backend, bits, precision, Workload::Nonnormal4, 4u,
-                   selection, runner, results);
         measure<P>(backend, bits, precision, Workload::NonnormalInterval4, 4u,
                    selection, runner, results);
     }
@@ -438,7 +436,7 @@ int main(int argc, const char* argv[]) {
         const std::size_t configurations =
             (1u + 3u * selection.sizes.size()) *
                 (2u + 2u * selection.bits.size()) +
-            2u * (1u + selection.bits.size());
+            3u * (1u + selection.bits.size());
         const Bench::Runner runner(command_line, configurations);
         std::vector<Datum> results;
         results.reserve(configurations);

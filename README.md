@@ -53,11 +53,11 @@ and A/B comparisons.
 The deterministic workload catalogue includes dense 2x2, upper-triangular,
 dense symmetric with separated disks, and dense symmetric with overlapping
 original Gershgorin disks (Jacobi and validated preconditioning). Two additional
-**Validated-only** 4x4 non-normal workloads use an exact rational matrix with
-known simple real spectrum {1,3,5,7}, first as a point matrix and then with
-one small interval perturbation. These exercise the challenging certified
-eigenpair path rather than the approximate symmetric Jacobi algorithm.
-Their fixed order four is independent of `--sizes`. Options:
+4x4 non-normal workloads use an exact rational matrix with a known simple
+real spectrum {1,3,5,7}. The point-matrix workload is now available for
+both ApproximateTag (shifted Householder QR) and ValidatedTag (rigorous
+eigenpair certificate); the small interval-perturbation case is
+Validated-only. Their fixed order four is independent of `--sizes`. Options:
 `--sizes` (orders 3–64), `--bits` (MP precision), `--iterations`,
 `--samples` (odd, >=3), `--warmups`, `--summary` and `--csv`.
 DP53 and MP at the selected bit widths are measured with both paradigms.
