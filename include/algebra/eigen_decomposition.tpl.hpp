@@ -954,115 +954,156 @@ EigenDecomposition<P, PR>::_preconditioned(
         const SizeType n = A.row_size();
         const X zero(0u, _precision);
         const X one(1u, _precision);
-        const ApproximateX half = ApproximateX(1u, _precision) /
-                                  ApproximateX(2u, _precision);
-
-        // Candidate basis only: use a symmetric matrix built from interval
-        // midpoints. Even if the original family contains nonsymmetric
-        // matrices, the later interval certificate applies to every member.
-        Matrix<ApproximateX> seed(n, n, ApproximateX(0u, _precision));
-        for (SizeType row = 0u; row != n; ++row) {
-            seed[row][row] = ApproximateX(A[row][row]);
-            for (SizeType col = row + 1u; col != n; ++col) {
-                const ApproximateX center = (ApproximateX(A[row][col]) +
-                                             ApproximateX(A[col][row])) * half;
-                seed[row][col] = center;
-                seed[col][row] = center;
-            }
-        }
-
-        EigenDecomposition<ApproximateTag, PR> approximate(_precision);
-        const auto candidate = approximate(seed);
-        if (candidate.status != Status::SUCCESS || !candidate.data) {
-            return {Status::INCONCLUSIVE, std::nullopt};
-        }
-        candidate_timer.stop();
-        EigenDecompositionSectionTimer verified_timer(
-            diagnostics ? &diagnostics->verification_time : nullptr);
-
-        // S is a point matrix: its floating-point coefficients are treated
-        // as exact dyadic constants when constructing the interval matrix.
-        // Nothing relies on the computed Jacobi columns being *exactly*
-        // orthogonal. We explicitly certify a valid inverse of S.
-        Matrix<X> similarity(n, n, zero);
+        // Try actual-midpoint eigenvectors as a fixed *candidate* basis.
+        // Non-symmetric midpoints use shifted QR; symmetric ones use Jacobi.
+        // Nothing is accepted until S^{-1} and the Gershgorin eigenpairs
+        // have been verified using the ORIGINAL interval family.
+        const ApproximateX azero(0u, _precision);
+        Matrix<ApproximateX> midpoint(n, n, azero);
+        bool symmetric_midpoint = true;
         for (SizeType row = 0u; row != n; ++row) {
             for (SizeType col = 0u; col != n; ++col) {
-                const auto& entry = candidate.data->eigenvectors[row][col];
-                if (!is_finite(entry.raw())) {
+                midpoint[row][col] = ApproximateX(A[row][col]);
+                if (!is_finite(midpoint[row][col].raw())) {
                     return {Status::INCONCLUSIVE, std::nullopt};
                 }
-                similarity[row][col] = X(entry.raw());
             }
         }
-
-        // Interval Gauss-Jordan reduction encloses S^{-1} since every
-        // pivot is verified nonzero and S is a fixed point matrix.
-        Matrix<X> working(similarity);
-        Matrix<X> inverse = Matrix<X>::identity(n, _precision);
-        for (SizeType pivot = 0u; pivot != n; ++pivot) {
-            SizeType chosen = pivot;
-            while (chosen != n && !this->_nonzero(working[chosen][pivot])) {
-                ++chosen;
-            }
-            if (chosen == n) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
-            if (chosen != pivot) {
-                for (SizeType col = 0u; col != n; ++col) {
-                    const X original = working[pivot][col];
-                    working[pivot][col] = working[chosen][col];
-                    working[chosen][col] = original;
-                    const X inverse_original = inverse[pivot][col];
-                    inverse[pivot][col] = inverse[chosen][col];
-                    inverse[chosen][col] = inverse_original;
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = row + 1u; col != n; ++col) {
+                if (midpoint[row][col].raw() != midpoint[col][row].raw()) {
+                    symmetric_midpoint = false;
                 }
             }
+        }
+        EigenDecomposition<ApproximateTag, PR> approximate(_precision);
+        const auto midpoint_candidate = approximate(midpoint);
+        candidate_timer.stop();
 
-            const X divisor = working[pivot][pivot];
-            if (!this->_nonzero(divisor)) {
+        // All certificate operations are independent of the approximate
+        // algorithm that proposed S; failures are inconclusive and may
+        // be retried with another seed.
+        const auto certify_similarity = [&](const auto& candidate) -> ResultType {
+            if (candidate.status != Status::SUCCESS || !candidate.data) {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
-            for (SizeType col = pivot + 1u; col != n; ++col) {
-                working[pivot][col] /= divisor;
-            }
-            working[pivot][pivot] = one;
-            for (SizeType col = 0u; col != n; ++col) {
-                inverse[pivot][col] /= divisor;
-            }
-
+            EigenDecompositionSectionTimer verified_timer(
+                diagnostics ? &diagnostics->verification_time : nullptr);
+            // S is a point matrix: its floating-point coefficients are treated
+            // as exact dyadic constants when constructing the interval matrix.
+            // Nothing relies on the computed Jacobi columns being *exactly*
+            // orthogonal. We explicitly certify a valid inverse of S.
+            Matrix<X> similarity(n, n, zero);
             for (SizeType row = 0u; row != n; ++row) {
-                if (row == pivot) {
-                    continue;
-                }
-                const X multiplier = working[row][pivot];
-                for (SizeType col = pivot + 1u; col != n; ++col) {
-                    working[row][col] -= multiplier * working[pivot][col];
-                }
-                working[row][pivot] = zero;
                 for (SizeType col = 0u; col != n; ++col) {
-                    inverse[row][col] -= multiplier * inverse[pivot][col];
+                    const auto& entry = candidate.data->eigenvectors[row][col];
+                    if (!is_finite(entry.raw())) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    similarity[row][col] = X(entry.raw());
                 }
             }
-        }
 
-        // The exact similarity B = S^{-1} A S lies inside the interval
-        // evaluation below for every input matrix A. Gershgorin certifies
-        // simple real eigenvalues and a basis W of B when it succeeds.
-        const Matrix<X> transformed = inverse * A * similarity;
-        auto transformed_result = this->_gershgorin(transformed);
-        if (transformed_result.status != Status::SUCCESS ||
-            !transformed_result.data) {
+            // Interval Gauss-Jordan reduction encloses S^{-1} since every
+            // pivot is verified nonzero and S is a fixed point matrix.
+            Matrix<X> working(similarity);
+            Matrix<X> inverse = Matrix<X>::identity(n, _precision);
+            for (SizeType pivot = 0u; pivot != n; ++pivot) {
+                SizeType chosen = pivot;
+                while (chosen != n && !this->_nonzero(working[chosen][pivot])) {
+                    ++chosen;
+                }
+                if (chosen == n) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                if (chosen != pivot) {
+                    for (SizeType col = 0u; col != n; ++col) {
+                        const X original = working[pivot][col];
+                        working[pivot][col] = working[chosen][col];
+                        working[chosen][col] = original;
+                        const X inverse_original = inverse[pivot][col];
+                        inverse[pivot][col] = inverse[chosen][col];
+                        inverse[chosen][col] = inverse_original;
+                    }
+                }
+
+                const X divisor = working[pivot][pivot];
+                if (!this->_nonzero(divisor)) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                for (SizeType col = pivot + 1u; col != n; ++col) {
+                    working[pivot][col] /= divisor;
+                }
+                working[pivot][pivot] = one;
+                for (SizeType col = 0u; col != n; ++col) {
+                    inverse[pivot][col] /= divisor;
+                }
+
+                for (SizeType row = 0u; row != n; ++row) {
+                    if (row == pivot) {
+                        continue;
+                    }
+                    const X multiplier = working[row][pivot];
+                    for (SizeType col = pivot + 1u; col != n; ++col) {
+                        working[row][col] -= multiplier * working[pivot][col];
+                    }
+                    working[row][pivot] = zero;
+                    for (SizeType col = 0u; col != n; ++col) {
+                        inverse[row][col] -= multiplier * inverse[pivot][col];
+                    }
+                }
+            }
+
+            // The exact similarity B = S^{-1} A S lies inside the interval
+            // evaluation below for every input matrix A. Gershgorin certifies
+            // simple real eigenvalues and a basis W of B when it succeeds.
+            const Matrix<X> transformed = inverse * A * similarity;
+            auto transformed_result = this->_gershgorin(transformed);
+            if (transformed_result.status != Status::SUCCESS ||
+                !transformed_result.data) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+
+            // V=S W is the corresponding eigenvector basis of A.
+            // Both S and W are certified invertible; the columns do not
+            // necessarily retain the unit-pivot normalization of W.
+            Matrix<X> vectors = similarity * transformed_result.data->eigenvectors;
+            return {Status::SUCCESS,
+                    EigenDecompositionData<P, PR>{
+                        std::move(transformed_result.data->eigenvalues),
+                        std::move(vectors)}};
+        };
+
+        if (midpoint_candidate.status == Status::SUCCESS && midpoint_candidate.data) {
+            const auto direct_result = certify_similarity(midpoint_candidate);
+            if (direct_result.status == Status::SUCCESS) {
+                return direct_result;
+            }
+        }
+        if (symmetric_midpoint) {
+            // Jacobi has already supplied the symmetric midpoint basis.
             return {Status::INCONCLUSIVE, std::nullopt};
         }
 
-        // V=S W is the corresponding eigenvector basis of A.
-        // Both S and W are certified invertible; the columns do not
-        // necessarily retain the unit-pivot normalization of W.
-        Matrix<X> vectors = similarity * transformed_result.data->eigenvectors;
-        return {Status::SUCCESS,
-                EigenDecompositionData<P, PR>{
-                    std::move(transformed_result.data->eigenvalues),
-                    std::move(vectors)}};
+        // Retain the old symmetrized-Jacobi route if QR fails or its
+        // fixed-basis Gershgorin certificate is too conservative.
+        EigenDecompositionSectionTimer fallback_timer(
+            diagnostics ? &diagnostics->candidate_time : nullptr);
+        const ApproximateX half = ApproximateX(1u, _precision) /
+                                  ApproximateX(2u, _precision);
+        Matrix<ApproximateX> symmetric_seed(n, n, azero);
+        for (SizeType row = 0u; row != n; ++row) {
+            symmetric_seed[row][row] = midpoint[row][row];
+            for (SizeType col = row + 1u; col != n; ++col) {
+                const ApproximateX center =
+                    (midpoint[row][col] + midpoint[col][row]) * half;
+                symmetric_seed[row][col] = center;
+                symmetric_seed[col][row] = center;
+            }
+        }
+        const auto symmetric_candidate = approximate(symmetric_seed);
+        fallback_timer.stop();
+        return certify_similarity(symmetric_candidate);
     }
 }
 

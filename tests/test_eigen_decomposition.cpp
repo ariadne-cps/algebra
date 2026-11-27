@@ -1169,9 +1169,9 @@ Void test_validated_nonsymmetric_qr_seeds(PR precision) {
     verify(A);
 }
 
-//! \brief Non-normal dense example with known spectrum that defeats Gershgorin.
+//! \brief Non-normal dense example requiring genuine validated dense certification.
 template<class PR>
-Void test_krawczyk_nonnormal(PR precision) {
+Void test_dense_nonnormal_validated(PR precision) {
     using X = FloatBounds<PR>;
     const X zero(0u, precision);
 
@@ -1360,8 +1360,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_jacobi_multiprecision());
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_validated_nonsymmetric_qr_seeds(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_validated_nonsymmetric_qr_seeds(MultiplePrecision(80u)));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(dp));
-        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_dense_nonnormal_validated(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_dense_nonnormal_validated(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_diagnostics(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_diagnostics(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonsymmetric_approximate(dp));

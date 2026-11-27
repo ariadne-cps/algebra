@@ -202,9 +202,12 @@ class EigenDecomposition {
     ResultType _gershgorin(const Matrix<NumericType>& A) const;
 
     //! \brief Certify dense eigenpairs after an interval-verified similarity.
-    //! \details Uses an approximate Jacobi basis as a *candidate* fixed
-    //! coordinate change, verifies its inverse by interval elimination,
-    //! then invokes the rigorous Gershgorin eigenpair certificate.
+    //! \details Tries an approximate basis computed from the actual
+    //! midpoint (QR for nonsymmetric matrices, Jacobi for symmetric ones),
+    //! then falls back to symmetrized Jacobi when necessary. The fixed
+    //! candidate basis is inverted by verified interval elimination;
+    //! Gershgorin on the rigorously transformed original matrix
+    //! determines whether the eigenpairs can be certified.
     ResultType _preconditioned(const Matrix<NumericType>& A,
                                EigenDecompositionDiagnostics* diagnostics) const;
 
