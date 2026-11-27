@@ -32,6 +32,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -113,7 +114,7 @@ List<ArgumentParser> arguments(Selection& selection) {
 }
 
 /** @brief Workloads select different currently implemented algorithmic paths. */
-enum class Workload { Dense2, Triangular, Separated, Rotated };
+enum class Workload { Dense2, Triangular, Separated, Rotated, Nonnormal4, NonnormalInterval4 };
 
 /** @brief Stable workload labels for cross-commit comparisons. */
 const char* label(Workload w) {
@@ -122,6 +123,8 @@ const char* label(Workload w) {
         case Workload::Triangular: return "upper_triangular";
         case Workload::Separated: return "dense_separated";
         case Workload::Rotated: return "dense_rotated";
+        case Workload::Nonnormal4: return "dense_nonnormal_4x4";
+        case Workload::NonnormalInterval4: return "dense_nonnormal_interval_4x4";
         default: throw std::invalid_argument("unknown workload");
     }
 }
@@ -134,6 +137,29 @@ Matrix<X> matrix_for(Workload w, unsigned n, PR precision) {
     const X zero(0u, precision);
     const X one(1u, precision);
     Matrix<X> A(n, n, zero);
+    if(w == Workload::Nonnormal4 || w == Workload::NonnormalInterval4) {
+        if(n != 4u)
+            throw std::invalid_argument("nonnormal workload has fixed order four");
+        // Exact characteristic roots {1, 3, 5, 7}; original Gershgorin
+        // disks overlap. Match the independent functional regression.
+        const Int coefficients[4][4] = {
+            {1, 2, 0, 0},
+            {0, 3, 0, 0},
+            {-8, 10, 5, 0},
+            {-6, 2, 0, 7}
+        };
+        for(unsigned i = 0u; i != 4u; ++i)
+            for(unsigned j = 0u; j != 4u; ++j)
+                A[i][j] = X(coefficients[i][j], precision);
+        if(w == Workload::NonnormalInterval4) {
+            if constexpr(std::is_same_v<typename X::Paradigm, ValidatedTag>) {
+                A[0u][0u] += X(0, 1, precision) / X(1048576u, precision);
+            } else {
+                throw std::invalid_argument("interval workload requires ValidatedTag");
+            }
+        }
+        return A;
+    }
     if(w == Workload::Dense2) {
         A[0u][0u] = X(2u, precision);
         A[0u][1u] = one;
@@ -204,8 +230,9 @@ void measure(const char* backend, unsigned bits, PR precision,
     const auto pilot = solve(input);
     const Status expected = pilot.status;
 
-    // An inconclusive result in the rotated case is a genuine outcome
-    // and must remain explicit in reports and A/B comparisons.
+    // An inconclusive result in the rotated case is a genuine outcome.
+    // Nonnormal regression cases require successful validated certification,
+    // so a failure is never silently measured as a "speedup".
     if(expected == Status::UNSUPPORTED_DIMENSION ||
        (workload != Workload::Rotated && expected != Status::SUCCESS) ||
        (expected == Status::SUCCESS && !pilot.data)) {
@@ -247,6 +274,15 @@ void measure_backend(const char* backend, unsigned bits, PR precision,
         measure<P>(backend, bits, precision, Workload::Separated, size,
                    selection, runner, results);
         measure<P>(backend, bits, precision, Workload::Rotated, size,
+                   selection, runner, results);
+    }
+    if constexpr(std::is_same_v<P, ValidatedTag>) {
+        // These deliberately non-normal problems are not supported by the
+        // symmetric ApproximateTag Jacobi solver. Do not compare "unsupported"
+        // runs with successful validated eigenpair certificates.
+        measure<P>(backend, bits, precision, Workload::Nonnormal4, 4u,
+                   selection, runner, results);
+        measure<P>(backend, bits, precision, Workload::NonnormalInterval4, 4u,
                    selection, runner, results);
     }
 }
@@ -304,7 +340,8 @@ int main(int argc, const char* argv[]) {
 
         const std::size_t configurations =
             (1u + 3u * selection.sizes.size()) *
-            (2u + 2u * selection.bits.size());
+                (2u + 2u * selection.bits.size()) +
+            2u * (1u + selection.bits.size());
         const Bench::Runner runner(command_line, configurations);
         std::vector<Datum> results;
         results.reserve(configurations);
