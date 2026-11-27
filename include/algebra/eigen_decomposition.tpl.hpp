@@ -317,6 +317,77 @@ EigenDecomposition<P, PR>::operator()(
             }
         }
         if (!upper_triangular && !lower_triangular) {
+            // A connected directed acyclic off-diagonal pattern is upper
+            // triangular after a simultaneous coordinate permutation.
+            // Only exactly zero entries are absent from this graph:
+            // an uncertain interval containing zero is still an edge.
+            std::vector<SizeType> indegree(n, 0u);
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = 0u; col != n; ++col) {
+                    if (row != col && !this->_zero(M[row][col])) {
+                        ++indegree[col];
+                    }
+                }
+            }
+            std::vector<bool> placed(n, false);
+            std::vector<SizeType> permutation;
+            permutation.reserve(n);
+            for (SizeType k = 0u; k != n; ++k) {
+                SizeType next = n;
+                for (SizeType row = 0u; row != n; ++row) {
+                    if (!placed[row] && indegree[row] == 0u) {
+                        next = row;
+                        break;
+                    }
+                }
+                if (next == n) {
+                    // A directed cycle prevents triangularization by a
+                    // permutation. Preserve the generic dense fallback.
+                    break;
+                }
+                placed[next] = true;
+                permutation.push_back(next);
+                for (SizeType col = 0u; col != n; ++col) {
+                    if (!placed[col] && !this->_zero(M[next][col])) {
+                        --indegree[col];
+                    }
+                }
+            }
+            if (permutation.size() == n) {
+                Matrix<X> permuted(n, n, zero);
+                for (SizeType row = 0u; row != n; ++row) {
+                    for (SizeType col = 0u; col != n; ++col) {
+                        permuted[row][col] =
+                            M[permutation[row]][permutation[col]];
+                    }
+                }
+                EigenDecompositionDiagnostics nested_diagnostics;
+                const auto triangular = this->operator()(
+                    permuted, diagnostics ? &nested_diagnostics : nullptr);
+                if (diagnostics) {
+                    diagnostics->candidate_time += nested_diagnostics.candidate_time;
+                    diagnostics->verification_time += nested_diagnostics.verification_time;
+                }
+                if (triangular.status == Status::SUCCESS && triangular.data) {
+                    // Undo the row permutation on the eigenvectors. The
+                    // eigenvalues are already sorted by the triangular
+                    // solver; columns must retain that ordering.
+                    for (SizeType col = 0u; col != n; ++col) {
+                        values[col] = triangular.data->eigenvalues[col];
+                        for (SizeType row = 0u; row != n; ++row) {
+                            vectors[permutation[row]][col] =
+                                triangular.data->eigenvectors[row][col];
+                        }
+                    }
+                    if (diagnostics) {
+                        diagnostics->strategy = EigenDecompositionStrategy::TRIANGULAR;
+                    }
+                    return {Status::SUCCESS, EigenDecompositionData<P, PR>{
+                        std::move(values), std::move(vectors)}};
+                }
+                // Inconclusive triangular substitution is not a proof that
+                // another solver cannot handle the matrix; fall through.
+            }
             if constexpr (std::is_same_v<P, ApproximateTag>) {
                 if (diagnostics) {
                     diagnostics->strategy = EigenDecompositionStrategy::JACOBI;

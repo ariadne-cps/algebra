@@ -687,6 +687,88 @@ Void test_repeated_real_spectrum(PR precision) {
     }
 }
 
+/** @brief Diagonalize connected directed-acyclic patterns after permutation. */
+template<class PR>
+Void test_permuted_triangular_spectrum(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+
+    // In coordinate order {2,0,3,1}, the 4x4 matrix is upper
+    // triangular with eigenvalues {1,3,5,7}. In its stored order
+    // it is neither upper nor lower triangular. The undirected graph
+    // is connected: this must not be mistaken for block diagonal.
+    const SizeType order[4] = {2u, 0u, 3u, 1u};
+    Matrix<AX> a(4u, 4u, azero);
+    Matrix<VX> v(4u, 4u, vzero);
+    for (SizeType i = 0u; i != 4u; ++i) {
+        const unsigned diagonal = 2u * static_cast<unsigned>(i) + 1u;
+        a[order[i]][order[i]] = AX(diagonal, precision);
+        v[order[i]][order[i]] = VX(diagonal, precision);
+        if (i + 1u != 4u) {
+            a[order[i]][order[i + 1u]] = AX(1u, precision);
+            v[order[i]][order[i + 1u]] = VX(1u, precision);
+        }
+    }
+
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    EigenDecompositionDiagnostics diagnostics;
+    const auto point = approximate(a, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     point.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::TRIANGULAR);
+    const auto certified = validated(v, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     certified.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::TRIANGULAR);
+    if (point.data && certified.data) {
+        const Int expected[4] = {1, 3, 5, 7};
+        for (SizeType col = 0u; col != 4u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                point.data->eigenvalues[col].raw() ==
+                    AX(expected[col], precision).raw());
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                encloses(certified.data->eigenvalues[col], expected[col], precision));
+        }
+        const auto lhs = v * certified.data->eigenvectors;
+        const auto rhs = certified.data->eigenvectors *
+                         certified.data->diagonal_matrix();
+        for (SizeType row = 0u; row != 4u; ++row) {
+            for (SizeType col = 0u; col != 4u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    lhs[row][col].lower_raw() <= rhs[row][col].upper_raw() &&
+                    lhs[row][col].upper_raw() >= rhs[row][col].lower_raw());
+            }
+        }
+    }
+
+    // An off-diagonal interval containing zero does not constitute an
+    // exact structural zero. Nevertheless the directed pattern remains
+    // acyclic, and all real members have the same sorted eigenvalues.
+    v[order[1u]][order[2u]] = VX(0, 1, precision);
+    const auto uncertain = validated(v, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     uncertain.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::TRIANGULAR);
+    if (uncertain.data) {
+        const auto lhs = v * uncertain.data->eigenvectors;
+        const auto rhs = uncertain.data->eigenvectors *
+                         uncertain.data->diagonal_matrix();
+        for (SizeType row = 0u; row != 4u; ++row) {
+            for (SizeType col = 0u; col != 4u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    lhs[row][col].lower_raw() <= rhs[row][col].upper_raw() &&
+                    lhs[row][col].upper_raw() >= rhs[row][col].lower_raw());
+            }
+        }
+    }
+}
+
 /** @brief Blockwise diagonalization with noncontiguous invariant components. */
 template<class PR>
 Void test_block_diagonal_spectrum(PR precision) {
@@ -1266,6 +1348,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_real_spectrum(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_triangular_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_triangular_spectrum(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_permuted_triangular_spectrum(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_permuted_triangular_spectrum(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_diagonal_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_diagonal_spectrum(MultiplePrecision(80u)));
     });

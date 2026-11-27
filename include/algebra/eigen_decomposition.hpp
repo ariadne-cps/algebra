@@ -132,9 +132,11 @@ struct EigenDecompositionResult {
 //! decomposed blockwise, including interleaved blocks and repeated
 //! eigenvalues in distinct invariant blocks. ValidatedTag requires a
 //! consistent ordering of the resulting eigenvalue enclosures.
-//! Non-diagonal triangular matrices allow repeated real eigenvalues when
-//! their normalized eigenvector equations admit a triangular unit-pivot
-//! basis. A defective or interval-undecidable case is INCONCLUSIVE.
+//! Non-diagonal triangular matrices, also after a simultaneous row/column
+//! permutation detected by their acyclic structural nonzero pattern, are
+//! solved by triangular substitution. Exact repeated eigenvalues are
+//! accepted when their normalized equations are compatible; a defective
+//! or interval-undecidable case is INCONCLUSIVE.
 //! Dense 2x2 real matrices with simple spectrum are supported by closed form.
 //! For dense higher-order matrices, ApproximateTag uses Jacobi rotations
 //! for symmetric inputs (including repeated real eigenvalues) and shifted
