@@ -303,6 +303,259 @@ EigenDecomposition<P, PR>::operator()(
         }
     }
 
+    // A directed cycle can be confined to a diagonal block even when
+    // the entire matrix is not permutationally triangular. The strongly
+    // connected components of the structural nonzero graph give an upper
+    // block-triangular form without treating uncertain zeros as absent.
+    if (n > 2u) {
+        std::vector<std::vector<bool>> reachable(
+            n, std::vector<bool>(n, false));
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = 0u; col != n; ++col) {
+                reachable[row][col] =
+                    row == col || !this->_zero(M[row][col]);
+            }
+        }
+        for (SizeType via = 0u; via != n; ++via) {
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = 0u; col != n; ++col) {
+                    if (reachable[row][via] && reachable[via][col]) {
+                        reachable[row][col] = true;
+                    }
+                }
+            }
+        }
+
+        std::vector<SizeType> component_of(n, n);
+        std::vector<std::vector<SizeType>> components;
+        for (SizeType start = 0u; start != n; ++start) {
+            if (component_of[start] != n) {
+                continue;
+            }
+            const SizeType id = components.size();
+            std::vector<SizeType> component;
+            for (SizeType vertex = 0u; vertex != n; ++vertex) {
+                if (component_of[vertex] == n &&
+                    reachable[start][vertex] && reachable[vertex][start]) {
+                    component_of[vertex] = id;
+                    component.push_back(vertex);
+                }
+            }
+            components.push_back(std::move(component));
+        }
+
+        // Acyclic singleton components are already handled by the
+        // permutation-triangular solver below. Restrict this path to
+        // genuinely cyclic diagonal blocks, with at least two blocks.
+        bool cyclic_block = false;
+        for (const auto& component: components) {
+            cyclic_block = cyclic_block || component.size() > 1u;
+        }
+        if (components.size() > 1u && cyclic_block) {
+            const SizeType count = components.size();
+            std::vector<std::vector<bool>> edges(
+                count, std::vector<bool>(count, false));
+            std::vector<SizeType> indegree(count, 0u);
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = 0u; col != n; ++col) {
+                    const SizeType from = component_of[row];
+                    const SizeType to = component_of[col];
+                    if (from != to && !this->_zero(M[row][col]) &&
+                        !edges[from][to]) {
+                        edges[from][to] = true;
+                        ++indegree[to];
+                    }
+                }
+            }
+
+            std::vector<SizeType> order;
+            std::vector<bool> placed(count, false);
+            for (SizeType k = 0u; k != count; ++k) {
+                SizeType next = count;
+                for (SizeType id = 0u; id != count; ++id) {
+                    if (!placed[id] && indegree[id] == 0u) {
+                        next = id;
+                        break;
+                    }
+                }
+                if (next == count) {
+                    break; // The condensation graph must be acyclic.
+                }
+                placed[next] = true;
+                order.push_back(next);
+                for (SizeType id = 0u; id != count; ++id) {
+                    if (edges[next][id]) {
+                        --indegree[id];
+                    }
+                }
+            }
+
+            if (order.size() == count) {
+                if (diagnostics) {
+                    diagnostics->strategy = EigenDecompositionStrategy::BLOCK_TRIANGULAR;
+                }
+                bool viable = true;
+                std::vector<ResultType> solved_blocks;
+                for (SizeType k = 0u; k != count && viable; ++k) {
+                    const auto& indices = components[order[k]];
+                    const SizeType m = indices.size();
+                    Matrix<X> diagonal_block(m, m, zero);
+                    for (SizeType row = 0u; row != m; ++row) {
+                        for (SizeType col = 0u; col != m; ++col) {
+                            diagonal_block[row][col] =
+                                M[indices[row]][indices[col]];
+                        }
+                    }
+                    EigenDecompositionDiagnostics nested_diagnostics;
+                    auto answer = this->operator()(
+                        diagonal_block, diagnostics ? &nested_diagnostics : nullptr);
+                    if (diagnostics) {
+                        diagnostics->candidate_time += nested_diagnostics.candidate_time;
+                        diagnostics->verification_time += nested_diagnostics.verification_time;
+                    }
+                    if (answer.status != Status::SUCCESS || !answer.data) {
+                        viable = false;
+                    } else {
+                        solved_blocks.push_back(std::move(answer));
+                    }
+                }
+
+                if (viable) {
+                    EigenDecompositionSectionTimer lifting_time(
+                        diagnostics ? (std::is_same_v<P, ValidatedTag>
+                            ? &diagnostics->verification_time
+                            : &diagnostics->candidate_time) : nullptr);
+                    SizeType output_col = 0u;
+                    for (SizeType k = 0u; k != count && viable; ++k) {
+                        const auto& indices = components[order[k]];
+                        const auto& data = *solved_blocks[k].data;
+                        for (SizeType eigen_col = 0u;
+                             eigen_col != indices.size() && viable; ++eigen_col) {
+                            const X lambda = data.eigenvalues[eigen_col];
+                            Vector<X> lifted(n, zero);
+                            for (SizeType row = 0u; row != indices.size(); ++row) {
+                                lifted[indices[row]] =
+                                    data.eigenvectors[row][eigen_col];
+                            }
+
+                            // For an upper block-triangular matrix, an
+                            // eigenvector of block k is lifted into blocks
+                            // preceding k via (B_i-lambda*I)v_i = -sum A_ij*v_j.
+                            for (SizeType previous = k; previous > 0u && viable;) {
+                                --previous;
+                                const auto& earlier = components[order[previous]];
+                                const SizeType m = earlier.size();
+                                Matrix<X> shifted(m, m, zero);
+                                Vector<X> rhs(m, zero);
+                                for (SizeType row = 0u; row != m; ++row) {
+                                    const SizeType original = earlier[row];
+                                    for (SizeType col = 0u; col != m; ++col) {
+                                        shifted[row][col] =
+                                            M[original][earlier[col]];
+                                    }
+                                    shifted[row][row] -= lambda;
+                                    for (SizeType col = 0u; col != n; ++col) {
+                                        // All components in the current block
+                                        // are still zero; only later blocks
+                                        // contribute to the right-hand side.
+                                        rhs[row] += M[original][col] * lifted[col];
+                                    }
+                                }
+
+                                try {
+                                    const Matrix<X> shifted_inverse = inverse(shifted);
+                                    for (SizeType row = 0u; row != m; ++row) {
+                                        X entry(zero);
+                                        for (SizeType col = 0u; col != m; ++col) {
+                                            entry -= shifted_inverse[row][col] * rhs[col];
+                                        }
+                                        lifted[earlier[row]] = entry;
+                                    }
+                                } catch (const SingularMatrixException&) {
+                                    // A failed interval inverse is not proof
+                                    // of a defective eigenvalue; try the
+                                    // existing dense solver instead.
+                                    viable = false;
+                                }
+                            }
+                            if (viable) {
+                                values[output_col] = lambda;
+                                for (SizeType row = 0u; row != n; ++row) {
+                                    vectors[row][output_col] = lifted[row];
+                                }
+                                ++output_col;
+                            }
+                        }
+                    }
+                }
+
+                if (viable) {
+                    // Preserve the documented ascending order for *every*
+                    // member of an interval family. Overlapping independent
+                    // eigenvalue ranges cannot be assigned fixed columns.
+                    std::vector<SizeType> eigen_order;
+                    for (SizeType col = 0u; col != n && viable; ++col) {
+                        const X& current = values[col];
+                        if constexpr (std::is_same_v<P, ValidatedTag>) {
+                            if (!is_finite(current.lower_raw()) ||
+                                !is_finite(current.upper_raw())) {
+                                viable = false;
+                                break;
+                            }
+                        } else if (!is_finite(current.raw())) {
+                            viable = false;
+                            break;
+                        }
+                        SizeType position = 0u;
+                        for (; position != eigen_order.size(); ++position) {
+                            const X& previous = values[eigen_order[position]];
+                            if constexpr (std::is_same_v<P, ValidatedTag>) {
+                                if (current.upper_raw() < previous.lower_raw()) {
+                                    break;
+                                }
+                                const bool strictly_after =
+                                    current.lower_raw() > previous.upper_raw();
+                                const bool same_point =
+                                    current.lower_raw() == current.upper_raw() &&
+                                    previous.lower_raw() == previous.upper_raw() &&
+                                    current.lower_raw() == previous.lower_raw();
+                                if (!strictly_after && !same_point) {
+                                    viable = false;
+                                    break;
+                                }
+                            } else if (current.raw() < previous.raw()) {
+                                break;
+                            }
+                        }
+                        if (viable) {
+                            eigen_order.insert(eigen_order.begin() +
+                                static_cast<std::ptrdiff_t>(position), col);
+                        }
+                    }
+
+                    if (viable) {
+                        Vector<X> sorted_values(n, zero);
+                        Matrix<X> sorted_vectors(n, n, zero);
+                        for (SizeType col = 0u; col != n; ++col) {
+                            const SizeType source = eigen_order[col];
+                            sorted_values[col] = values[source];
+                            for (SizeType row = 0u; row != n; ++row) {
+                                sorted_vectors[row][col] = vectors[row][source];
+                            }
+                        }
+                        // Before lifting, each diagonal block supplies an
+                        // invertible basis. Lifting only adds components in
+                        // earlier blocks; hence the full basis is invertible.
+                        return {Status::SUCCESS, EigenDecompositionData<P, PR>{
+                            std::move(sorted_values), std::move(sorted_vectors)}};
+                    }
+                }
+                // An inconclusive block or shifted inverse must not block
+                // the existing generic dense eigendecomposition fallback.
+            }
+        }
+    }
+
     if (n > 2u) {
         bool upper_triangular = true;
         bool lower_triangular = true;

@@ -1169,6 +1169,101 @@ Void test_validated_nonsymmetric_qr_seeds(PR precision) {
     verify(A);
 }
 
+//! \brief Interleaved cyclic block with genuine one-way coupling to a scalar.
+template<class PR>
+Void test_block_triangular_spectrum(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    EigenDecomposition<ValidatedTag, PR> validated(precision);
+
+    // Indices {0,2} form a strongly connected 2x2 block with
+    // eigenvalues 1,3, and index {1} has eigenvalue 5. The entries
+    // A[0,1] and A[2,1] couple the blocks, so this is neither
+    // block diagonal nor permutation triangular.
+    const Int entries[3][3] = {{2, 1, 1}, {0, 5, 0}, {1, 1, 2}};
+    Matrix<AX> a(3u, 3u, azero);
+    Matrix<VX> v(3u, 3u, vzero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            a[row][col] = AX(entries[row][col], precision);
+            v[row][col] = VX(entries[row][col], precision);
+        }
+    }
+
+    EigenDecompositionDiagnostics diagnostics;
+    const auto point = approximate(a, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        point.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::BLOCK_TRIANGULAR);
+
+    const auto check = [&](const Matrix<VX>& input) {
+        const auto certified = validated(input, &diagnostics);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            certified.status == Status::SUCCESS);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            diagnostics.strategy == EigenDecompositionStrategy::BLOCK_TRIANGULAR);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            certified.data.has_value());
+        if (certified.data) {
+            const Int expected[3] = {1, 3, 5};
+            const Matrix<VX> left = input * certified.data->eigenvectors;
+            const Matrix<VX> right = certified.data->eigenvectors *
+                certified.data->diagonal_matrix();
+            for (SizeType col = 0u; col != 3u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    encloses(certified.data->eigenvalues[col], expected[col], precision));
+                if (col > 0u) {
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        certified.data->eigenvalues[col - 1u].upper_raw() <
+                        certified.data->eigenvalues[col].lower_raw());
+                }
+                for (SizeType row = 0u; row != 3u; ++row) {
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        left[row][col].lower_raw() <= right[row][col].upper_raw() &&
+                        left[row][col].upper_raw() >= right[row][col].lower_raw());
+                }
+            }
+        }
+    };
+    check(v);
+    if (point.data) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(point.data->eigenvalues[col].get_d() -
+                    static_cast<double>(2u * col + 1u)) < 1e-10);
+            for (SizeType row = 0u; row != 3u; ++row) {
+                AX residual(azero);
+                for (SizeType k = 0u; k != 3u; ++k) {
+                    residual += a[row][k] * point.data->eigenvectors[k][col];
+                }
+                residual -= point.data->eigenvalues[col] *
+                    point.data->eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs(residual.get_d()) < 1e-10);
+            }
+        }
+    }
+
+    // The first block's interval uncertainty must propagate through both
+    // its eigenvalue enclosures and the shifted inverse used for lifting.
+    v[0u][2u] += VX(0, 1, precision) / VX(1048576u, precision);
+    check(v);
+
+    // Coupling a repeated eigenvalue to its 2x2 eigenspace produces
+    // a defective eigenvalue 3; block lifting must not certify it.
+    v[0u][2u] = VX(1u, precision);
+    v[1u][1u] = VX(3u, precision);
+    const auto defective = validated(v);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        defective.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !defective.data.has_value());
+}
+
 //! \brief Non-normal dense example requiring genuine validated dense certification.
 template<class PR>
 Void test_dense_nonnormal_validated(PR precision) {
@@ -1374,6 +1469,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_permuted_triangular_spectrum(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_diagonal_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_diagonal_spectrum(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_triangular_spectrum(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_triangular_spectrum(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

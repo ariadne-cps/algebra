@@ -52,6 +52,7 @@ enum class EigenDecompositionStrategy {
     ANALYTIC,      //!< 1x1/2x2 closed form.
     TRIANGULAR,    //!< Triangular eigenvector substitution.
     BLOCK_DIAGONAL, //!< Eigenbasis assembled from independent blocks.
+    BLOCK_TRIANGULAR, //!< Eigenvectors lifted from coupled triangular blocks.
     JACOBI,        //!< Approximate symmetric Jacobi rotations.
     SHIFTED_QR,    //!< Approximate nonsymmetric real QR and Newton refinement.
     GERSHGORIN,    //!< Direct validated disk separation.
@@ -134,7 +135,10 @@ struct EigenDecompositionResult {
 //! consistent ordering of the resulting eigenvalue enclosures.
 //! Non-diagonal triangular matrices, also after a simultaneous row/column
 //! permutation detected by their acyclic structural nonzero pattern, are
-//! solved by triangular substitution. Exact repeated eigenvalues are
+//! solved by triangular substitution. More general structurally block-upper-
+//! triangular matrices are decomposed into strongly connected diagonal
+//! blocks. Certified interval inverses lift their eigenvectors into the
+//! preceding blocks when spectral separation permits it. Exact repeated eigenvalues are
 //! accepted when their normalized equations are compatible; a defective
 //! or interval-undecidable case is INCONCLUSIVE.
 //! Dense 2x2 real matrices with simple spectrum are supported by closed form.
