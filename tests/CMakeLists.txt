@@ -2,6 +2,7 @@ include(CTest)
 
 set(UNIT_TESTS
     test_differential
+    test_eigen_decomposition
     test_algebra
     test_expansion
     test_graded

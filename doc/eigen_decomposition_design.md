@@ -11,7 +11,7 @@ Do not merge into `main` until implementation, numerical and semantic tests, and
 
 Implement reusable approximate and validated spectral methods in Algebra. Evolution's first-order PDE solver currently takes user-supplied characteristic eigenvalues/eigenvectors. Algebra must remain independent of PDE assumptions; integration with Evolution is a later project.
 
-## Public API direction (proposed; not yet implemented)
+## Public API direction (first restricted implementation)
 
 - `EigenDecomposition<P, PR>`: algorithm/solver object, with `P` in `ApproximateTag` or `ValidatedTag` and `PR` denoting numeric precision.
 - `EigenDecompositionResult<P, PR>`: corresponding result type. `ApproximateTag` returns approximations without certification. `ValidatedTag` provides mathematically guaranteed enclosures **only when certified**, and an explicit inconclusive status otherwise.
@@ -24,14 +24,14 @@ Implement reusable approximate and validated spectral methods in Algebra. Evolut
 
 For a real square matrix `M`, a diagonalization `M T = T D` requires `T` invertible. Some matrices are defective; some have nonreal eigenvalues. A general eigensolver should ideally expose a Schur-based result even if diagonalization fails.
 
-For the first increment, target **simple real eigenvalues and their normalized eigenvectors**. This is a deliberate limited-scope milestone, not a general eigenvalue decomposition.
+For the first increment, target **simple real eigenvalues and their normalized eigenvectors** for orders 1 and 2 only. This is a deliberate limited-scope milestone, not a general eigenvalue decomposition.
 
 Approximate stage:
-1. Produce candidate eigenpairs using a numerically stable standard method (evaluate existing Algebra capabilities, then decide whether to use an external backend or implement a specific algorithm).
+1. Current 2x2 milestone uses the closed-form quadratic discriminant, not a general QR algorithm. A stable general backend for larger matrices remains to be designed.
 2. Measure residuals and account for convergence and ill-conditioning, without treating small numerical residuals as proof.
 
 Validated stage:
-1. Start from an approximate candidate.
+1. For the present 2x2 case, apply directly validated interval arithmetic to the exact quadratic formula; a general validated eigenpair solver seeded by approximate candidates is future work.
 2. Fix eigenvector scaling with an explicit normalization constraint.
 3. Apply an interval inclusion technique (e.g. interval Newton / Krawczyk) to the eigenpair equations `Mv - lambda v = 0` and the normalization equation.
 4. Certify the unique eigenpair in a specific interval box when the inclusion succeeds. If it does not, return inconclusive.
@@ -74,3 +74,13 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Added this design and implementation journal.
 - No eigensolver implementation or runtime tests yet.
 - Next: settle result types and the first self-contained algorithm; add tests in the same implementation commit.
+
+### 2026-11-27 — first restricted implementation (this commit)
+
+- Added public header-only `EigenDecomposition<P,PR>` and a status-bearing `EigenDecompositionResult<P,PR>` with an optional successful data payload.
+- The initial algorithm handles 1x1 and 2x2 real matrices with simple real spectrum. It computes both approximate and outward-rounded validated eigenvalues and normalized eigenvectors using the quadratic discriminant, and checks basis invertibility.
+- Validated success has a **family-wise enclosure** contract: for every real matrix represented by the input intervals, its two ascending eigenvalues and normalized eigenvectors belong to the respective output intervals. `INCONCLUSIVE` is not a proof of absence of diagonalization.
+- Added tests for real symmetric and nonsymmetric, triangular, diagonal and 1x1 cases, irrational eigenvalues, interval families, complex and repeated spectrum rejection, and DP/MP variants. Registered the new test and public header.
+- All new C++ files use repository GPL headers with copyright 2026 Luca Geretti.
+- **Verification status:** Code and tests committed for CI; a complete local build cannot run in the available environment (GitHub clone/dependencies unavailable). Passing tests are NOT claimed. Revisit compiler/runtime diagnostics before broadening scope.
+- **Out of scope:** general dimension, complex spectra, clusters, Schur, QR, Krawczyk, and end-to-end PDE integration.
