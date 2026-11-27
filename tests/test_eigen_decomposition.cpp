@@ -481,6 +481,67 @@ Void test_validated_uncertainty() {
 }
 
 
+//! \brief Non-normal dense example with known spectrum that defeats Gershgorin.
+template<class PR>
+Void test_krawczyk_nonnormal(PR precision) {
+    using X = FloatBounds<PR>;
+    const X zero(0u, precision);
+
+    // A=S diag(1,3,5,7) S^{-1} with integer unimodular
+    // S=[[1,1,0,0],[0,1,0,0],[2,-1,1,0],[1,1,0,1]].
+    // The original Gershgorin disks overlap and the symmetric midpoint
+    // eigenbasis does not separate the transformed disks. Eigenpair
+    // Newton/Krawczyk must certify all four real simple roots.
+    const Int coefficients[4][4] = {
+        {1, 2, 0, 0},
+        {0, 3, 0, 0},
+        {-8, 10, 5, 0},
+        {-6, 2, 0, 7}
+    };
+    Matrix<X> A(4u, 4u, zero);
+    for (SizeType i = 0u; i != 4u; ++i) {
+        for (SizeType j = 0u; j != 4u; ++j) {
+            A[i][j] = X(coefficients[i][j], precision);
+        }
+    }
+    EigenDecomposition<ValidatedTag, PR> solver(precision);
+
+    const auto check = [&](const Matrix<X>& matrix) {
+        const auto result = solver(matrix);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         result.status == Status::SUCCESS);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         result.data.has_value());
+        if (result.data) {
+            const auto& data = *result.data;
+            for (SizeType col = 0u; col != 4u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    encloses(data.eigenvalues[col], static_cast<Int>(2u * col + 1u), precision));
+                if (col > 0u) {
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        data.eigenvalues[col - 1u].upper_raw() <
+                        data.eigenvalues[col].lower_raw());
+                }
+            }
+            const auto action = matrix * data.eigenvectors;
+            for (SizeType row = 0u; row != 4u; ++row) {
+                for (SizeType col = 0u; col != 4u; ++col) {
+                    const X rhs = data.eigenvalues[col] * data.eigenvectors[row][col];
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        action[row][col].lower_raw() <= rhs.upper_raw() &&
+                        action[row][col].upper_raw() >= rhs.lower_raw());
+                }
+            }
+        }
+    };
+    check(A);
+
+    // Uniform certification of a nontrivial interval family must
+    // still enclose the unperturbed eigenvalues as one family member.
+    A[0u][0u] += X(0, 1, precision) / X(1048576u, precision);
+    check(A);
+}
+
 //! \brief Regression for an MP-visible but binary64-invisible coupling.
 Void test_jacobi_multiprecision() {
     const MultiplePrecision pr(160u);
@@ -541,6 +602,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_real_examples(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_validated_uncertainty());
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_jacobi_multiprecision());
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

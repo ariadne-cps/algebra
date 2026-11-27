@@ -32,6 +32,9 @@
 #include <vector>
 #include <type_traits>
 #include <utility>
+#include <exception>
+
+#include "algebra/validated_root_contractors.hpp"
 
 namespace Ariadne {
 
@@ -105,7 +108,11 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
                 if (direct.status == Status::SUCCESS) {
                     return direct;
                 }
-                return this->_preconditioned(M);
+                const auto preconditioned = this->_preconditioned(M);
+                if (preconditioned.status == Status::SUCCESS) {
+                    return preconditioned;
+                }
+                return this->_krawczyk(M);
             }
         }
 
@@ -688,6 +695,271 @@ EigenDecomposition<P, PR>::_preconditioned(const Matrix<NumericType>& A) const {
                 EigenDecompositionData<P, PR>{
                     std::move(transformed_result.data->eigenvalues),
                     std::move(vectors)}};
+    }
+}
+
+
+/** @brief Verify normalized real eigenpairs by interval Krawczyk inclusion. */
+template<class P, class PR>
+typename EigenDecomposition<P, PR>::ResultType
+EigenDecomposition<P, PR>::_krawczyk(const Matrix<NumericType>& A) const {
+    using Status = EigenDecompositionStatus;
+    if constexpr (!std::is_same_v<P, ValidatedTag>) {
+        return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+    } else {
+        using X = NumericType;
+        using AX = FloatApproximation<PR>;
+        using Raw = typename AX::RawType;
+        const SizeType n = A.row_size();
+        const X zero(0u, _precision);
+        const X one(1u, _precision);
+        const AX approximate_zero(0u, _precision);
+        const AX approximate_one(1u, _precision);
+        const AX half = approximate_one / AX(2u, _precision);
+
+        // Jacobi supplies only starting guesses. All subsequent proof
+        // obligations use outward-rounded interval arithmetic.
+        Matrix<AX> midpoint(n, n, approximate_zero);
+        Matrix<AX> seed(n, n, approximate_zero);
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = 0u; col != n; ++col) {
+                midpoint[row][col] = AX(A[row][col]);
+                if (!is_finite(midpoint[row][col].raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+        }
+        for (SizeType row = 0u; row != n; ++row) {
+            seed[row][row] = midpoint[row][row];
+            for (SizeType col = row + 1u; col != n; ++col) {
+                const AX symmetric_entry =
+                    (midpoint[row][col] + midpoint[col][row]) * half;
+                seed[row][col] = symmetric_entry;
+                seed[col][row] = symmetric_entry;
+            }
+        }
+
+        const EigenDecomposition<ApproximateTag, PR> approximate(_precision);
+        const auto candidates = approximate(seed);
+        if (candidates.status != Status::SUCCESS || !candidates.data) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+
+        Vector<X> unordered_values(n, zero);
+        Matrix<X> unordered_vectors(n, n, zero);
+        const X eps(Raw::eps(_precision));
+
+        for (SizeType col = 0u; col != n; ++col) {
+            SizeType pivot = 0u;
+            for (SizeType row = 1u; row != n; ++row) {
+                if (abs(candidates.data->eigenvectors[row][col]).raw() >
+                    abs(candidates.data->eigenvectors[pivot][col]).raw()) {
+                    pivot = row;
+                }
+            }
+            const AX pivot_value = candidates.data->eigenvectors[pivot][col];
+            if (!is_finite(pivot_value.raw()) ||
+                pivot_value.raw() == approximate_zero.raw()) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+
+            std::vector<SizeType> other_rows;
+            other_rows.reserve(n - 1u);
+            for (SizeType row = 0u; row != n; ++row) {
+                if (row != pivot) {
+                    other_rows.push_back(row);
+                }
+            }
+
+            // Unknown z = (lambda, v[other_rows]); v[pivot]=1. Hence there
+            // are exactly n equations in n unknowns:
+            // F_i(z)=(A*v)_i-lambda*v_i.
+            Vector<AX> z(n, approximate_zero);
+            z[0u] = candidates.data->eigenvalues[col];
+            for (SizeType k = 0u; k != n - 1u; ++k) {
+                z[k + 1u] = candidates.data->eigenvectors[other_rows[k]][col] /
+                             pivot_value;
+            }
+
+            const auto approximate_system =
+                [&](const Vector<AX>& at, Vector<AX>& residual,
+                    Matrix<AX>& jacobian) {
+                Vector<AX> v(n, approximate_zero);
+                v[pivot] = approximate_one;
+                for (SizeType k = 0u; k != n - 1u; ++k) {
+                    v[other_rows[k]] = at[k + 1u];
+                }
+                for (SizeType row = 0u; row != n; ++row) {
+                    AX result(approximate_zero);
+                    for (SizeType j = 0u; j != n; ++j) {
+                        result += midpoint[row][j] * v[j];
+                    }
+                    residual[row] = result - at[0u] * v[row];
+                    jacobian[row][0u] = -v[row];
+                    for (SizeType k = 0u; k != n - 1u; ++k) {
+                        const SizeType original_col = other_rows[k];
+                        jacobian[row][k + 1u] = midpoint[row][original_col] -
+                            (row == original_col ? at[0u] : approximate_zero);
+                    }
+                }
+            };
+
+            // Newton steps improve the candidate but carry no certificate.
+            // The interval Krawczyk check below decides whether to accept.
+            for (SizeType step = 0u; step != 12u; ++step) {
+                Vector<AX> residual(n, approximate_zero);
+                Matrix<AX> jacobian(n, n, approximate_zero);
+                approximate_system(z, residual, jacobian);
+                Matrix<AX> point_inverse(n, n, approximate_zero);
+                try {
+                    point_inverse = inverse(jacobian);
+                } catch (const std::exception&) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                const Vector<AX> correction = point_inverse * residual;
+                for (SizeType k = 0u; k != n; ++k) {
+                    z[k] -= correction[k];
+                    if (!is_finite(z[k].raw())) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                }
+            }
+
+            Vector<AX> approximate_residual(n, approximate_zero);
+            Matrix<AX> approximate_jacobian(n, n, approximate_zero);
+            approximate_system(z, approximate_residual, approximate_jacobian);
+            Matrix<AX> point_inverse(n, n, approximate_zero);
+            try {
+                point_inverse = inverse(approximate_jacobian);
+            } catch (const std::exception&) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+
+            Vector<X> center(n, zero);
+            Matrix<X> preconditioner(n, n, zero);
+            for (SizeType k = 0u; k != n; ++k) {
+                if (!is_finite(z[k].raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                center[k] = X(z[k].raw());
+                for (SizeType j = 0u; j != n; ++j) {
+                    if (!is_finite(point_inverse[k][j].raw())) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    preconditioner[k][j] = X(point_inverse[k][j].raw());
+                }
+            }
+
+            Vector<X> exact_vector(n, zero);
+            exact_vector[pivot] = one;
+            for (SizeType k = 0u; k != n - 1u; ++k) {
+                exact_vector[other_rows[k]] = center[k + 1u];
+            }
+            Vector<X> residual(n, zero);
+            for (SizeType row = 0u; row != n; ++row) {
+                X result(zero);
+                for (SizeType j = 0u; j != n; ++j) {
+                    result += A[row][j] * exact_vector[j];
+                }
+                residual[row] = result - center[0u] * exact_vector[row];
+            }
+
+            // An enclosure of C*F(center), plus precision-dependent slack,
+            // seeds an interval box wide enough to contain a root if one
+            // can be verified. The chosen radius is NOT a proof.
+            const Vector<X> predicted_correction = preconditioner * residual;
+            Vector<X> base_radii(n, zero);
+            for (SizeType k = 0u; k != n; ++k) {
+                const X magnitude = abs(center[k]);
+                const X coordinate_scale =
+                    magnitude.upper_raw() > one.upper_raw() ? magnitude : one;
+                base_radii[k] = X(4u, _precision) * abs(predicted_correction[k]) +
+                                X(4096u, _precision) * eps * coordinate_scale;
+                if (!is_finite(base_radii[k].upper_raw()) ||
+                    !(base_radii[k].upper_raw() > zero.upper_raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+
+            bool certified = false;
+            Vector<X> certified_box(n, zero);
+            for (SizeType attempt = 0u; attempt != 4u; ++attempt) {
+                Vector<X> box(n, zero);
+                for (SizeType k = 0u; k != n; ++k) {
+                    const X radius = X(1u << attempt, _precision) * base_radii[k];
+                    if (!is_finite(radius.upper_raw())) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    box[k] = center[k] +
+                             X(-radius.upper_raw(), radius.upper_raw());
+                }
+
+                // Analytic interval Jacobian valid for every A in the
+                // input family and every candidate (lambda,v) in box.
+                Vector<X> interval_vector(n, zero);
+                interval_vector[pivot] = one;
+                for (SizeType k = 0u; k != n - 1u; ++k) {
+                    interval_vector[other_rows[k]] = box[k + 1u];
+                }
+                Matrix<X> jacobian(n, n, zero);
+                for (SizeType row = 0u; row != n; ++row) {
+                    jacobian[row][0u] = -interval_vector[row];
+                    for (SizeType k = 0u; k != n - 1u; ++k) {
+                        const SizeType original_col = other_rows[k];
+                        jacobian[row][k + 1u] = A[row][original_col] -
+                            (row == original_col ? box[0u] : zero);
+                    }
+                }
+
+                if (krawczyk_certifies_unique_root(
+                        center, residual, jacobian, box, preconditioner)) {
+                    certified_box = std::move(box);
+                    certified = true;
+                    break;
+                }
+            }
+            if (!certified) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            unordered_values[col] = certified_box[0u];
+            unordered_vectors[pivot][col] = one;
+            for (SizeType k = 0u; k != n - 1u; ++k) {
+                unordered_vectors[other_rows[k]][col] = certified_box[k + 1u];
+            }
+        }
+
+        // Each verified box contains a real normalized eigenpair for
+        // every input matrix. Pairwise disjoint real eigenvalue boxes
+        // imply exactly n simple real eigenvalues and an invertible
+        // eigenvector basis, pointwise for every represented matrix.
+        std::vector<SizeType> order;
+        order.reserve(n);
+        for (SizeType col = 0u; col != n; ++col) {
+            SizeType position = 0u;
+            for (; position != order.size(); ++position) {
+                if (unordered_values[col].upper_raw() <
+                    unordered_values[order[position]].lower_raw()) {
+                    break;
+                }
+                if (!(unordered_values[col].lower_raw() >
+                      unordered_values[order[position]].upper_raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+            order.insert(order.begin() + static_cast<std::ptrdiff_t>(position), col);
+        }
+
+        Vector<X> values(n, zero);
+        Matrix<X> vectors(n, n, zero);
+        for (SizeType col = 0u; col != n; ++col) {
+            const SizeType original = order[col];
+            values[col] = unordered_values[original];
+            for (SizeType row = 0u; row != n; ++row) {
+                vectors[row][col] = unordered_vectors[row][original];
+            }
+        }
+        return {Status::SUCCESS,
+                EigenDecompositionData<P, PR>{std::move(values), std::move(vectors)}};
     }
 }
 

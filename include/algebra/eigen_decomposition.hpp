@@ -75,8 +75,9 @@ struct EigenDecompositionResult {
 //! real matrices by Jacobi rotations; ValidatedTag supports matrices with
 //! rigorously isolated Gershgorin disks, possibly after a certified
 //! similarity using a point-matrix basis seeded by approximate Jacobi
-//! rotations. This also applies to some nonsymmetric matrices. These
-//! are sufficient conditions, not a general-purpose spectral certificate.
+//! rotations, or through a Krawczyk certificate on individually normalized
+//! eigenpair equations. This also applies to some nonsymmetric matrices.
+//! These are sufficient conditions, not a general-purpose spectral solver.
 //! An approximate result is never claimed to be validated.
 //! Interval input denotes a family of matrices; a successful validated
 //! result encloses eigenpairs of every member, with consistent ascending
@@ -122,6 +123,12 @@ class EigenDecomposition {
     //! coordinate change, verifies its inverse by interval elimination,
     //! then invokes the rigorous Gershgorin eigenpair certificate.
     ResultType _preconditioned(const Matrix<NumericType>& A) const;
+
+    //! \brief Certify each real simple eigenpair via a Krawczyk root box.
+    //! \details Fixes one eigenvector component to one, performs approximate
+    //! Newton refinement only for seeding, and verifies pointwise-real
+    //! eigenpairs using the shared interval Krawczyk root predicate.
+    ResultType _krawczyk(const Matrix<NumericType>& A) const;
 
     PR _precision;
 };
