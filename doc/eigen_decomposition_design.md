@@ -119,3 +119,9 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Diagonal intervals that cannot be ordered consistently return `INCONCLUSIVE`. Dense higher-order matrices continue to return `UNSUPPORTED_DIMENSION`; complex or repeated eigenvalues remain outside the milestone.
 - Added DP/MP tests for upper and lower triangular 4x4 matrices, matrix-eigenpair residual inclusion, strictly separated interval diagonal families, overlapping intervals and unsupported dense 3x3 inputs.
 - **Verification:** code and tests published for CI, with runtime results still pending at commit time. `check-format` is intentionally deferred until pre-merge, as requested.
+
+### 2026-11-27 — guard zero-order eigendecomposition (this commit)
+
+- During review of the triangular extension, identified that the prior early dimension guard excluded order zero, while the new branch only rejected dense order >2. Added an explicit order-zero `UNSUPPORTED_DIMENSION` return before any matrix indexing and a regression test.
+- No change to the supported nonempty matrices. `determinant` intentionally treats the empty square matrix differently, returning one by convention.
+- **Verification:** source inspection and regression added; runtime CI remains to be confirmed. `check-format` intentionally deferred until pre-merge.

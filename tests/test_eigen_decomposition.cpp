@@ -215,6 +215,13 @@ Void test_real_examples(PR pr) {
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), separated.status == Status::SUCCESS);
 
     // A dense 3x3 matrix still requires a general spectral backend.
+    // Dimension zero has no individual eigenpairs and is deliberately
+    // excluded from this diagonalization API.
+    Matrix<VX> empty(0u, 0u, VX(0u, pr));
+    const auto empty_result = validated(empty);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_result.status == Status::UNSUPPORTED_DIMENSION);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !empty_result.data.has_value());
+
     Matrix<VX> unsupported(3u, 3u, VX(0u, pr));
     unsupported[0u][1u] = VX(1u, pr);
     unsupported[1u][0u] = VX(1u, pr);

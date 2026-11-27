@@ -77,6 +77,9 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
     ARIADNE_PRECONDITION(M.row_size() == M.column_size());
 
     const SizeType n = M.row_size();
+    if (n == 0u) {
+        return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+    }
     const X zero(0u, _precision);
     const X one(1u, _precision);
     Vector<X> values(n, zero);
