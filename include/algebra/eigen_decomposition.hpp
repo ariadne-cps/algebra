@@ -41,7 +41,7 @@ namespace Ariadne {
 enum class EigenDecompositionStatus {
     SUCCESS,              //!< All real eigenpairs and an invertible eigenvector basis were obtained.
     INCONCLUSIVE,         //!< The requested real diagonalization was not established.
-    UNSUPPORTED_DIMENSION //!< Dense matrices of dimension greater than two are not yet implemented.
+    UNSUPPORTED_DIMENSION //!< Unsupported structure or dimension for the requested paradigm.
 };
 
 //! \brief Eigenvalues (in ascending order) and eigenvectors stored by columns.
@@ -67,7 +67,10 @@ struct EigenDecompositionResult {
 //! \brief Compute a real eigendecomposition in the requested paradigm and precision.
 //! \details Real triangular matrices of arbitrary positive dimension with
 //! pairwise strictly separated diagonal entries are supported. Dense matrices
-//! of order one or two are supported when the spectrum is real and simple. ApproximateTag produces
+//! of order one or two are supported when the spectrum is real and simple.
+//! Dense real symmetric matrices of order greater than two are additionally
+//! supported for ApproximateTag, using Jacobi rotations. That solver is not
+//! an algorithm for general nonsymmetric matrices and provides no enclosure. ApproximateTag produces
 //! approximate eigenpairs; ValidatedTag uses outward-rounded interval
 //! arithmetic and succeeds only when real eigenvalues, normalized
 //! eigenvectors, and invertibility of their interval matrix can be certified.
@@ -85,7 +88,8 @@ class EigenDecomposition {
 
     //! \brief Attempt real diagonalization of the square matrix M.
     //! \details A non-square matrix violates the precondition. Orders
-    //! greater than two must be triangular, otherwise return UNSUPPORTED_DIMENSION.
+    //! greater than two must be triangular, or symmetric with
+    //! ApproximateTag. Other structures return UNSUPPORTED_DIMENSION.
     ResultType operator()(const Matrix<NumericType>& M) const;
 
   private:
@@ -97,6 +101,11 @@ class EigenDecomposition {
     bool _zero(const NumericType& x) const;
     //! \brief Certify or numerically test a nonzero number.
     bool _nonzero(const NumericType& x) const;
+
+    //! \brief Approximate real simple eigenpairs of a symmetric dense matrix.
+    //! \details Implemented using Jacobi plane rotations for ApproximateTag.
+    //! Other paradigms or inconclusive numerical convergence report failure.
+    ResultType _symmetric(const Matrix<NumericType>& A) const;
 
     PR _precision;
 };

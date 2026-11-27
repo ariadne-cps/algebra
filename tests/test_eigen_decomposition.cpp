@@ -142,6 +142,74 @@ Void test_real_examples(PR pr) {
                                          std::abs(stable_negative.data->eigenvalues[1u].get_d() + 1.0) < 1e-6);
     }
 
+    // Dense symmetric 3x3 Jacobi eigenpairs: exactly 2, 2 +/- sqrt(2).
+    // Test the known spectrum independently and check M*V=V*D.
+    Matrix<AX> symmetric(3u, 3u, AX(0u, pr));
+    symmetric[0u][0u] = AX(2u, pr);
+    symmetric[1u][1u] = AX(2u, pr);
+    symmetric[2u][2u] = AX(2u, pr);
+    symmetric[0u][1u] = AX(1u, pr);
+    symmetric[1u][0u] = AX(1u, pr);
+    symmetric[1u][2u] = AX(1u, pr);
+    symmetric[2u][1u] = AX(1u, pr);
+    const auto three = approximate(symmetric);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), three.status == Status::SUCCESS);
+    if (three.data) {
+        const double expected[3] = {2.0 - std::sqrt(2.0), 2.0, 2.0 + std::sqrt(2.0)};
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                             std::abs(three.data->eigenvalues[col].get_d() - expected[col]) < 1e-10);
+            for (SizeType row = 0u; row != 3u; ++row) {
+                AX action(0u, pr);
+                for (SizeType k = 0u; k != 3u; ++k) {
+                    action += symmetric[row][k] * three.data->eigenvectors[k][col];
+                }
+                const AX residual = action - three.data->eigenvalues[col] * three.data->eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                                 std::abs(residual.get_d()) < 1e-10);
+            }
+        }
+    }
+
+    // A dense symmetric 4x4 matrix with an independently constructed
+    // orthogonal eigenbasis and known spectrum {1,2,3,4}.
+    Matrix<AX> four_by_four(4u, 4u, AX(0u, pr));
+    const double entries_4[4][4] = {
+        {2.5, -0.5, -1.0, 0.0},
+        {-0.5, 2.5, 0.0, -1.0},
+        {-1.0, 0.0, 2.5, -0.5},
+        {0.0, -1.0, -0.5, 2.5}
+    };
+    for (SizeType row = 0u; row != 4u; ++row) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            four_by_four[row][col] = AX(entries_4[row][col], pr);
+        }
+    }
+    const auto four = approximate(four_by_four);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), four.status == Status::SUCCESS);
+    if (four.data) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                             std::abs(four.data->eigenvalues[col].get_d() - static_cast<double>(col + 1u)) < 1e-10);
+        }
+    }
+
+    // Approximate nonsymmetric dense matrices remain unsupported. Validated
+    // dense symmetric matrices must never be passed off as certified.
+    symmetric[0u][1u] = AX(3u, pr);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     approximate(symmetric).status == Status::UNSUPPORTED_DIMENSION);
+    Matrix<VX> symmetric_bounds(3u, 3u, VX(0u, pr));
+    symmetric_bounds[0u][0u] = VX(2u, pr);
+    symmetric_bounds[1u][1u] = VX(2u, pr);
+    symmetric_bounds[2u][2u] = VX(2u, pr);
+    symmetric_bounds[0u][1u] = VX(1u, pr);
+    symmetric_bounds[1u][0u] = VX(1u, pr);
+    symmetric_bounds[1u][2u] = VX(1u, pr);
+    symmetric_bounds[2u][1u] = VX(1u, pr);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     validated(symmetric_bounds).status == Status::UNSUPPORTED_DIMENSION);
+
     // A 1x1 matrix is decomposable even with an interval entry.
     Matrix<VX> scalar(1u, 1u, VX(0u, pr));
     scalar[0u][0u] = VX(1, 2, pr);

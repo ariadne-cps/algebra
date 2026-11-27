@@ -125,3 +125,14 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - During review of the triangular extension, identified that the prior early dimension guard excluded order zero, while the new branch only rejected dense order >2. Added an explicit order-zero `UNSUPPORTED_DIMENSION` return before any matrix indexing and a regression test.
 - No change to the supported nonempty matrices. `determinant` intentionally treats the empty square matrix differently, returning one by convention.
 - **Verification:** source inspection and regression added; runtime CI remains to be confirmed. `check-format` intentionally deferred until pre-merge.
+
+### 2026-11-27 — dense symmetric approximate eigendecomposition (this commit)
+
+- Extended the dimension-general solver to **real symmetric dense matrices** (order >=3) for `ApproximateTag`, using a maximum-off-diagonal-pivot Jacobi rotation algorithm.
+- Require exactly matching stored symmetric matrix entries; arbitrary dense nonsymmetric matrices are still unsupported. Do not silently symmetrize user inputs.
+- Compute plane rotations with a stable tangent formula; diagonalize iteratively, sort real eigenvalues, reject unresolved repeated/very close eigenvalues, and return `INCONCLUSIVE` for failed iteration or residual checks.
+- Jacobi convergence, pivot selection and residual acceptance are currently assessed with double-precision estimates even if the underlying numeric type is MP. Thus **MP is supported as an input/output type, but this implementation makes no claim of exploiting full MP accuracy**. A precision-native convergence policy is necessary for a mature generic eigensolver.
+- ValidatedTag deliberately remains restricted to existing 1x1, 2x2 and triangular workflows: an approximate Jacobi eigenpair must **not** be returned as a validated result.
+- Added DP and MP regression tests for a symmetric tridiagonal 3x3 with exact known spectrum `2,2±sqrt(2)`, a 4x4 dense symmetric construction with known spectrum `1,2,3,4`, and rejection of nonsymmetric/uncertified cases.
+- **CI status at preparation:** earlier commit `0bd47a6` has passed Ubuntu/macOS/Sanitizers/Coverage; newer branch CI still ongoing. Tests for this new implementation have not yet been executed. `check-format` deferred per user instruction.
+- **Next:** address CI findings, test near-degenerate and ill-conditioned symmetric systems, then introduce a robust nonsymmetric approximate backend and verified simple-eigenpair certification.

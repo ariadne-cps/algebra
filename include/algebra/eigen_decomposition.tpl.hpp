@@ -30,6 +30,7 @@
 #define ARIADNE_EIGEN_DECOMPOSITION_TPL_HPP
 
 #include <cmath>
+#include <limits>
 #include <vector>
 #include <type_traits>
 #include <utility>
@@ -99,7 +100,11 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
             }
         }
         if (!upper_triangular && !lower_triangular) {
-            return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+            if constexpr (std::is_same_v<P, ApproximateTag>) {
+                return this->_symmetric(M);
+            } else {
+                return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+            }
         }
 
         // An interval-independent ordering is necessary to identify the
@@ -250,6 +255,170 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
     }
 
     return {Status::SUCCESS, EigenDecompositionData<P, PR>{std::move(values), std::move(vectors)}};
+}
+
+
+/** @brief Diagonalize an approximately symmetric real matrix using Jacobi rotations. */
+template<class P, class PR>
+typename EigenDecomposition<P, PR>::ResultType
+EigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) const {
+    using Status = EigenDecompositionStatus;
+    if constexpr (!std::is_same_v<P, ApproximateTag>) {
+        return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+    } else {
+        using X = NumericType;
+        const SizeType n = input.row_size();
+        const X zero(0u, _precision);
+        const X one(1u, _precision);
+        const X two_value(2u, _precision);
+
+        // Require equal stored symmetric entries; silently symmetrizing
+        // a genuinely nonsymmetric matrix would give incorrect eigenpairs.
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = row + 1u; col != n; ++col) {
+                if (input[row][col].raw() != input[col][row].raw()) {
+                    return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+                }
+            }
+        }
+
+        double scale = 0.0;
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = 0u; col != n; ++col) {
+                const double magnitude = std::abs(input[row][col].get_d());
+                if (!std::isfinite(magnitude)) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                if (magnitude > scale) {
+                    scale = magnitude;
+                }
+            }
+        }
+        if (scale == 0.0) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+
+        Matrix<X> rotated(input);
+        Matrix<X> basis = Matrix<X>::identity(n, _precision);
+        const double tolerance = 64.0 * std::numeric_limits<double>::epsilon() * scale;
+        const SizeType iteration_limit = 64u * n * n;
+        bool converged = false;
+
+        for (SizeType iteration = 0u; iteration != iteration_limit; ++iteration) {
+            SizeType pivot_row = 0u;
+            SizeType pivot_col = 1u;
+            double off_diagonal_maximum = 0.0;
+
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = row + 1u; col != n; ++col) {
+                    const double magnitude = std::abs(rotated[row][col].get_d());
+                    if (!std::isfinite(magnitude)) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    if (magnitude > off_diagonal_maximum) {
+                        off_diagonal_maximum = magnitude;
+                        pivot_row = row;
+                        pivot_col = col;
+                    }
+                }
+            }
+            if (off_diagonal_maximum <= tolerance) {
+                converged = true;
+                break;
+            }
+
+            const X app = rotated[pivot_row][pivot_row];
+            const X aqq = rotated[pivot_col][pivot_col];
+            const X apq = rotated[pivot_row][pivot_col];
+            const X tau = (aqq - app) / (two_value * apq);
+            const double tau_estimate = tau.get_d();
+            if (!std::isfinite(tau_estimate)) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            // The stable Jacobi tangent avoids cancellation in the
+            // quadratic formula for the plane rotation.
+            const X tangent = (tau_estimate >= 0.0 ? one : -one) /
+                              (abs(tau) + sqrt(one + sqr(tau)));
+            const X cosine = one / sqrt(one + sqr(tangent));
+            const X sine = tangent * cosine;
+
+            for (SizeType row = 0u; row != n; ++row) {
+                if (row != pivot_row && row != pivot_col) {
+                    const X rp = rotated[row][pivot_row];
+                    const X rq = rotated[row][pivot_col];
+                    const X updated_p = cosine * rp - sine * rq;
+                    const X updated_q = sine * rp + cosine * rq;
+                    rotated[row][pivot_row] = updated_p;
+                    rotated[pivot_row][row] = updated_p;
+                    rotated[row][pivot_col] = updated_q;
+                    rotated[pivot_col][row] = updated_q;
+                }
+                const X bp = basis[row][pivot_row];
+                const X bq = basis[row][pivot_col];
+                basis[row][pivot_row] = cosine * bp - sine * bq;
+                basis[row][pivot_col] = sine * bp + cosine * bq;
+            }
+            rotated[pivot_row][pivot_row] = app - tangent * apq;
+            rotated[pivot_col][pivot_col] = aqq + tangent * apq;
+            rotated[pivot_row][pivot_col] = zero;
+            rotated[pivot_col][pivot_row] = zero;
+        }
+        if (!converged) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+
+        // Sort the columns, and enforce simple eigenvalues for this
+        // implementation milestone.
+        std::vector<SizeType> ordering;
+        ordering.reserve(n);
+        for (SizeType row = 0u; row != n; ++row) {
+            const double eigenvalue = rotated[row][row].get_d();
+            if (!std::isfinite(eigenvalue)) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            SizeType pos = 0u;
+            for (; pos != ordering.size(); ++pos) {
+                if (eigenvalue < rotated[ordering[pos]][ordering[pos]].get_d()) {
+                    break;
+                }
+            }
+            ordering.insert(ordering.begin() + static_cast<std::ptrdiff_t>(pos), row);
+        }
+
+        Vector<X> eigenvalues(n, zero);
+        Matrix<X> eigenvectors(n, n, zero);
+        for (SizeType col = 0u; col != n; ++col) {
+            const SizeType source = ordering[col];
+            eigenvalues[col] = rotated[source][source];
+            if (col > 0u &&
+                eigenvalues[col].get_d() - eigenvalues[col - 1u].get_d() <=
+                    128.0 * std::numeric_limits<double>::epsilon() * scale) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            for (SizeType row = 0u; row != n; ++row) {
+                eigenvectors[row][col] = basis[row][source];
+            }
+        }
+
+        // Small residual and near-orthogonality are numerical quality
+        // checks only, not a validated enclosure or mathematical proof.
+        const double budget = 4096.0 * std::numeric_limits<double>::epsilon() *
+                              scale * static_cast<double>(n);
+        for (SizeType col = 0u; col != n; ++col) {
+            for (SizeType row = 0u; row != n; ++row) {
+                X action(zero);
+                for (SizeType k = 0u; k != n; ++k) {
+                    action += input[row][k] * eigenvectors[k][col];
+                }
+                const double residual = std::abs(
+                    (action - eigenvalues[col] * eigenvectors[row][col]).get_d());
+                if (!std::isfinite(residual) || residual > budget) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+        }
+        return {Status::SUCCESS, EigenDecompositionData<P, PR>{std::move(eigenvalues), std::move(eigenvectors)}};
+    }
 }
 
 } // namespace Ariadne
