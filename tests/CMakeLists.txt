@@ -4,6 +4,7 @@ set(UNIT_TESTS
     test_differential
     test_eigen_decomposition
     test_determinant
+    test_validated_root_contractors
     test_algebra
     test_expansion
     test_graded

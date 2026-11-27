@@ -47,6 +47,7 @@
 #include "algebra/sweeper.hpp"
 #include "algebra/symmetric_matrix.hpp"
 #include "algebra/univariate_differential.hpp"
+#include "algebra/validated_root_contractors.hpp"
 #include "algebra/vector.hpp"
 
 #include "ariadne-interval.hpp"
