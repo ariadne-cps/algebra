@@ -157,7 +157,9 @@ struct EigenDecompositionResult {
 //! These are sufficient conditions, not a general-purpose spectral solver.
 //! An approximate result is never claimed to be validated.
 //! Nonfinite input coefficients (including NaN and infinity) are
-//! inconclusive for all positive orders; SUCCESS implies finite input.
+//! inconclusive for all positive orders. SUCCESS additionally requires
+//! finite eigenvalues and eigenvector coefficients after every numerical
+//! operation, including triangular substitution and block lifting.
 //! Interval input denotes a family of matrices; a successful validated
 //! result encloses eigenpairs of every member, with consistent ascending
 //! eigenvalue order. This is not yet a general-purpose eigensolver.
@@ -183,6 +185,12 @@ class EigenDecomposition {
                           EigenDecompositionDiagnostics* diagnostics) const;
 
   private:
+    //! \brief Execute decomposition strategies before final output checks.
+    //! \details The public operator rejects nonfinite results produced by
+    //! intermediate numerical overflow, regardless of chosen strategy.
+    ResultType _attempt(const Matrix<NumericType>& M,
+                        EigenDecompositionDiagnostics* diagnostics) const;
+
     //! \brief Decide strict positivity using the requested paradigm.
     bool _positive(const NumericType& x) const;
     //! \brief Decide strict negativity using the requested paradigm.

@@ -1510,6 +1510,66 @@ Void test_two_coupled_cyclic_blocks(PR precision) {
     check(v);
 }
 
+//! \brief Guard successful spectral results against intermediate overflow.
+Void test_eigen_intermediate_overflow() {
+    using AX = FloatApproximation<DoublePrecision>;
+    using VX = FloatBounds<DoublePrecision>;
+    const AX azero(0u, dp);
+    const VX vzero(0u, dp);
+    const AX atwo(2u, dp);
+    const VX vtwo(2u, dp);
+    AX large(1u, dp);
+    VX rigorous_large(1u, dp);
+    for (SizeType exponent = 0u; exponent != 600u; ++exponent) {
+        large *= atwo;
+        rigorous_large *= vtwo;
+    }
+    // 2^600 is representable in binary64; its square is not. An upper
+    // triangular 3x3 with diagonal 1,2,3 and two adjacent couplings
+    // of size 2^600 has the simple real spectrum {1,2,3}, but
+    // unit-pivot back-substitution for lambda=3 overflows at row 0.
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        is_finite(large.raw()));
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        is_finite(rigorous_large.lower_raw()) &&
+        is_finite(rigorous_large.upper_raw()));
+    Matrix<AX> a(3u, 3u, azero);
+    Matrix<VX> v(3u, 3u, vzero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        a[row][row] = AX(static_cast<unsigned>(row + 1u), dp);
+        v[row][row] = VX(static_cast<unsigned>(row + 1u), dp);
+    }
+    a[0u][1u] = large;
+    a[1u][2u] = large;
+    v[0u][1u] = rigorous_large;
+    v[1u][2u] = rigorous_large;
+
+    EigenDecomposition<ApproximateTag, DoublePrecision> approximate(dp);
+    EigenDecomposition<ValidatedTag, DoublePrecision> validated(dp);
+    EigenDecompositionDiagnostics diagnostics;
+    const auto a_result = approximate(a, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::TRIANGULAR);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        a_result.status == Status::INCONCLUSIVE && !a_result.data.has_value());
+    const auto v_result = validated(v, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::TRIANGULAR);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        v_result.status == Status::INCONCLUSIVE && !v_result.data.has_value());
+
+    // Ordinary finite triangular cases still return a complete
+    // decomposition; the postcondition is not a blanket rejection.
+    a[0u][1u] = AX(1u, dp);
+    a[1u][2u] = AX(1u, dp);
+    v[0u][1u] = VX(1u, dp);
+    v[1u][2u] = VX(1u, dp);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate(a).status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(v).status == Status::SUCCESS);
+}
+
 //! \brief Non-normal dense example requiring genuine validated dense certification.
 template<class PR>
 Void test_dense_nonnormal_validated(PR precision) {
@@ -1723,6 +1783,7 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_two_coupled_cyclic_blocks(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonfinite_eigen_inputs(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonfinite_eigen_inputs(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_intermediate_overflow());
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

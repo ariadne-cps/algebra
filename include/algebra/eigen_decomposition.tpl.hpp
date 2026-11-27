@@ -105,6 +105,46 @@ typename EigenDecomposition<P, PR>::ResultType
 EigenDecomposition<P, PR>::operator()(
         const Matrix<NumericType>& M,
         EigenDecompositionDiagnostics* diagnostics) const {
+    using Status = EigenDecompositionStatus;
+    auto result = this->_attempt(M, diagnostics);
+    if (result.status != Status::SUCCESS) {
+        return result;
+    }
+    // Every algorithm (including recursive structural paths) passes
+    // through this gate. Finite inputs alone cannot prevent arithmetic
+    // overflow while lifting or normalizing an eigenvector.
+    if (!result.data ||
+        result.data->eigenvalues.size() != M.row_size() ||
+        result.data->eigenvectors.row_size() != M.row_size() ||
+        result.data->eigenvectors.column_size() != M.column_size()) {
+        return {Status::INCONCLUSIVE, std::nullopt};
+    }
+    const auto finite = [](const NumericType& value) {
+        if constexpr (std::is_same_v<P, ValidatedTag>) {
+            return is_finite(value.lower_raw()) && is_finite(value.upper_raw());
+        } else {
+            return is_finite(value.raw());
+        }
+    };
+    const SizeType n = M.row_size();
+    for (SizeType col = 0u; col != n; ++col) {
+        if (!finite(result.data->eigenvalues[col])) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+        for (SizeType row = 0u; row != n; ++row) {
+            if (!finite(result.data->eigenvectors[row][col])) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+        }
+    }
+    return result;
+}
+
+template<class P, class PR>
+typename EigenDecomposition<P, PR>::ResultType
+EigenDecomposition<P, PR>::_attempt(
+        const Matrix<NumericType>& M,
+        EigenDecompositionDiagnostics* diagnostics) const {
     if (diagnostics) {
         *diagnostics = {};
     }
