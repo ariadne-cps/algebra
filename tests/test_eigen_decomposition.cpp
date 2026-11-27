@@ -393,13 +393,46 @@ Void test_real_examples(PR pr) {
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), empty_result.status == Status::UNSUPPORTED_DIMENSION);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !empty_result.data.has_value());
 
-    Matrix<VX> unsupported(3u, 3u, VX(0u, pr));
-    unsupported[0u][1u] = VX(1u, pr);
-    unsupported[1u][0u] = VX(1u, pr);
+    // This reducible symmetric 3x3 matrix has simple real eigenvalues
+    // {-1, 0, 1}. Its original Gershgorin disks overlap, but the verified
+    // similarity path introduced later must certify the eigenbasis.
+    Matrix<VX> decoupled(3u, 3u, VX(0u, pr));
+    decoupled[0u][1u] = VX(1u, pr);
+    decoupled[1u][0u] = VX(1u, pr);
 
-    const auto no_dimension = validated(unsupported);
-    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), no_dimension.status == Status::INCONCLUSIVE);
-    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), !no_dimension.data.has_value());
+    const auto decoupled_result = validated(decoupled);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     decoupled_result.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     decoupled_result.data.has_value());
+    if (decoupled_result.data) {
+        const auto& result = *decoupled_result.data;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         encloses(result.eigenvalues[0u], -1, pr));
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         encloses(result.eigenvalues[1u], 0, pr));
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         encloses(result.eigenvalues[2u], 1, pr));
+        const auto lhs = decoupled * result.eigenvectors;
+        for (SizeType row = 0u; row != 3u; ++row) {
+            for (SizeType col = 0u; col != 3u; ++col) {
+                const VX rhs = result.eigenvalues[col] * result.eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    lhs[row][col].lower_raw() <= rhs.upper_raw() &&
+                    lhs[row][col].upper_raw() >= rhs.lower_raw());
+            }
+        }
+    }
+
+    // Changing only the isolated third diagonal entry to one creates a
+    // repeated eigenvalue: {-1, 1, 1}. The simple-eigenpair contract must
+    // remain inconclusive rather than reporting a spurious certificate.
+    decoupled[2u][2u] = VX(1u, pr);
+    const auto repeated_spectrum = validated(decoupled);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     repeated_spectrum.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     !repeated_spectrum.data.has_value());
 }
 
 Void test_validated_uncertainty() {
