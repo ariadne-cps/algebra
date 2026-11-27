@@ -169,3 +169,13 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Added DP/MP tests for the symmetric tridiagonal matrix with known spectrum 2, 2±sqrt(2), a nonsymmetric perturbation and an uncertain interval family that must remain inconclusive.
 - **Verification:** repository source and tests reviewed and committed; this new commit has not yet passed a CI build. Do not interpret any unverified test as already passing.
 - Remaining: evaluate interval overestimation from Gauss-Jordan and transformed matrix products; design a general interval-Newton/Krawczyk refinement for difficult isolated eigenpairs.
+
+### 2026-11-27 — eigenvalue/eigenvector performance benchmark (this commit)
+
+- Added optional auxiliary `ariadne-cps/benchmarking` submodule `ss/bmk` at `8dca1e7eb605a378852e574632c9e9b82641f582`, mirroring Numeric. Verified shared Build `5e6444f` and Utility `341736b` pins against Interval/Numeric/Foundation and Benchmarking/Logging.
+- Registered a separate `benchmarks` target via Build's existing `ariadne_setup_benchmarking` root orchestration, and linked only benchmark executable to `ariadne-benchmarking` plus any additional Logging objects (following Numeric's standalone linking pattern). Production Algebra remains independent of Benchmarking.
+- Introduced `benchmarks/benchmark_eigen_decomposition.cpp` with deterministic test matrices and four distinct paths: dense 2x2, upper triangular, well-separated dense, and overlapping-disk rotated dense. Both Approximate and Validated paradigms; DP53 and configurable MP bits.
+- Uses shared `Runner`, `Statistics`, `Report`, CLI parser and optimization barrier. Inputs and pilot status are computed before timing; each measured operation is the entire eigenvalue/eigenvector decomposition. Check statuses after every round, and mark inconclusive results explicitly.
+- Stable CSV schema: `backend,workload,n,bits,status,median_ns,mad_ns,min_ns,max_ns,p95_ns`. Compare only rows with the same semantic outcome; no false speedups by treating an inconclusive attempt as successful. Configurable sizes, bit precisions, repetitions, samples, warmups and summary columns.
+- Added Release benchmark build/run examples to README. No performance measurements are claimed for this commit: benchmark build and execution remain to be verified in CI or on a dedicated machine.
+- `check-format` remains deferred to pre-merge as requested. Next measure actual timings, identify per-path bottlenecks and add A/B implementations without changing the fixed workloads.

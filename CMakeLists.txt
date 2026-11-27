@@ -22,4 +22,9 @@ endif()
 require_same_dependency_commit(Build CHAINS
     "build" "interval|build")
 
+# Benchmarking is auxiliary; verify that its Logging chain and Interval's
+# Numeric/Foundation chain use the same Utility checkout.
+require_same_dependency_commit(Utility CHAINS
+    "interval|numeric|foundation|utility" "benchmarking|logging|utility")
+
 ariadne_setup_module(algebra)

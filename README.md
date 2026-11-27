@@ -28,6 +28,35 @@ ctest --output-on-failure
 
 A C++20 compiler and CMake are required.
 
+## Eigenvalue and eigenvector benchmark
+
+The `eigen` branch provides an optional benchmark of complete
+`EigenDecomposition<P,PR>` calls, **including eigenvectors**, and in the
+validated paradigm the certification attempt. Shared timing, warm-ups and
+reporting use the auxiliary `ariadne-cps/benchmarking` gitlink at `ss/bmk`.
+Benchmarking does not become a production dependency.
+
+```bash
+git submodule update --init --recursive
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON_BINDINGS=OFF
+cmake --build build-release --parallel --target benchmarks
+./build-release/benchmarks/benchmark_eigen_decomposition --sizes 3,8,16 --bits 53,128 --iterations 3 --samples 7 --warmups 1 --summary median,mad,p95
+./build-release/benchmarks/benchmark_eigen_decomposition --sizes 3,8 --bits 128 --iterations 3 --samples 7 --warmups 1 --csv > eigen-benchmark.csv
+```
+
+The deterministic workload catalogue includes dense 2x2, upper-triangular,
+dense symmetric with separated disks, and dense symmetric with overlapping
+original Gershgorin disks (Jacobi and validated preconditioning). Options:
+`--sizes` (orders 3–64), `--bits` (MP precision), `--iterations`,
+`--samples` (odd, >=3), `--warmups`, `--summary` and `--csv`.
+DP53 and MP at the selected bit widths are measured with both paradigms.
+
+Results report nanoseconds per complete call and the semantic outcome.
+A fast `INCONCLUSIVE` outcome is not equivalent to a successful validated
+decomposition. Compare only identical workload, size, precision and outcome.
+Matrix construction is excluded from the timer. This does not measure
+eigenvalues alone.
+
 ## Python bindings
 
 When a compatible Python development environment is available, the build produces a standalone `pyariadne` module containing the lower Interval/Numeric/Foundation bindings plus Algebra bindings for linear algebra, sparse expansions and series, polynomial representations, and differential algebra. The public `pyariadne-algebra` interface consumes only the direct lower `pyariadne-interval` interface.
