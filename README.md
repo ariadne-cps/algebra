@@ -71,6 +71,10 @@ adds overhead; compare profiled builds against other profiled builds, not
 against the normal uninstrumented mode. Warm-ups are excluded from all
 statistics. The default CSV columns and normal timing mode are unchanged.
 
+Display and CSV reports round all timing values to whole nanoseconds (and
+variance to whole ns^2); internal samples and statistics retain their original
+floating-point precision. Sub-nanosecond fractions are not displayed.
+
 Results report nanoseconds per complete call and the semantic outcome.
 A fast `INCONCLUSIVE` outcome is not equivalent to a successful validated
 decomposition. Compare only identical workload, size, precision and outcome.

@@ -345,6 +345,36 @@ void measure_backend(const char* backend, unsigned bits, PR precision,
     }
 }
 
+/** @brief Format benchmark statistics as integral nanoseconds for display.
+ *  @details Measurements remain full-precision doubles. Variance is in ns^2,
+ *  and sample count remains an unscaled integer.
+ */
+std::string integer_statistic(const Bench::Statistics& result,
+                              Bench::SummaryField field) {
+    switch(field) {
+        case Bench::SummaryField::Minimum:
+            return Bench::Table::number(result.minimum, 0u);
+        case Bench::SummaryField::Maximum:
+            return Bench::Table::number(result.maximum, 0u);
+        case Bench::SummaryField::Mean:
+            return Bench::Table::number(result.mean, 0u);
+        case Bench::SummaryField::MAD:
+            return Bench::Table::number(result.mad, 0u);
+        case Bench::SummaryField::Median:
+            return Bench::Table::number(result.median, 0u);
+        case Bench::SummaryField::P95:
+            return Bench::Table::number(result.p95, 0u);
+        case Bench::SummaryField::Stddev:
+            return Bench::Table::number(result.stddev, 0u);
+        case Bench::SummaryField::Variance:
+            return Bench::Table::number(result.variance, 0u);
+        case Bench::SummaryField::Count:
+            return std::to_string(result.count);
+        default:
+            throw std::invalid_argument("unknown benchmark statistic");
+    }
+}
+
 /** @brief Render a tabular or CSV result matrix. */
 void report(const std::vector<Datum>& rows, const Selection& options,
             const Bench::SummaryFields& fields) {
@@ -357,7 +387,7 @@ void report(const std::vector<Datum>& rows, const Selection& options,
         for(const auto& row: rows) {
             const auto& s = row.stats;
             std::ostringstream record;
-            record << std::setprecision(17)
+            record << std::fixed << std::setprecision(0)
                    << row.backend << ',' << row.workload << ','
                    << row.n << ',' << row.bits << ',' << status_name(row.status) << ','
                    << s.median << ',' << s.mad << ',' << s.minimum << ','
@@ -370,44 +400,38 @@ void report(const std::vector<Datum>& rows, const Selection& options,
             LOGGING_PRINTLN(record.str())
         }
     } else {
-        Bench::Report table("EigenDecomposition: nanoseconds per call", fields);
+        std::vector<Bench::TableColumn> columns = {
+            {"Backend"}, {"Workload"},
+            {"n", 0u, Bench::TableAlignment::Right},
+            {"Bits", 0u, Bench::TableAlignment::Right},
+            {"Outcome"}
+        };
         if(options.profile) {
-            table.set_dimension_columns({
-                {"Backend"}, {"Workload"},
-                {"n", 0u, Bench::TableAlignment::Right},
-                {"Bits", 0u, Bench::TableAlignment::Right},
-                {"Outcome"}, {"Strategy"},
-                {"Candidate ns", 0u, Bench::TableAlignment::Right},
-                {"Verify ns", 0u, Bench::TableAlignment::Right}
-            });
-        } else {
-            table.set_dimension_columns({
-                {"Backend"}, {"Workload"},
-                {"n", 0u, Bench::TableAlignment::Right},
-                {"Bits", 0u, Bench::TableAlignment::Right},
-                {"Outcome"}
-            });
+            columns.push_back({"Strategy"});
+            columns.push_back({"Candidate ns", 0u, Bench::TableAlignment::Right});
+            columns.push_back({"Verify ns", 0u, Bench::TableAlignment::Right});
+        }
+        for(Bench::SummaryField field: fields) {
+            columns.push_back({std::string(Bench::summary_field_heading(field)),
+                               0u, Bench::TableAlignment::Right});
         }
         auto style = Bench::TableOptions::ruled();
         style.group_columns = {0u, 1u};
-        table.set_table_options(style);
+        Bench::Table table(std::move(columns), style);
         for(const auto& row: rows) {
+            std::vector<std::string> cells = {
+                row.backend, row.workload, std::to_string(row.n),
+                std::to_string(row.bits), status_name(row.status)
+            };
             if(options.profile) {
-                std::ostringstream candidate;
-                std::ostringstream verified;
-                candidate << std::fixed << std::setprecision(1)
-                          << row.candidate_median_ns;
-                verified << std::fixed << std::setprecision(1)
-                         << row.verification_median_ns;
-                table.add_row({row.backend, row.workload, std::to_string(row.n),
-                               std::to_string(row.bits), status_name(row.status),
-                               strategy_name(row.strategy), candidate.str(),
-                               verified.str()}, row.stats);
-            } else {
-                table.add_row({row.backend, row.workload, std::to_string(row.n),
-                               std::to_string(row.bits), status_name(row.status)},
-                              row.stats);
+                cells.push_back(strategy_name(row.strategy));
+                cells.push_back(Bench::Table::number(row.candidate_median_ns, 0u));
+                cells.push_back(Bench::Table::number(row.verification_median_ns, 0u));
             }
+            for(Bench::SummaryField field: fields) {
+                cells.push_back(integer_statistic(row.stats, field));
+            }
+            table.add_row(std::move(cells));
         }
         LOGGING_PRINTLN("End-to-end eigenvalue + eigenvector decomposition; "
                         "matrix construction excluded.")
@@ -418,7 +442,8 @@ void report(const std::vector<Datum>& rows, const Selection& options,
             LOGGING_PRINTLN("Profiling adds timer overhead; candidate and verification times "
                             "exclude dispatch/bookkeeping and need not sum to total.")
         }
-        table.print();
+        LOGGING_PRINTLN("EigenDecomposition: nanoseconds per call")
+        LOGGING_PRINTLN(table.str())
     }
 }
 

@@ -312,3 +312,11 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - The public `eigen_decomposition.hpp`, algorithm dispatch, test source, build targets, and benchmarks remain unchanged. This is a pure source-organization change, not a new spectral algorithm or an optimization.
 - Verified before commit that the independent QR definition appears exactly once in the merged source and the secondary include reference is gone. CI compilation/test outcomes for the resulting commit must still be checked.
 - Prior commit `2d8b694` had passed Ubuntu, macOS, Windows, Sanitizers and Coverage; `check-format` stays intentionally deferred until pre-merge. Benchmark executables are compiled in Release CI on all three OSes but **never run in CI**.
+
+### 2026-11-27 — display nanoseconds as integers in eigen benchmarks (this commit)
+
+- User requirement: the eigendecomposition benchmark should not display fractional nanoseconds. Keep measurement precision and timing statistics unchanged; round **only the displayed output** to the nearest integer nanosecond (and variance to integer ns^2).
+- `Benchmarking::Report` uses `Table::number(value)`, which defaults to three decimal places. Avoid changing the shared benchmarking library or the arithmetic of the stored samples. Use `Benchmarking::Table` directly for this benchmark, retaining its same configurable summary-field headings, grouping, column order and formatting through `LOGGING_PRINTLN`.
+- The normal table and optional profiling columns use `Table::number(value,0u)`; CSV writes `std::fixed << std::setprecision(0)` for all time statistics and optional stage medians. The existing CSV headers and schema are unchanged; count remains an integer and variance retains the `ns^2` unit.
+- Documented that display rounding does not imply nanosecond-level measurement accuracy; only the report representation is changed. No workload definitions, timers, acceptance criteria or algorithms altered.
+- **Verification:** inspected source and the shared `Report`/`Table` formatting behavior, preserved requested summary-field support and logging. The new commit CI is pending. `check-format` remains deferred; Release CI compiles benchmark binaries without executing them.
