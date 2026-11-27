@@ -144,13 +144,15 @@ Matrix<X> matrix_for(Workload w, unsigned n, PR precision) {
     if(w == Workload::Nonnormal4 || w == Workload::NonnormalInterval4) {
         if(n != 4u)
             throw std::invalid_argument("nonnormal workload has fixed order four");
-        // Exact characteristic roots {1, 3, 5, 7}; original Gershgorin
-        // disks overlap. Match the independent functional regression.
+        // Genuinely cyclic nonnormal problem; QR/dense validation
+        // rather than permutation-triangular substitution. This is
+        // S*(H*diag(1,3,5,7)*H^T/4)*S^{-1}, with H Hadamard and
+        // S=I+E_01 unimodular. Match the functional regression.
         const Int coefficients[4][4] = {
-            {1, 2, 0, 0},
-            {0, 3, 0, 0},
-            {-8, 10, 5, 0},
-            {-6, 2, 0, 7}
+            {3, 0, -2, -2},
+            {-1, 5, 0, -2},
+            {-2, 2, 4, -1},
+            {0, -2, -1, 4}
         };
         for(unsigned i = 0u; i != 4u; ++i)
             for(unsigned j = 0u; j != 4u; ++j)

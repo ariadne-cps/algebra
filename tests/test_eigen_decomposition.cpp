@@ -999,8 +999,8 @@ Void test_nonsymmetric_approximate(PR precision) {
     const X zero(0u, precision);
     EigenDecomposition<ApproximateTag, PR> solver(precision);
 
-    // Neither matrix is upper/lower triangular, and both have independent
-    // integer spectra by exact characteristic-polynomial factorization.
+    // Both QR matrices have directed off-diagonal cycles and known
+    // simple integer spectra. The former acyclic 4x4 is tested separately.
     const Int three_coefficients[3][3] = {
         {0, 1, 0},
         {-2, 3, 1},
@@ -1013,11 +1013,14 @@ Void test_nonsymmetric_approximate(PR precision) {
         }
     }
 
+    // A=S*(H*diag(1,3,5,7)*H^T/4)*S^{-1}, with H the integer
+    // order-four Hadamard matrix and S=I+E_01 unimodular.
+    // Its off-diagonal graph has cycles, forcing genuine nonsymmetric QR.
     const Int four_coefficients[4][4] = {
-        {1, 2, 0, 0},
-        {0, 3, 0, 0},
-        {-8, 10, 5, 0},
-        {-6, 2, 0, 7}
+        {3, 0, -2, -2},
+        {-1, 5, 0, -2},
+        {-2, 2, 4, -1},
+        {0, -2, -1, 4}
     };
     Matrix<X> four(4u, 4u, zero);
     for (SizeType row = 0u; row != 4u; ++row) {
@@ -1026,14 +1029,29 @@ Void test_nonsymmetric_approximate(PR precision) {
         }
     }
 
+    // Preserve the original 4x4 fixture as a permutation-triangular test.
+    const Int acyclic_coefficients[4][4] = {
+        {1, 2, 0, 0},
+        {0, 3, 0, 0},
+        {-8, 10, 5, 0},
+        {-6, 2, 0, 7}
+    };
+    Matrix<X> acyclic(4u, 4u, zero);
+    for (SizeType row = 0u; row != 4u; ++row) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            acyclic[row][col] = X(acyclic_coefficients[row][col], precision);
+        }
+    }
+
     const auto verify = [&](const Matrix<X>& A,
-                            const std::vector<Int>& expected) {
+                            const std::vector<Int>& expected,
+                            EigenDecompositionStrategy required_strategy) {
         EigenDecompositionDiagnostics diagnostics;
         const auto answer = solver(A, &diagnostics);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
             answer.status == Status::SUCCESS);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-            diagnostics.strategy == EigenDecompositionStrategy::SHIFTED_QR);
+            diagnostics.strategy == required_strategy);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
             answer.data.has_value());
         if (answer.data) {
@@ -1055,8 +1073,9 @@ Void test_nonsymmetric_approximate(PR precision) {
             }
         }
     };
-    verify(three, {1, 3, 5});
-    verify(four, {1, 3, 5, 7});
+    verify(three, {1, 3, 5}, EigenDecompositionStrategy::SHIFTED_QR);
+    verify(four, {1, 3, 5, 7}, EigenDecompositionStrategy::SHIFTED_QR);
+    verify(acyclic, {1, 3, 5, 7}, EigenDecompositionStrategy::TRIANGULAR);
 
     // The eigenvalues +-i and 2 are not a complete real spectrum.
     Matrix<X> complex(3u, 3u, zero);
@@ -1156,16 +1175,15 @@ Void test_krawczyk_nonnormal(PR precision) {
     using X = FloatBounds<PR>;
     const X zero(0u, precision);
 
-    // A=S diag(1,3,5,7) S^{-1} with integer unimodular
-    // S=[[1,1,0,0],[0,1,0,0],[2,-1,1,0],[1,1,0,1]].
-    // The original Gershgorin disks overlap and the symmetric midpoint
-    // eigenbasis does not separate the transformed disks. Eigenpair
-    // Newton/Krawczyk must certify all four real simple roots.
+    // A=S*(H*diag(1,3,5,7)*H^T/4)*S^{-1} with integer
+    // Hadamard H and unimodular S=I+E_01. The matrix is nonnormal
+    // and has directed cycles, so structural triangularization cannot
+    // bypass dense validated certification. Its Gershgorin disks overlap.
     const Int coefficients[4][4] = {
-        {1, 2, 0, 0},
-        {0, 3, 0, 0},
-        {-8, 10, 5, 0},
-        {-6, 2, 0, 7}
+        {3, 0, -2, -2},
+        {-1, 5, 0, -2},
+        {-2, 2, 4, -1},
+        {0, -2, -1, 4}
     };
     Matrix<X> A(4u, 4u, zero);
     for (SizeType i = 0u; i != 4u; ++i) {
@@ -1176,9 +1194,13 @@ Void test_krawczyk_nonnormal(PR precision) {
     EigenDecomposition<ValidatedTag, PR> solver(precision);
 
     const auto check = [&](const Matrix<X>& matrix) {
-        const auto result = solver(matrix);
+        EigenDecompositionDiagnostics diagnostics;
+        const auto result = solver(matrix, &diagnostics);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                                          result.status == Status::SUCCESS);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            diagnostics.strategy != EigenDecompositionStrategy::TRIANGULAR &&
+            diagnostics.strategy != EigenDecompositionStrategy::BLOCK_DIAGONAL);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                                          result.data.has_value());
         if (result.data) {
