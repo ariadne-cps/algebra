@@ -249,14 +249,38 @@ EigenDecomposition<P, PR>::operator()(
         std::vector<SizeType> order;
         order.reserve(n);
         for (SizeType row = 0u; row != n; ++row) {
+            const X& current_value = M[row][row];
+            if constexpr (std::is_same_v<P, ValidatedTag>) {
+                if (!is_finite(current_value.lower_raw()) ||
+                    !is_finite(current_value.upper_raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            } else if (!is_finite(current_value.raw())) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
             SizeType position = 0u;
             for (; position != order.size(); ++position) {
-                const X difference = M[row][row] - M[order[position]][order[position]];
-                if (this->_negative(difference)) {
-                    break;
-                }
-                if (!this->_positive(difference)) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
+                const X& prior_value = M[order[position]][order[position]];
+                if constexpr (std::is_same_v<P, ValidatedTag>) {
+                    if (current_value.upper_raw() < prior_value.lower_raw()) {
+                        break;
+                    }
+                    const bool ordered_after =
+                        current_value.lower_raw() > prior_value.upper_raw();
+                    const bool exactly_repeated =
+                        current_value.lower_raw() == current_value.upper_raw() &&
+                        prior_value.lower_raw() == prior_value.upper_raw() &&
+                        current_value.lower_raw() == prior_value.lower_raw();
+                    // A repeated interval description does not identify a
+                    // common parameter: independent diagonal entries may
+                    // represent different eigenvalues for different members.
+                    if (!ordered_after && !exactly_repeated) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                } else {
+                    if (current_value.raw() < prior_value.raw()) {
+                        break;
+                    }
                 }
             }
             order.insert(order.begin() + static_cast<std::ptrdiff_t>(position), row);
@@ -278,10 +302,17 @@ EigenDecomposition<P, PR>::operator()(
                         numerator += M[row][k] * vectors[k][col];
                     }
                     const X divisor = M[row][row] - eigenvalue;
-                    if (!this->_nonzero(divisor)) {
+                    if (this->_nonzero(divisor)) {
+                        vectors[row][col] = -numerator / divisor;
+                    } else if (this->_zero(divisor) && this->_zero(numerator)) {
+                        // Equal diagonal eigenvalues are permitted when this
+                        // dependent row equation is identically satisfied.
+                        // Assign zero to the free component, retaining the
+                        // exact unit-pivot triangular eigenvector basis.
+                        vectors[row][col] = zero;
+                    } else {
                         return {Status::INCONCLUSIVE, std::nullopt};
                     }
-                    vectors[row][col] = -numerator / divisor;
                 }
             } else {
                 // Lower triangular analogue: forward substitution.
@@ -291,17 +322,26 @@ EigenDecomposition<P, PR>::operator()(
                         numerator += M[row][k] * vectors[k][col];
                     }
                     const X divisor = M[row][row] - eigenvalue;
-                    if (!this->_nonzero(divisor)) {
+                    if (this->_nonzero(divisor)) {
+                        vectors[row][col] = -numerator / divisor;
+                    } else if (this->_zero(divisor) && this->_zero(numerator)) {
+                        // Equal diagonal eigenvalues are permitted when this
+                        // dependent row equation is identically satisfied.
+                        // Assign zero to the free component, retaining the
+                        // exact unit-pivot triangular eigenvector basis.
+                        vectors[row][col] = zero;
+                    } else {
                         return {Status::INCONCLUSIVE, std::nullopt};
                     }
-                    vectors[row][col] = -numerator / divisor;
                 }
             }
         }
 
-        // The eigenvector matrix is triangular after a column permutation,
-        // with exact unit pivots and exact structural zero entries. This
-        // proves invertibility without a pessimistic interval determinant.
+        // Even with repeated diagonal eigenvalues, the computed eigenvector
+        // matrix is a column permutation of a unit triangular matrix.
+        // Its exact pivots establish invertibility for every interval member.
+        // Repeated-eigenvalue equations that cannot be shown identically
+        // compatible have already returned INCONCLUSIVE.
         if (diagnostics) {
             diagnostics->strategy = EigenDecompositionStrategy::TRIANGULAR;
         }

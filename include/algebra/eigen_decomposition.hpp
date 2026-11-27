@@ -97,7 +97,9 @@ struct EigenDecompositionResult {
 //! repeated real eigenvalues, including exact repetitions in ValidatedTag.
 //! A validated interval diagonal family needs a fixed ascending order:
 //! entries must be strictly separated or identical singleton values.
-//! Non-diagonal triangular matrices require distinct diagonal eigenvalues.
+//! Non-diagonal triangular matrices allow repeated real eigenvalues when
+//! their normalized eigenvector equations admit a triangular unit-pivot
+//! basis. A defective or interval-undecidable case is INCONCLUSIVE.
 //! Dense 2x2 real matrices with simple spectrum are supported by closed form.
 //! For dense higher-order matrices, ApproximateTag uses Jacobi rotations
 //! for symmetric inputs (including repeated real eigenvalues) and shifted
@@ -124,8 +126,8 @@ class EigenDecomposition {
 
     //! \brief Attempt real diagonalization of the square matrix M.
     //! \details A non-square matrix violates the precondition. Orders
-    //! greater than two may be triangular, symmetric in ApproximateTag,
-//! or have separated Gershgorin disks in ValidatedTag.
+    //! greater than two may be triangular or admit a dense real eigensolver;
+    //! ValidatedTag requires a certified real eigenbasis.
     ResultType operator()(const Matrix<NumericType>& M) const;
 
     //! \brief Run the same eigendecomposition, collecting optional timings.

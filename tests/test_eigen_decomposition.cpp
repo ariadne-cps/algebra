@@ -610,6 +610,102 @@ Void test_repeated_real_spectrum(PR precision) {
     }
 }
 
+/** @brief Repeated triangular eigenvalues that still admit an invertible basis. */
+template<class PR>
+Void test_repeated_triangular_spectrum(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    EigenDecomposition<ValidatedTag, PR> validated(precision);
+
+    // Non-diagonal upper triangular A, with eigenvalues {1,1,2}.
+    // The repeated eigenvalue 1 has two independent eigenvectors:
+    // e0 and (0,-1,1); the dependent row equation cancels exactly.
+    const Int entries[3][3] = {{1, 1, 1}, {0, 2, 1}, {0, 0, 1}};
+    Matrix<AX> upper_approx(3u, 3u, azero);
+    Matrix<VX> upper_validated(3u, 3u, vzero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            upper_approx[row][col] = AX(entries[row][col], precision);
+            upper_validated[row][col] = VX(entries[row][col], precision);
+        }
+    }
+    const auto aresult = approximate(upper_approx);
+    const auto vresult = validated(upper_validated);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     aresult.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     vresult.status == Status::SUCCESS);
+    if (aresult.data && vresult.data) {
+        const Int expected[3] = {1, 1, 2};
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                aresult.data->eigenvalues[col].raw() ==
+                    AX(expected[col], precision).raw());
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                encloses(vresult.data->eigenvalues[col], expected[col], precision));
+            for (SizeType row = 0u; row != 3u; ++row) {
+                AX lhs(azero);
+                for (SizeType k = 0u; k != 3u; ++k) {
+                    lhs += upper_approx[row][k] * aresult.data->eigenvectors[k][col];
+                }
+                const AX residual = lhs -
+                    aresult.data->eigenvalues[col] * aresult.data->eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    abs(residual).get_d() < 1e-12);
+                VX rigorous_lhs(vzero);
+                for (SizeType k = 0u; k != 3u; ++k) {
+                    rigorous_lhs += upper_validated[row][k] *
+                        vresult.data->eigenvectors[k][col];
+                }
+                const VX rigorous_rhs = vresult.data->eigenvalues[col] *
+                    vresult.data->eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    rigorous_lhs.lower_raw() <= rigorous_rhs.upper_raw() &&
+                    rigorous_lhs.upper_raw() >= rigorous_rhs.lower_raw());
+            }
+        }
+        // The repeated eigenspace is two-dimensional. Both canonical
+        // pivot entries are exact ones in the corresponding columns.
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            vresult.data->eigenvectors[0u][0u].lower_raw() ==
+                VX(1u, precision).lower_raw());
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            vresult.data->eigenvectors[2u][1u].lower_raw() ==
+                VX(1u, precision).lower_raw());
+    }
+
+    // Transposition exercises the distinct lower-triangular recurrence.
+    Matrix<VX> lower_validated(3u, 3u, vzero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            lower_validated[row][col] = upper_validated[col][row];
+        }
+    }
+    const auto lower_result = validated(lower_validated);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     lower_result.status == Status::SUCCESS);
+
+    // Different independent interval diagonal entries that happen to use
+    // the same bounds do not represent a guaranteed repeated eigenvalue.
+    upper_validated[0u][0u] = VX(1, 2, precision);
+    upper_validated[2u][2u] = VX(1, 2, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(upper_validated).status == Status::INCONCLUSIVE);
+
+    // A Jordan block is still defective: the repeated-eigenvalue row has
+    // a nonzero compatibility obstruction.
+    Matrix<VX> jordan(3u, 3u, vzero);
+    jordan[0u][0u] = VX(1u, precision);
+    jordan[1u][1u] = VX(1u, precision);
+    jordan[2u][2u] = VX(2u, precision);
+    jordan[0u][1u] = VX(1u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(jordan).status == Status::INCONCLUSIVE);
+}
+
 /** @brief Test dense nonsymmetric approximate simple real eigendecompositions. */
 template<class PR>
 Void test_nonsymmetric_approximate(PR precision) {
@@ -914,6 +1010,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonsymmetric_approximate(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_real_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_real_spectrum(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_triangular_spectrum(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_triangular_spectrum(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }
