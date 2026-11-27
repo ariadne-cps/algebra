@@ -578,14 +578,17 @@ Void test_repeated_real_spectrum(PR precision) {
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                                      !unorderable.data.has_value());
 
-    // Jacobi's orthogonal eigenvectors remain independent even with the
-    // repeated eigenvalues {1,3,3} of this non-diagonal symmetric matrix.
+    // Jacobi's orthogonal eigenvectors remain independent even when
+    // the fully connected symmetric matrix 4*I - ones(3,3) has repeated
+    // eigenvalues {1,4,4}. This case must NOT be block-decomposable:
+    // it preserves independent coverage of the Jacobi path.
     Matrix<AX> symmetric(3u, 3u, approx_zero);
-    symmetric[0u][0u] = AX(2u, precision);
-    symmetric[1u][1u] = AX(2u, precision);
-    symmetric[2u][2u] = AX(3u, precision);
-    symmetric[0u][1u] = AX(1u, precision);
-    symmetric[1u][0u] = AX(1u, precision);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            symmetric[row][col] = row == col
+                ? AX(3u, precision) : AX(-1, precision);
+        }
+    }
     EigenDecompositionDiagnostics diagnostics;
     const auto repeated = approximate(symmetric, &diagnostics);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
@@ -593,7 +596,7 @@ Void test_repeated_real_spectrum(PR precision) {
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         diagnostics.strategy == EigenDecompositionStrategy::JACOBI);
     if (repeated.data) {
-        const double expected[3] = {1.0, 3.0, 3.0};
+        const double expected[3] = {1.0, 4.0, 4.0};
         for (SizeType col = 0u; col != 3u; ++col) {
             ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                 std::abs(repeated.data->eigenvalues[col].get_d() - expected[col]) < 1e-10);
@@ -608,6 +611,108 @@ Void test_repeated_real_spectrum(PR precision) {
             }
         }
     }
+}
+
+/** @brief Blockwise diagonalization with noncontiguous invariant components. */
+template<class PR>
+Void test_block_diagonal_spectrum(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    EigenDecomposition<ValidatedTag, PR> validated(precision);
+
+    // The two coupled 2x2 blocks occupy indices {0,2} and {1,3},
+    // not contiguous intervals. Their spectra {2,4} and {4,6}
+    // overlap at 4, but the block eigenvector bases are independent.
+    Matrix<AX> a(4u, 4u, azero);
+    Matrix<VX> v(4u, 4u, vzero);
+    for (SizeType row = 0u; row != 4u; ++row) {
+        const unsigned diagonal = (row % 2u == 0u) ? 3u : 5u;
+        a[row][row] = AX(diagonal, precision);
+        v[row][row] = VX(diagonal, precision);
+    }
+    a[0u][2u] = AX(1u, precision);
+    a[2u][0u] = AX(1u, precision);
+    a[1u][3u] = AX(1u, precision);
+    a[3u][1u] = AX(1u, precision);
+    v[0u][2u] = VX(1u, precision);
+    v[2u][0u] = VX(1u, precision);
+    v[1u][3u] = VX(1u, precision);
+    v[3u][1u] = VX(1u, precision);
+
+    EigenDecompositionDiagnostics diagnostics;
+    const auto point = approximate(a, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     point.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::BLOCK_DIAGONAL);
+    const auto certified = validated(v, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     certified.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::BLOCK_DIAGONAL);
+    if (point.data && certified.data) {
+        const Int expected[4] = {2, 4, 4, 6};
+        for (SizeType col = 0u; col != 4u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                point.data->eigenvalues[col].raw() ==
+                    AX(expected[col], precision).raw());
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                encloses(certified.data->eigenvalues[col], expected[col], precision));
+            for (SizeType row = 0u; row != 4u; ++row) {
+                AX action(azero);
+                VX rigorous_action(vzero);
+                for (SizeType k = 0u; k != 4u; ++k) {
+                    action += a[row][k] * point.data->eigenvectors[k][col];
+                    rigorous_action += v[row][k] *
+                        certified.data->eigenvectors[k][col];
+                }
+                const AX residual = action -
+                    point.data->eigenvalues[col] * point.data->eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs(residual.get_d()) < 1e-11);
+                const VX rigorous_rhs = certified.data->eigenvalues[col] *
+                    certified.data->eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    rigorous_action.lower_raw() <= rigorous_rhs.upper_raw() &&
+                    rigorous_action.upper_raw() >= rigorous_rhs.lower_raw());
+            }
+        }
+    }
+
+    // The second block has spectrum safely above the first, even if its
+    // first diagonal coefficient varies independently in a small interval.
+    v[1u][1u] = VX(6u, precision) +
+                 VX(0, 1, precision) / VX(64u, precision);
+    v[3u][3u] = VX(6u, precision);
+    const auto family = validated(v);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     family.status == Status::SUCCESS);
+    if (family.data) {
+        const Int expected[4] = {2, 4, 5, 7};
+        for (SizeType col = 0u; col != 4u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                encloses(family.data->eigenvalues[col], expected[col], precision));
+        }
+    }
+
+    // Repeated interval descriptions in distinct blocks do not imply
+    // equal real eigenvalues for every possible input matrix.
+    v[1u][1u] = VX(5u, precision) +
+                 VX(0, 1, precision) / VX(64u, precision);
+    v[3u][3u] = VX(5u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(v).status == Status::INCONCLUSIVE);
+
+    // A defective Jordan block is not made diagonalizable by adding
+    // another independent diagonalizable block.
+    v[0u][0u] = VX(1u, precision);
+    v[2u][2u] = VX(1u, precision);
+    v[2u][0u] = vzero;
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(v).status == Status::INCONCLUSIVE);
 }
 
 /** @brief Repeated triangular eigenvalues that still admit an invertible basis. */
@@ -1012,6 +1117,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_real_spectrum(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_triangular_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_triangular_spectrum(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_diagonal_spectrum(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_diagonal_spectrum(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

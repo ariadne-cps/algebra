@@ -29,6 +29,7 @@
 #ifndef ARIADNE_EIGEN_DECOMPOSITION_TPL_HPP
 #define ARIADNE_EIGEN_DECOMPOSITION_TPL_HPP
 
+#include <algorithm>
 #include <vector>
 #include <type_traits>
 #include <utility>
@@ -185,6 +186,120 @@ EigenDecomposition<P, PR>::operator()(
             }
             return {Status::SUCCESS, EigenDecompositionData<P, PR>{
                 std::move(values), std::move(vectors)}};
+        }
+    }
+
+    // Detect a block-diagonal structure up to a simultaneous row and
+    // column permutation. An off-block entry must be *exactly zero*;
+    // intervals containing zero but also nonzero values connect blocks.
+    // The undirected nonzero pattern gives the finest independent blocks.
+    if (n > 2u) {
+        std::vector<bool> reached(n, false);
+        std::vector<std::vector<SizeType>> components;
+        for (SizeType start = 0u; start != n; ++start) {
+            if (reached[start]) {
+                continue;
+            }
+            std::vector<SizeType> component{start};
+            reached[start] = true;
+            for (SizeType index = 0u; index != component.size(); ++index) {
+                const SizeType row = component[index];
+                for (SizeType col = 0u; col != n; ++col) {
+                    if (!reached[col] &&
+                        (!this->_zero(M[row][col]) || !this->_zero(M[col][row]))) {
+                        reached[col] = true;
+                        component.push_back(col);
+                    }
+                }
+            }
+            std::sort(component.begin(), component.end());
+            components.push_back(std::move(component));
+        }
+        if (components.size() > 1u) {
+            if (diagnostics) {
+                diagnostics->strategy = EigenDecompositionStrategy::BLOCK_DIAGONAL;
+            }
+            SizeType offset = 0u;
+            for (const auto& component: components) {
+                const SizeType m = component.size();
+                Matrix<X> block(m, m, zero);
+                for (SizeType row = 0u; row != m; ++row) {
+                    for (SizeType col = 0u; col != m; ++col) {
+                        block[row][col] = M[component[row]][component[col]];
+                    }
+                }
+                EigenDecompositionDiagnostics subdiagnostics;
+                const auto subresult = this->operator()(
+                    block, diagnostics ? &subdiagnostics : nullptr);
+                if (diagnostics) {
+                    diagnostics->candidate_time += subdiagnostics.candidate_time;
+                    diagnostics->verification_time += subdiagnostics.verification_time;
+                }
+                if (subresult.status != Status::SUCCESS || !subresult.data) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                for (SizeType col = 0u; col != m; ++col) {
+                    values[offset + col] = subresult.data->eigenvalues[col];
+                    for (SizeType row = 0u; row != m; ++row) {
+                        vectors[component[row]][offset + col] =
+                            subresult.data->eigenvectors[row][col];
+                    }
+                }
+                offset += m;
+            }
+
+            // Sort all block eigenpairs without silently imposing a fixed
+            // ordering on independently varying interval coefficients.
+            std::vector<SizeType> order;
+            order.reserve(n);
+            for (SizeType col = 0u; col != n; ++col) {
+                const X& current_value = values[col];
+                if constexpr (std::is_same_v<P, ValidatedTag>) {
+                    if (!is_finite(current_value.lower_raw()) ||
+                        !is_finite(current_value.upper_raw())) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                } else if (!is_finite(current_value.raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                SizeType position = 0u;
+                for (; position != order.size(); ++position) {
+                    const X& prior = values[order[position]];
+                    if constexpr (std::is_same_v<P, ValidatedTag>) {
+                        if (current_value.upper_raw() < prior.lower_raw()) {
+                            break;
+                        }
+                        const bool strictly_after =
+                            current_value.lower_raw() > prior.upper_raw();
+                        const bool repeated_point =
+                            current_value.lower_raw() == current_value.upper_raw() &&
+                            prior.lower_raw() == prior.upper_raw() &&
+                            current_value.lower_raw() == prior.lower_raw();
+                        if (!strictly_after && !repeated_point) {
+                            return {Status::INCONCLUSIVE, std::nullopt};
+                        }
+                    } else if (current_value.raw() < prior.raw()) {
+                        break;
+                    }
+                }
+                order.insert(order.begin() +
+                             static_cast<std::ptrdiff_t>(position), col);
+            }
+            Vector<X> sorted_values(n, zero);
+            Matrix<X> sorted_vectors(n, n, zero);
+            for (SizeType col = 0u; col != n; ++col) {
+                const SizeType source = order[col];
+                sorted_values[col] = values[source];
+                for (SizeType row = 0u; row != n; ++row) {
+                    sorted_vectors[row][col] = vectors[row][source];
+                }
+            }
+
+            // Every block contributes an invertible eigenvector basis.
+            // The global basis is block diagonal up to permutations and
+            // thus invertible, even for eigenvalues repeated across blocks.
+            return {Status::SUCCESS, EigenDecompositionData<P, PR>{
+                std::move(sorted_values), std::move(sorted_vectors)}};
         }
     }
 

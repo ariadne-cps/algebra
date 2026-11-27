@@ -50,6 +50,7 @@ enum class EigenDecompositionStrategy {
     NONE,          //!< No strategy attempted.
     ANALYTIC,      //!< 1x1/2x2 closed form.
     TRIANGULAR,    //!< Triangular eigenvector substitution.
+    BLOCK_DIAGONAL, //!< Eigenbasis assembled from independent blocks.
     JACOBI,        //!< Approximate symmetric Jacobi rotations.
     SHIFTED_QR,    //!< Approximate nonsymmetric real QR and Newton refinement.
     GERSHGORIN,    //!< Direct validated disk separation.
@@ -97,6 +98,10 @@ struct EigenDecompositionResult {
 //! repeated real eigenvalues, including exact repetitions in ValidatedTag.
 //! A validated interval diagonal family needs a fixed ascending order:
 //! entries must be strictly separated or identical singleton values.
+//! Block-diagonal matrices whose off-block entries are exactly zero are
+//! decomposed blockwise, including interleaved blocks and repeated
+//! eigenvalues in distinct invariant blocks. ValidatedTag requires a
+//! consistent ordering of the resulting eigenvalue enclosures.
 //! Non-diagonal triangular matrices allow repeated real eigenvalues when
 //! their normalized eigenvector equations admit a triangular unit-pivot
 //! basis. A defective or interval-undecidable case is INCONCLUSIVE.

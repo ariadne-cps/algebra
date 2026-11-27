@@ -231,6 +231,7 @@ const char* strategy_name(EigenDecompositionStrategy strategy) {
         case EigenDecompositionStrategy::NONE: return "none";
         case EigenDecompositionStrategy::ANALYTIC: return "analytic";
         case EigenDecompositionStrategy::TRIANGULAR: return "triangular";
+        case EigenDecompositionStrategy::BLOCK_DIAGONAL: return "block_diagonal";
         case EigenDecompositionStrategy::JACOBI: return "jacobi";
         case EigenDecompositionStrategy::GERSHGORIN: return "gershgorin";
         case EigenDecompositionStrategy::SIMILARITY: return "similarity";
