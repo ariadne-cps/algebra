@@ -73,6 +73,10 @@ Void test_linear_problem(PR precision) {
     const Vector<X> newton = interval_newton_image(center, residual, jacobian);
     const Vector<X> krawczyk = krawczyk_image(center, residual, jacobian,
                                               domain, preconditioner);
+    const bool uniquely_solved = krawczyk_certifies_unique_root(
+        center, residual, jacobian, domain, preconditioner);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     uniquely_solved);
 
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                                      encloses_integer(newton[0u], 1, precision));
@@ -88,6 +92,9 @@ Void test_linear_problem(PR precision) {
     Matrix<X> ineffective(2u, 2u, zero);
     const Vector<X> trivial_image = krawczyk_image(center, residual, jacobian,
                                                   domain, ineffective);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !krawczyk_certifies_unique_root(
+            center, residual, jacobian, domain, ineffective));
     for (SizeType i = 0u; i != 2u; ++i) {
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
             trivial_image[i].lower_raw() <= domain[i].lower_raw() &&
@@ -118,6 +125,25 @@ Void test_nonlinear_problem(PR precision) {
     const auto newton = interval_newton_image(center, residual, jacobian);
     const auto krawczyk = krawczyk_image(center, residual, jacobian,
                                           box, preconditioner);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        krawczyk_certifies_unique_root(
+            center, residual, jacobian, box, preconditioner));
+
+    // A box including a critical point of f'(x)=2*x cannot establish a
+    // contraction using the same coarse preconditioner.
+    Vector<X> wide(1u, X(0, 3, precision));
+    Matrix<X> wide_jacobian(1u, 1u, zero);
+    wide_jacobian[0u][0u] = X(0, 6, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !krawczyk_certifies_unique_root(
+            center, residual, wide_jacobian, wide, preconditioner));
+
+    // The center argument must be a singleton point in the interior.
+    Vector<X> nonpoint_center(1u, X(1, 2, precision));
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !krawczyk_certifies_unique_root(
+            nonpoint_center, residual, jacobian, box, preconditioner));
+
     const X radical = sqrt(two_value);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         newton[0u].lower_raw() <= radical.lower_raw() &&

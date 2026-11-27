@@ -31,6 +31,7 @@
 
 #include "algebra/matrix.hpp"
 #include "algebra/vector.hpp"
+#include <type_traits>
 
 namespace Ariadne {
 
@@ -89,6 +90,82 @@ Vector<X> krawczyk_image(const Vector<X>& center,
     const Vector<X> radius = box - center;
     const Vector<X> remainder = defect * radius;
     return center - correction + remainder;
+}
+
+//! \brief Verify an inclusion-and-contraction certificate for one root.
+//! \details For each fixed continuously differentiable real function f,
+//! assuming residual_at_center encloses f(center) and jacobian encloses
+//! Df(x) for every x in box, the conditions K(box) strictly inside box
+//! and ||I-C*jacobian||_infinity < 1 ensure a unique root in box.
+//! Both conditions are checked with outward-rounded interval arithmetic.
+//! This is valid also for families of functions satisfying the assumptions.
+//! \pre Dimensions are consistent and box is a nonempty convex interval box.
+//! \warning The caller must establish the stated residual and Jacobian
+//! enclosure assumptions; this operation cannot infer them from matrices.
+//! \warning Failure returns false (inconclusive), not proof of no root.
+template<class X>
+bool krawczyk_certifies_unique_root(const Vector<X>& center,
+                                   const Vector<X>& residual_at_center,
+                                   const Matrix<X>& jacobian,
+                                   const Vector<X>& box,
+                                   const Matrix<X>& preconditioner) {
+    static_assert(std::is_same_v<typename X::Paradigm, ValidatedTag>,
+                  "Krawczyk root certification requires validated interval arithmetic");
+    const SizeType n = center.size();
+    ARIADNE_PRECONDITION(residual_at_center.size() == n);
+    ARIADNE_PRECONDITION(box.size() == n);
+    ARIADNE_PRECONDITION(jacobian.row_size() == n);
+    ARIADNE_PRECONDITION(jacobian.column_size() == n);
+    ARIADNE_PRECONDITION(preconditioner.row_size() == n);
+    ARIADNE_PRECONDITION(preconditioner.column_size() == n);
+    if (n == 0u) {
+        return false;
+    }
+
+    const X zero = center.zero_element();
+    const X one = zero + X(1u, center.element_characteristics());
+    for (SizeType i = 0u; i != n; ++i) {
+        // The expansion point is fixed, not an unknown interval variable.
+        if (center[i].lower_raw() != center[i].upper_raw() ||
+            !is_finite(center[i].lower_raw()) ||
+            !is_finite(box[i].lower_raw()) ||
+            !is_finite(box[i].upper_raw()) ||
+            !is_finite(residual_at_center[i].lower_raw()) ||
+            !is_finite(residual_at_center[i].upper_raw()) ||
+            !(box[i].lower_raw() < center[i].lower_raw() &&
+              center[i].upper_raw() < box[i].upper_raw())) {
+            return false;
+        }
+    }
+
+    const Matrix<X> defect =
+        Matrix<X>::identity(n, center.element_characteristics()) -
+        preconditioner * jacobian;
+    for (SizeType row = 0u; row != n; ++row) {
+        X row_sum(zero);
+        for (SizeType col = 0u; col != n; ++col) {
+            if (!is_finite(defect[row][col].lower_raw()) ||
+                !is_finite(defect[row][col].upper_raw())) {
+                return false;
+            }
+            row_sum += abs(defect[row][col]);
+        }
+        if (!(row_sum.upper_raw() < one.lower_raw())) {
+            return false;
+        }
+    }
+
+    const Vector<X> image =
+        krawczyk_image(center, residual_at_center, jacobian, box, preconditioner);
+    for (SizeType i = 0u; i != n; ++i) {
+        if (!is_finite(image[i].lower_raw()) ||
+            !is_finite(image[i].upper_raw()) ||
+            !(box[i].lower_raw() < image[i].lower_raw() &&
+              image[i].upper_raw() < box[i].upper_raw())) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace Ariadne
