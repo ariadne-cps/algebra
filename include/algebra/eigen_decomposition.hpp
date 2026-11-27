@@ -94,6 +94,24 @@ struct EigenDecompositionData {
     DiagonalMatrix<NumericType> diagonal_matrix() const {
         return DiagonalMatrix<NumericType>(eigenvalues);
     }
+
+    //! \brief Attempt to compute the inverse of the eigenvector matrix V.
+    //! \details On success, this is the third factor of A=V*D*V^{-1}.
+    //! With validated arithmetic it encloses inverses of *every* matrix
+    //! represented by the independent interval entries of V, a stronger
+    //! requirement than the pointwise existence of a coherent eigenbasis
+    //! established by a successful eigendecomposition. The interval
+    //! elimination can therefore be inconclusive even when the spectral
+    //! decomposition was certified successfully. No inverse is cached.
+    //! \return A computed inverse, or no value when elimination cannot
+    //! establish a nonzero pivot. In ApproximateTag it is not certified.
+    std::optional<Matrix<NumericType>> inverse_eigenvector_matrix() const {
+        try {
+            return inverse(eigenvectors);
+        } catch (const SingularMatrixException&) {
+            return std::nullopt;
+        }
+    }
 };
 
 //! \brief Result of an eigendecomposition attempt.

@@ -82,6 +82,18 @@ Void test_real_examples(PR pr) {
                     std::abs((left[row][col] - right[row][col]).get_d()) < 1e-12);
             }
         }
+        const auto inverse_basis = approximation.data->inverse_eigenvector_matrix();
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         inverse_basis.has_value());
+        if (inverse_basis) {
+            const Matrix<AX> reconstructed = (vectors * D) * *inverse_basis;
+            for (SizeType row = 0u; row != 2u; ++row) {
+                for (SizeType col = 0u; col != 2u; ++col) {
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        std::abs((reconstructed[row][col] - a[row][col]).get_d()) < 1e-12);
+                }
+            }
+        }
     }
 
     Matrix<VX> v(2u, 2u, VX(0u, pr));
@@ -110,6 +122,22 @@ Void test_real_examples(PR pr) {
                 ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                     product[row][col].lower_raw() <= expected[row][col].upper_raw()
                     && product[row][col].upper_raw() >= expected[row][col].lower_raw());
+            }
+        }
+        const auto inverse_basis = eigen.inverse_eigenvector_matrix();
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         inverse_basis.has_value());
+        if (inverse_basis) {
+            const Matrix<VX> reconstructed = (eigen.eigenvectors * D) * *inverse_basis;
+            for (SizeType row = 0u; row != 2u; ++row) {
+                for (SizeType col = 0u; col != 2u; ++col) {
+                    // A coherent exact V and lambda exist for each input;
+                    // interval reconstruction must enclose those matrices,
+                    // not be literally equal to the original interval box.
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        reconstructed[row][col].lower_raw() <= v[row][col].lower_raw()
+                        && reconstructed[row][col].upper_raw() >= v[row][col].upper_raw());
+                }
             }
         }
     }
@@ -705,6 +733,19 @@ Void test_block_diagonal_spectrum(PR precision) {
         const auto D = certified.data->diagonal_matrix();
         const Matrix<VX> left = v * certified.data->eigenvectors;
         const Matrix<VX> right = certified.data->eigenvectors * D;
+        const auto inverse_basis = certified.data->inverse_eigenvector_matrix();
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                         inverse_basis.has_value());
+        if (inverse_basis) {
+            const Matrix<VX> reconstructed = right * *inverse_basis;
+            for (SizeType row = 0u; row != 4u; ++row) {
+                for (SizeType col = 0u; col != 4u; ++col) {
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        reconstructed[row][col].lower_raw() <= v[row][col].lower_raw()
+                        && reconstructed[row][col].upper_raw() >= v[row][col].upper_raw());
+                }
+            }
+        }
         for (SizeType row = 0u; row != 4u; ++row) {
             for (SizeType col = 0u; col != 4u; ++col) {
                 ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
