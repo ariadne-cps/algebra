@@ -198,3 +198,11 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Registered the header in the Algebra umbrella and the test in the existing test target list. No changes to `equation-solving` and no dependency cycle.
 - **Verification status:** source and interfaces inspected and changes committed for CI; local C++ compilation and test execution not performed. As of inspection, the preceding regression fix `ace1e92` had passed macOS, Ubuntu, Sanitizers and Coverage; Windows remained in progress. `check-format` remains deferred until merge.
 - **Next step:** once the DP/MP tests pass, have `equation-solving` call these two helpers from its existing solver steps (in that repository and its own tests) before considering any richer shared abstraction. Implement eigenpair-specific validated Newton/Krawczyk refinement only once the shared operation is exercised in both consumers.
+
+### 2026-11-27 — route eigendecomposition benchmark output through Logging (this commit)
+
+- Reviewed Numeric benchmarks and shared Benchmarking `Report`: Numeric uses `LOGGING_PRINTLN` for informational and error output, and `Report::print()` to present tables. The Algebra eigendecomposition benchmark previously wrote directly to `std::cout`/`std::cerr`, bypassing the Logger.
+- Replaced the table banner and configuration summary with `LOGGING_PRINTLN`, then invoked `Bench::Report::print()` for the tabular report. Replaced error output in `main` with `LOGGING_PRINTLN`. Removed the no-longer-needed `<iostream>` include.
+- Kept the established CSV column names and order, constructing each CSV record with `std::ostringstream` at 17-digit precision and printing each complete record through `LOGGING_PRINTLN`. This keeps CSV data together per line and avoids introducing extra diagnostics in CSV mode; CSV output now follows the Logger's configured destination and verbosity.
+- No benchmark timing, workload construction, numeric semantics, status checks, or benchmarking linkage changed. All presentation remains outside measured callbacks.
+- **Verification:** source references and exact replacements inspected; compilation/CLI output for this commit remain to be checked. `check-format` remains deferred until pre-merge.

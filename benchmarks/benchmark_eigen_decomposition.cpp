@@ -29,7 +29,6 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
-#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -256,14 +255,16 @@ void measure_backend(const char* backend, unsigned bits, PR precision,
 void report(const std::vector<Datum>& rows, const Selection& options,
             const Bench::SummaryFields& fields) {
     if(options.csv) {
-        std::cout << "backend,workload,n,bits,status,median_ns,mad_ns,min_ns,max_ns,p95_ns\n";
-        std::cout << std::setprecision(17);
+        LOGGING_PRINTLN("backend,workload,n,bits,status,median_ns,mad_ns,min_ns,max_ns,p95_ns")
         for(const auto& row: rows) {
             const auto& s = row.stats;
-            std::cout << row.backend << ',' << row.workload << ',' <<
-                row.n << ',' << row.bits << ',' << status_name(row.status) << ',' <<
-                s.median << ',' << s.mad << ',' << s.minimum << ',' <<
-                s.maximum << ',' << s.p95 << '\n';
+            std::ostringstream record;
+            record << std::setprecision(17)
+                   << row.backend << ',' << row.workload << ','
+                   << row.n << ',' << row.bits << ',' << status_name(row.status) << ','
+                   << s.median << ',' << s.mad << ',' << s.minimum << ','
+                   << s.maximum << ',' << s.p95;
+            LOGGING_PRINTLN(record.str())
         }
     } else {
         Bench::Report table("EigenDecomposition: nanoseconds per call", fields);
@@ -281,12 +282,12 @@ void report(const std::vector<Datum>& rows, const Selection& options,
                            std::to_string(row.bits), status_name(row.status)},
                           row.stats);
         }
-        std::cout << "End-to-end eigenvalue + eigenvector decomposition; "
-                     "matrix construction excluded.\n";
-        std::cout << "iterations=" << options.iterations
-                  << ", samples=" << options.samples
-                  << " (warm-ups via --warmups).\n";
-        std::cout << table.table();
+        LOGGING_PRINTLN("End-to-end eigenvalue + eigenvector decomposition; "
+                        "matrix construction excluded.")
+        LOGGING_PRINTLN("iterations=" << options.iterations
+                                    << ", samples=" << options.samples
+                                    << " (warm-ups via --warmups).")
+        table.print();
     }
 }
 
@@ -324,7 +325,7 @@ int main(int argc, const char* argv[]) {
         report(results, selection, command_line.summary_fields());
         return 0;
     } catch(const std::exception& error) {
-        std::cerr << "benchmark_eigen_decomposition: " << error.what() << '\n';
+        LOGGING_PRINTLN("benchmark_eigen_decomposition: " << error.what())
         return 1;
     }
 }
