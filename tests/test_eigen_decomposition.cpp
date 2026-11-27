@@ -494,6 +494,122 @@ Void test_validated_uncertainty() {
 
 
 
+/** @brief Exercise repeated real eigenvalues without confusing degeneracy and defect. */
+template<class PR>
+Void test_repeated_real_spectrum(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX approx_zero(0u, precision);
+    const VX validated_zero(0u, precision);
+    const VX validated_one(1u, precision);
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    EigenDecomposition<ValidatedTag, PR> validated(precision);
+
+    // A repeated 2x2 diagonal eigenvalue is not a defective matrix.
+    Matrix<AX> diagonal_approx(2u, 2u, approx_zero);
+    diagonal_approx[0u][0u] = AX(4u, precision);
+    diagonal_approx[1u][1u] = AX(4u, precision);
+    const auto two_approx = approximate(diagonal_approx);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     two_approx.status == Status::SUCCESS);
+    if (two_approx.data) {
+        for (SizeType col = 0u; col != 2u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                two_approx.data->eigenvalues[col].raw() == AX(4u, precision).raw());
+        }
+    }
+
+    Matrix<VX> diagonal_two(2u, 2u, validated_zero);
+    diagonal_two[0u][0u] = VX(4u, precision);
+    diagonal_two[1u][1u] = VX(4u, precision);
+    const auto two_validated = validated(diagonal_two);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     two_validated.status == Status::SUCCESS);
+    if (two_validated.data) {
+        for (SizeType col = 0u; col != 2u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                encloses(two_validated.data->eigenvalues[col], 4, precision));
+        }
+    }
+
+    // Pointwise-equal repeated entries are sortable even in ValidatedTag.
+    // Another entry can remain a genuine interval if order is unambiguous.
+    Matrix<VX> diagonal_four(4u, 4u, validated_zero);
+    diagonal_four[0u][0u] = VX(2, 3, precision);
+    diagonal_four[1u][1u] = VX(-1, precision);
+    diagonal_four[2u][2u] = VX(5u, precision);
+    diagonal_four[3u][3u] = VX(-1, precision);
+    const auto four = validated(diagonal_four);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     four.status == Status::SUCCESS);
+    if (four.data) {
+        const auto& data = *four.data;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            encloses(data.eigenvalues[0u], -1, precision) &&
+            encloses(data.eigenvalues[1u], -1, precision) &&
+            encloses(data.eigenvalues[2u], 2, precision) &&
+            encloses(data.eigenvalues[2u], 3, precision) &&
+            encloses(data.eigenvalues[3u], 5, precision));
+        const Matrix<VX> product = diagonal_four * data.eigenvectors;
+        for (SizeType row = 0u; row != 4u; ++row) {
+            for (SizeType col = 0u; col != 4u; ++col) {
+                const VX rhs = data.eigenvalues[col] * data.eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    product[row][col].lower_raw() <= rhs.upper_raw() &&
+                    product[row][col].upper_raw() >= rhs.lower_raw());
+            }
+        }
+        // The column permutation gives an exact coordinate basis.
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            data.eigenvectors[1u][0u].lower_raw() == validated_one.lower_raw());
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            data.eigenvectors[3u][1u].lower_raw() == validated_one.lower_raw());
+    }
+
+    // Identical interval descriptions are not the same real parameter:
+    // independent entries may reverse eigenvalue order across the family.
+    Matrix<VX> ambiguous(3u, 3u, validated_zero);
+    ambiguous[0u][0u] = VX(2, 3, precision);
+    ambiguous[1u][1u] = VX(2, 3, precision);
+    ambiguous[2u][2u] = VX(5u, precision);
+    const auto unorderable = validated(ambiguous);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     unorderable.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     !unorderable.data.has_value());
+
+    // Jacobi's orthogonal eigenvectors remain independent even with the
+    // repeated eigenvalues {1,3,3} of this non-diagonal symmetric matrix.
+    Matrix<AX> symmetric(3u, 3u, approx_zero);
+    symmetric[0u][0u] = AX(2u, precision);
+    symmetric[1u][1u] = AX(2u, precision);
+    symmetric[2u][2u] = AX(3u, precision);
+    symmetric[0u][1u] = AX(1u, precision);
+    symmetric[1u][0u] = AX(1u, precision);
+    EigenDecompositionDiagnostics diagnostics;
+    const auto repeated = approximate(symmetric, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     repeated.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::JACOBI);
+    if (repeated.data) {
+        const double expected[3] = {1.0, 3.0, 3.0};
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(repeated.data->eigenvalues[col].get_d() - expected[col]) < 1e-10);
+            for (SizeType row = 0u; row != 3u; ++row) {
+                AX action(approx_zero);
+                for (SizeType k = 0u; k != 3u; ++k) {
+                    action += symmetric[row][k] * repeated.data->eigenvectors[k][col];
+                }
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs((action - repeated.data->eigenvalues[col] *
+                        repeated.data->eigenvectors[row][col]).get_d()) < 1e-10);
+            }
+        }
+    }
+}
+
 /** @brief Test dense nonsymmetric approximate simple real eigendecompositions. */
 template<class PR>
 Void test_nonsymmetric_approximate(PR precision) {
@@ -571,8 +687,8 @@ Void test_nonsymmetric_approximate(PR precision) {
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         !complex_answer.data.has_value());
 
-    // Double eigenvalue 2, plus eigenvalue 0: a simple-spectrum method
-    // must not claim a full eigenbasis even if this matrix is diagonalizable.
+    // A repeated eigenvalue does not by itself make a symmetric matrix
+    // defective. This matrix is orthogonally diagonalizable with 0,2,2.
     Matrix<X> repeated(3u, 3u, zero);
     repeated[0u][0u] = X(1u, precision);
     repeated[0u][1u] = X(1u, precision);
@@ -581,9 +697,27 @@ Void test_nonsymmetric_approximate(PR precision) {
     repeated[2u][2u] = X(2u, precision);
     const auto repeated_answer = solver(repeated);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-        repeated_answer.status == Status::INCONCLUSIVE);
+        repeated_answer.status == Status::SUCCESS);
+    if (repeated_answer.data) {
+        const double expected[3] = {0.0, 2.0, 2.0};
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(repeated_answer.data->eigenvalues[col].get_d() - expected[col]) < 1e-10);
+        }
+    }
+
+    // A genuine Jordan block has insufficient eigenvectors despite real
+    // eigenvalues. It must remain INCONCLUSIVE.
+    Matrix<X> defective(3u, 3u, zero);
+    defective[0u][0u] = X(2u, precision);
+    defective[0u][1u] = X(1u, precision);
+    defective[1u][1u] = X(2u, precision);
+    defective[2u][2u] = X(3u, precision);
+    const auto defective_answer = solver(defective);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-        !repeated_answer.data.has_value());
+        defective_answer.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !defective_answer.data.has_value());
 }
 
 //! \brief Non-normal dense example with known spectrum that defeats Gershgorin.
@@ -778,6 +912,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_diagnostics(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonsymmetric_approximate(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonsymmetric_approximate(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_real_spectrum(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_real_spectrum(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

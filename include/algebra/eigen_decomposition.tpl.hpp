@@ -120,6 +120,74 @@ EigenDecomposition<P, PR>::operator()(
     Vector<X> values(n, zero);
     Matrix<X> vectors(n, n, zero);
 
+    // Every real diagonal matrix has the canonical coordinate eigenbasis,
+    // including matrices with repeated eigenvalues. In ValidatedTag the
+    // diagonal entries represent *independent* interval coordinates:
+    // an ascending assignment is sound only for strictly separated
+    // intervals, or equal singleton values known to coincide exactly.
+    if (n > 1u) {
+        bool diagonal = true;
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = 0u; col != n; ++col) {
+                if (row != col && !this->_zero(M[row][col])) {
+                    diagonal = false;
+                }
+            }
+        }
+        if (diagonal) {
+            std::vector<SizeType> order;
+            order.reserve(n);
+            for (SizeType row = 0u; row != n; ++row) {
+                const X& current = M[row][row];
+                if constexpr (std::is_same_v<P, ValidatedTag>) {
+                    if (!is_finite(current.lower_raw()) ||
+                        !is_finite(current.upper_raw())) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                } else {
+                    if (!is_finite(current.raw())) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                }
+                SizeType position = 0u;
+                for (; position != order.size(); ++position) {
+                    const X& previous = M[order[position]][order[position]];
+                    if constexpr (std::is_same_v<P, ValidatedTag>) {
+                        if (current.upper_raw() < previous.lower_raw()) {
+                            break;
+                        }
+                        const bool separated_after =
+                            current.lower_raw() > previous.upper_raw();
+                        const bool repeated_point =
+                            current.lower_raw() == current.upper_raw() &&
+                            previous.lower_raw() == previous.upper_raw() &&
+                            current.lower_raw() == previous.lower_raw();
+                        if (!separated_after && !repeated_point) {
+                            return {Status::INCONCLUSIVE, std::nullopt};
+                        }
+                    } else {
+                        if (current.raw() < previous.raw()) {
+                            break;
+                        }
+                    }
+                }
+                order.insert(order.begin() + static_cast<std::ptrdiff_t>(position), row);
+            }
+            for (SizeType col = 0u; col != n; ++col) {
+                const SizeType pivot = order[col];
+                values[col] = M[pivot][pivot];
+                vectors[pivot][col] = one;
+            }
+            if (diagnostics) {
+                diagnostics->strategy = n == 2u
+                    ? EigenDecompositionStrategy::ANALYTIC
+                    : EigenDecompositionStrategy::TRIANGULAR;
+            }
+            return {Status::SUCCESS, EigenDecompositionData<P, PR>{
+                std::move(values), std::move(vectors)}};
+        }
+    }
+
     if (n > 2u) {
         bool upper_triangular = true;
         bool lower_triangular = true;
@@ -288,19 +356,9 @@ EigenDecomposition<P, PR>::operator()(
         values[1u] = (trace + root) / two_value;
     }
 
-    // A diagonal matrix has a canonical exact eigenbasis even if both
-    // off-diagonal coefficients are identically zero.
-    if (this->_zero(b) && this->_zero(c)) {
-        if (this->_negative(a - d)) {
-            vectors[0u][0u] = one;
-            vectors[1u][1u] = one;
-        } else if (this->_positive(a - d)) {
-            vectors[1u][0u] = one;
-            vectors[0u][1u] = one;
-        } else {
-            return {Status::INCONCLUSIVE, std::nullopt};
-        }
-    } else if (this->_nonzero(b)) {
+    // Exactly diagonal matrices (also with repeated eigenvalues) have
+    // already been handled by the dimension-independent coordinate basis.
+    if (this->_nonzero(b)) {
         // v = (1, (lambda-a)/b). Each column encloses the normalized
         // exact eigenvector for every represented input matrix.
         for (SizeType j = 0u; j != 2u; ++j) {
@@ -444,8 +502,8 @@ EigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) const {
             return {Status::INCONCLUSIVE, std::nullopt};
         }
 
-        // Sort the columns, and enforce simple eigenvalues for this
-        // implementation milestone.
+        // Sort the eigenpairs. Jacobi maintains an orthogonal eigenbasis
+        // even when eigenvalues repeat; simplicity is not required.
         std::vector<SizeType> ordering;
         ordering.reserve(n);
         for (SizeType row = 0u; row != n; ++row) {
@@ -467,13 +525,6 @@ EigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) const {
         for (SizeType col = 0u; col != n; ++col) {
             const SizeType source = ordering[col];
             eigenvalues[col] = rotated[source][source];
-            if (col > 0u) {
-                const X gap = eigenvalues[col] - eigenvalues[col - 1u];
-                if (!is_finite(gap.raw()) ||
-                    gap.raw() <= (X(128u, _precision) * epsilon * scale).raw()) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
-            }
             for (SizeType row = 0u; row != n; ++row) {
                 eigenvectors[row][col] = basis[row][source];
             }
@@ -491,6 +542,25 @@ EigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) const {
                 }
                 const X residual = abs(action - eigenvalues[col] * eigenvectors[row][col]);
                 if (!is_finite(residual.raw()) || residual.raw() > budget.raw()) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+        }
+        // Orthogonality also certifies numerical linear independence when
+        // a symmetric eigenspace has multiplicity >1. It is checked in the
+        // input arithmetic, without collapsing MP values to binary64.
+        const X orthogonality_budget =
+            X(4096u, _precision) * epsilon *
+            X(static_cast<unsigned>(n), _precision);
+        for (SizeType col = 0u; col != n; ++col) {
+            for (SizeType other = 0u; other != n; ++other) {
+                X dot(zero);
+                for (SizeType row = 0u; row != n; ++row) {
+                    dot += eigenvectors[row][col] * eigenvectors[row][other];
+                }
+                const X difference = abs(dot - (col == other ? one : zero));
+                if (!is_finite(difference.raw()) ||
+                    difference.raw() > orthogonality_budget.raw()) {
                     return {Status::INCONCLUSIVE, std::nullopt};
                 }
             }

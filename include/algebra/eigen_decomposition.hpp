@@ -93,12 +93,16 @@ struct EigenDecompositionResult {
 };
 
 //! \brief Compute a real eigendecomposition in the requested paradigm and precision.
-//! \details Real triangular matrices of arbitrary positive dimension with
-//! pairwise strictly separated diagonal entries are supported. Dense matrices
-//! of order one or two are supported when the spectrum is real and simple.
+//! \details Real diagonal matrices of arbitrary positive dimension support
+//! repeated real eigenvalues, including exact repetitions in ValidatedTag.
+//! A validated interval diagonal family needs a fixed ascending order:
+//! entries must be strictly separated or identical singleton values.
+//! Non-diagonal triangular matrices require distinct diagonal eigenvalues.
+//! Dense 2x2 real matrices with simple spectrum are supported by closed form.
 //! For dense higher-order matrices, ApproximateTag uses Jacobi rotations
-//! for symmetric inputs and shifted real QR with Newton refinement for
-//! nonsymmetric inputs having a resolvable simple real spectrum.
+//! for symmetric inputs (including repeated real eigenvalues) and shifted
+//! real QR with Newton refinement for nonsymmetric inputs having a
+//! resolvable simple real spectrum.
 //! ValidatedTag supports matrices with
 //! rigorously isolated Gershgorin disks, possibly after a certified
 //! similarity using a point-matrix basis seeded by approximate Jacobi
@@ -140,7 +144,7 @@ class EigenDecomposition {
     //! \brief Certify or numerically test a nonzero number.
     bool _nonzero(const NumericType& x) const;
 
-    //! \brief Approximate real simple eigenpairs of a symmetric dense matrix.
+    //! \brief Approximate a real orthogonal eigenbasis of a symmetric dense matrix.
     //! \details Implemented using Jacobi plane rotations for ApproximateTag.
     //! Other paradigms or inconclusive numerical convergence report failure.
     ResultType _symmetric(const Matrix<NumericType>& A) const;
