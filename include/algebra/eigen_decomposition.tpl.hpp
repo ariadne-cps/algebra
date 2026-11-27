@@ -101,7 +101,11 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
             if constexpr (std::is_same_v<P, ApproximateTag>) {
                 return this->_symmetric(M);
             } else {
-                return this->_gershgorin(M);
+                const auto direct = this->_gershgorin(M);
+                if (direct.status == Status::SUCCESS) {
+                    return direct;
+                }
+                return this->_preconditioned(M);
             }
         }
 
@@ -561,6 +565,129 @@ EigenDecomposition<P, PR>::_gershgorin(const Matrix<NumericType>& input) const {
             }
         }
         return {Status::SUCCESS, EigenDecompositionData<P, PR>{std::move(values), std::move(vectors)}};
+    }
+}
+
+
+/** @brief Certify a dense interval matrix by a validated similarity transform. */
+template<class P, class PR>
+typename EigenDecomposition<P, PR>::ResultType
+EigenDecomposition<P, PR>::_preconditioned(const Matrix<NumericType>& A) const {
+    using Status = EigenDecompositionStatus;
+    if constexpr (!std::is_same_v<P, ValidatedTag>) {
+        return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+    } else {
+        using X = NumericType;
+        using ApproximateX = FloatApproximation<PR>;
+        const SizeType n = A.row_size();
+        const X zero(0u, _precision);
+        const X one(1u, _precision);
+        const ApproximateX half = ApproximateX(1u, _precision) /
+                                  ApproximateX(2u, _precision);
+
+        // Candidate basis only: use a symmetric matrix built from interval
+        // midpoints. Even if the original family contains nonsymmetric
+        // matrices, the later interval certificate applies to every member.
+        Matrix<ApproximateX> seed(n, n, ApproximateX(0u, _precision));
+        for (SizeType row = 0u; row != n; ++row) {
+            seed[row][row] = ApproximateX(A[row][row]);
+            for (SizeType col = row + 1u; col != n; ++col) {
+                const ApproximateX center = (ApproximateX(A[row][col]) +
+                                             ApproximateX(A[col][row])) * half;
+                seed[row][col] = center;
+                seed[col][row] = center;
+            }
+        }
+
+        EigenDecomposition<ApproximateTag, PR> approximate(_precision);
+        const auto candidate = approximate(seed);
+        if (candidate.status != Status::SUCCESS || !candidate.data) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+
+        // S is a point matrix: its floating-point coefficients are treated
+        // as exact dyadic constants when constructing the interval matrix.
+        // Nothing relies on the computed Jacobi columns being *exactly*
+        // orthogonal. We explicitly certify a valid inverse of S.
+        Matrix<X> similarity(n, n, zero);
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = 0u; col != n; ++col) {
+                const auto& entry = candidate.data->eigenvectors[row][col];
+                if (!is_finite(entry.raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                similarity[row][col] = X(entry.raw());
+            }
+        }
+
+        // Interval Gauss-Jordan reduction encloses S^{-1} since every
+        // pivot is verified nonzero and S is a fixed point matrix.
+        Matrix<X> working(similarity);
+        Matrix<X> inverse = Matrix<X>::identity(n, _precision);
+        for (SizeType pivot = 0u; pivot != n; ++pivot) {
+            SizeType chosen = pivot;
+            while (chosen != n && !this->_nonzero(working[chosen][pivot])) {
+                ++chosen;
+            }
+            if (chosen == n) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            if (chosen != pivot) {
+                for (SizeType col = 0u; col != n; ++col) {
+                    const X original = working[pivot][col];
+                    working[pivot][col] = working[chosen][col];
+                    working[chosen][col] = original;
+                    const X inverse_original = inverse[pivot][col];
+                    inverse[pivot][col] = inverse[chosen][col];
+                    inverse[chosen][col] = inverse_original;
+                }
+            }
+
+            const X divisor = working[pivot][pivot];
+            if (!this->_nonzero(divisor)) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            for (SizeType col = pivot + 1u; col != n; ++col) {
+                working[pivot][col] /= divisor;
+            }
+            working[pivot][pivot] = one;
+            for (SizeType col = 0u; col != n; ++col) {
+                inverse[pivot][col] /= divisor;
+            }
+
+            for (SizeType row = 0u; row != n; ++row) {
+                if (row == pivot) {
+                    continue;
+                }
+                const X multiplier = working[row][pivot];
+                for (SizeType col = pivot + 1u; col != n; ++col) {
+                    working[row][col] -= multiplier * working[pivot][col];
+                }
+                working[row][pivot] = zero;
+                for (SizeType col = 0u; col != n; ++col) {
+                    inverse[row][col] -= multiplier * inverse[pivot][col];
+                }
+            }
+        }
+
+        // The exact similarity B = S^{-1} A S lies inside the interval
+        // evaluation below for every input matrix A. Gershgorin certifies
+        // simple real eigenvalues and a basis W of B when it succeeds.
+        const Matrix<X> transformed = inverse * A * similarity;
+        auto transformed_result = this->_gershgorin(transformed);
+        if (transformed_result.status != Status::SUCCESS ||
+            !transformed_result.data) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+
+        // V=S W is the corresponding eigenvector basis of A.
+        // Both S and W are certified invertible; the columns do not
+        // necessarily retain the unit-pivot normalization of W.
+        Matrix<X> vectors = similarity * transformed_result.data->eigenvectors;
+        return {Status::SUCCESS,
+                EigenDecompositionData<P, PR>{
+                    std::move(transformed_result.data->eigenvalues),
+                    std::move(vectors)}};
     }
 }
 

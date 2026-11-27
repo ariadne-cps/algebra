@@ -207,8 +207,38 @@ Void test_real_examples(PR pr) {
     symmetric_bounds[1u][0u] = VX(1u, pr);
     symmetric_bounds[1u][2u] = VX(1u, pr);
     symmetric_bounds[2u][1u] = VX(1u, pr);
+    // Gershgorin disks of the original symmetric tridiagonal matrix
+    // overlap, but the Jacobi candidate basis permits certification
+    // after a verified change of coordinates.
+    const auto preconditioned_symmetric = validated(symmetric_bounds);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-                                     validated(symmetric_bounds).status == Status::INCONCLUSIVE);
+                                     preconditioned_symmetric.status == Status::SUCCESS);
+    if (preconditioned_symmetric.data) {
+        const VX radical = sqrt(VX(2u, pr));
+        const VX expected[3] = {VX(2u, pr) - radical,
+                                VX(2u, pr),
+                                VX(2u, pr) + radical};
+        for (SizeType col = 0u; col != 3u; ++col) {
+            const VX& enclosed = preconditioned_symmetric.data->eigenvalues[col];
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                enclosed.lower_raw() <= expected[col].lower_raw() &&
+                enclosed.upper_raw() >= expected[col].upper_raw());
+        }
+    }
+
+    // Small nonsymmetric perturbation: the same verification remains
+    // rigorous for the actual matrix, not merely for the symmetric seed.
+    symmetric_bounds[0u][1u] = VX(9u, pr) / VX(8u, pr);
+    const auto preconditioned_nonsymmetric = validated(symmetric_bounds);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     preconditioned_nonsymmetric.status == Status::SUCCESS);
+
+    // Wide uncertain entries are not certified by a narrow midpoint
+    // approximation. The method must return INCONCLUSIVE.
+    symmetric_bounds[0u][1u] = VX(-2, 2, pr);
+    const auto unseparated = validated(symmetric_bounds);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     unseparated.status == Status::INCONCLUSIVE);
 
 
     // A symmetric dense interval family with pairwise disjoint Gershgorin

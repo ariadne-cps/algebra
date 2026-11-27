@@ -156,3 +156,16 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Registered DP/MP regression cases for a symmetric 3x3 interval family, a dense nonsymmetric 4x4 system, and overlapping Gershgorin disks. Updated formerly unsupported dense-validated tests to the more accurate `INCONCLUSIVE` status.
 - **Status:** Source inspection completed; compilation and test runs for this new commit remain pending. The preceding native-MP Jacobi commit `760f2d9` was still running the CI at time of design. `check-format` is deferred until pre-merge as requested.
 - **Limitations:** The criterion is deliberately conservative: a symmetric dense matrix with clustered spectra may have an excellent simple real eigendecomposition but fail the disk-separation test. A general approximate-seeded interval-Newton/Krawczyk certification remains future work.
+
+### 2026-11-27 — verified similarity preconditioning for dense validated eigenpairs (this commit)
+
+- **Baseline verified:** `306ed2e` passed Ubuntu, macOS, Windows, Coverage and Sanitizers. `check-format` remains deferred until pre-merge; the Codecov project/patch status checks are separate.
+- Introduced `_preconditioned` for dense `ValidatedTag` matrices when direct interval Gershgorin disk isolation fails.
+- Construct a symmetric **approximate** seed matrix from input interval midpoints and run the ApproximateTag Jacobi algorithm to obtain a candidate basis S. It is only a choice of *fixed coordinates*, not a certificate of the input matrix (which may be nonsymmetric).
+- Regard S as a point matrix with exact dyadic coefficients. Apply verified interval Gauss-Jordan to enclose S^{-1}; return `INCONCLUSIVE` when any required pivot includes zero. In particular, do not replace inverse by an unchecked approximate transpose of the Jacobi output.
+- Form the interval enclosure of the exact similarity B=S^{-1}AS. Apply the previously certified Gershgorin / eigenvector isolation to B, requiring real isolated eigenvalues, verified eigenvector interval solves and invertibility of the transformed eigenvector basis W.
+- Return the original eigenvalues and transformed eigenvectors V=SW. The basis V is invertible because both S and W are; unlike the direct Gershgorin path, its columns need not have a component equal to one.
+- This is a conservative but rigorous sufficient method, not a general verified QR algorithm. It may succeed even for some nonsymmetric dense matrices with overlapping original Gershgorin disks.
+- Added DP/MP tests for the symmetric tridiagonal matrix with known spectrum 2, 2±sqrt(2), a nonsymmetric perturbation and an uncertain interval family that must remain inconclusive.
+- **Verification:** repository source and tests reviewed and committed; this new commit has not yet passed a CI build. Do not interpret any unverified test as already passing.
+- Remaining: evaluate interval overestimation from Gauss-Jordan and transformed matrix products; design a general interval-Newton/Krawczyk refinement for difficult isolated eigenpairs.

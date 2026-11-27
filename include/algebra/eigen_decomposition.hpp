@@ -47,8 +47,10 @@ enum class EigenDecompositionStatus {
 //! \brief Eigenvalues (in ascending order) and eigenvectors stored by columns.
 //! \details For validated coefficients, each entry encloses the corresponding
 //! eigenvalue or normalized eigenvector component for every represented matrix.
-//! The closed-form and triangular implementations use a unit pivot;
-//! the Jacobi approximate implementation uses norm-one eigenvectors.
+//! The closed-form, triangular and direct Gershgorin implementations use
+//! a unit pivot. The approximate Jacobi implementation uses norm-one
+//! eigenvectors; the validated similarity-preconditioned implementation
+//! may use another nonsingular normalization.
 template<class P, class PR>
 struct EigenDecompositionData {
     using NumericType = FloatType<P, PR>;
@@ -71,8 +73,10 @@ struct EigenDecompositionResult {
 //! of order one or two are supported when the spectrum is real and simple.
 //! For dense higher-order matrices, ApproximateTag supports exactly symmetric
 //! real matrices by Jacobi rotations; ValidatedTag supports matrices with
-//! rigorously isolated Gershgorin disks (also nonsymmetric). The latter is a
-//! sufficient condition, not a general-purpose spectral certificate.
+//! rigorously isolated Gershgorin disks, possibly after a certified
+//! similarity using a point-matrix basis seeded by approximate Jacobi
+//! rotations. This also applies to some nonsymmetric matrices. These
+//! are sufficient conditions, not a general-purpose spectral certificate.
 //! An approximate result is never claimed to be validated.
 //! Interval input denotes a family of matrices; a successful validated
 //! result encloses eigenpairs of every member, with consistent ascending
@@ -112,6 +116,12 @@ class EigenDecomposition {
     //! the interval input; succeeds only after interval linear solves and
     //! strict column-diagonal-dominance verification of the eigenvector basis.
     ResultType _gershgorin(const Matrix<NumericType>& A) const;
+
+    //! \brief Certify dense eigenpairs after an interval-verified similarity.
+    //! \details Uses an approximate Jacobi basis as a *candidate* fixed
+    //! coordinate change, verifies its inverse by interval elimination,
+    //! then invokes the rigorous Gershgorin eigenpair certificate.
+    ResultType _preconditioned(const Matrix<NumericType>& A) const;
 
     PR _precision;
 };
