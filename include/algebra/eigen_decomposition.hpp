@@ -32,6 +32,7 @@
 #include <chrono>
 #include <optional>
 
+#include "algebra/diagonal_matrix.hpp"
 #include "algebra/matrix.hpp"
 #include "foundation/paradigm.hpp"
 #include "numeric/float.decl.hpp"
@@ -82,6 +83,17 @@ struct EigenDecompositionData {
     using NumericType = FloatType<P, PR>;
     Vector<NumericType> eigenvalues; //!< Real eigenvalue approximations or enclosures.
     Matrix<NumericType> eigenvectors; //!< Corresponding eigenvectors as columns.
+
+    //! \brief Construct the diagonal eigenvalue matrix D in A*V=V*D.
+    //! \details D has exactly zero off-diagonal entries; in ValidatedTag
+    //! its diagonal entries are eigenvalue enclosures, not necessarily
+    //! point eigenvalues. For every represented input matrix, a coherent
+    //! choice of eigenpairs exists in the returned enclosures, but this
+    //! does not imply literal equality of independently evaluated
+    //! interval matrix products.
+    DiagonalMatrix<NumericType> diagonal_matrix() const {
+        return DiagonalMatrix<NumericType>(eigenvalues);
+    }
 };
 
 //! \brief Result of an eigendecomposition attempt.

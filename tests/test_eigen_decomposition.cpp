@@ -70,6 +70,18 @@ Void test_real_examples(PR pr) {
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), std::abs(values[1u].get_d() - 3.0) < 1e-12);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), std::abs(vectors[1u][0u].get_d() + 1.0) < 1e-12);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), std::abs(vectors[1u][1u].get_d() - 1.0) < 1e-12);
+        const auto D = approximation.data->diagonal_matrix();
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), D.size() == 2u);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            D.at(0u, 1u).raw() == AX(0u, pr).raw());
+        const Matrix<AX> left = a * vectors;
+        const Matrix<AX> right = vectors * D;
+        for (SizeType row = 0u; row != 2u; ++row) {
+            for (SizeType col = 0u; col != 2u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs((left[row][col] - right[row][col]).get_d()) < 1e-12);
+            }
+        }
     }
 
     Matrix<VX> v(2u, 2u, VX(0u, pr));
@@ -86,13 +98,18 @@ Void test_real_examples(PR pr) {
         const auto& eigen = *certificate.data;
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), encloses(eigen.eigenvalues[0u], 1, pr));
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), encloses(eigen.eigenvalues[1u], 3, pr));
-        const auto product = v * eigen.eigenvectors;
+        const auto D = eigen.diagonal_matrix();
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), D.size() == 2u);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            D.at(0u, 1u).lower_raw() == VX(0u, pr).lower_raw() &&
+            D.at(0u, 1u).upper_raw() == VX(0u, pr).upper_raw());
+        const Matrix<VX> product = v * eigen.eigenvectors;
+        const Matrix<VX> expected = eigen.eigenvectors * D;
         for (SizeType row = 0u; row != 2u; ++row) {
             for (SizeType col = 0u; col != 2u; ++col) {
-                const auto expected = eigen.eigenvalues[col] * eigen.eigenvectors[row][col];
                 ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-                    product[row][col].lower_raw() <= expected.upper_raw()
-                    && product[row][col].upper_raw() >= expected.lower_raw());
+                    product[row][col].lower_raw() <= expected[row][col].upper_raw()
+                    && product[row][col].upper_raw() >= expected[row][col].lower_raw());
             }
         }
     }
@@ -683,6 +700,18 @@ Void test_block_diagonal_spectrum(PR precision) {
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         diagnostics.strategy == EigenDecompositionStrategy::BLOCK_DIAGONAL);
     if (point.data && certified.data) {
+        // The same diagonal-matrix API must retain the blockwise
+        // eigenpair ordering, including the repeated eigenvalue.
+        const auto D = certified.data->diagonal_matrix();
+        const Matrix<VX> left = v * certified.data->eigenvectors;
+        const Matrix<VX> right = certified.data->eigenvectors * D;
+        for (SizeType row = 0u; row != 4u; ++row) {
+            for (SizeType col = 0u; col != 4u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    left[row][col].lower_raw() <= right[row][col].upper_raw() &&
+                    left[row][col].upper_raw() >= right[row][col].lower_raw());
+            }
+        }
         const Int expected[4] = {2, 4, 4, 6};
         for (SizeType col = 0u; col != 4u; ++col) {
             ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
