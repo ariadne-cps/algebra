@@ -11,7 +11,77 @@ Do not merge into `main` until implementation, numerical and semantic tests, and
 
 Implement reusable approximate and validated spectral methods in Algebra. Evolution's first-order PDE solver currently takes user-supplied characteristic eigenvalues/eigenvectors. Algebra must remain independent of PDE assumptions; integration with Evolution is a later project.
 
-## Public API direction (first restricted implementation)
+## Current target architecture — approved 2026-11-27
+
+**This section supersedes the historical "Public API direction", "Mathematical
+contracts", and "Proposed milestones" below.** There are no downstream users
+of the experimental spectral API. We are free to change, replace, or delete the
+current classes and result types without compatibility adapters or deprecation.
+
+The intended Algebra responsibilities are independent and layered:
+
+1. **Spectrum<P,PR>** computes all eigenvalues of a real square matrix, with
+   algebraic multiplicities, in a **complex-valued representation**. The result
+   never implies existence of an eigenvector basis. Order of entries is not
+   part of the public contract: Schur block order or structural coordinate
+   order is permitted, and interval eigenvalue boxes may overlap. If the
+   input is an interval family, SUCCESS means that for *every* represented
+   real matrix, its eigenvalue multiset has a labeling enclosed by the
+   returned complex rectangles, with multiplicities. ApproximateTag is
+   not a certificate; ValidatedTag must use interval inclusion proofs.
+2. **SchurDecomposition<P,PR>** (future) represents A=Q*T*Q^T for real
+   matrices, with orthogonal Q and upper real quasi-triangular T (1x1
+   real blocks and 2x2 conjugate-pair blocks). It is the general numerical
+   backend for Spectrum and works for matrices that are defective or
+   have nonreal eigenvalues. Initially implement an approximate real
+   Hessenberg reduction and implicit double-shift Francis QR/deflation.
+   A validated Schur contract needs separate rigorous analysis; do not
+   pretend a floating Q and T prove an interval identity.
+3. **EigenDecomposition<P,PR>** is requested only when a full eigenvector
+   basis (over an explicitly specified real or complex scalar field) is
+   desired. SUCCESS must guarantee the required basis/invertibility in
+   the requested paradigm. A failed diagonalization is not a failed
+   spectrum. Existing real eigensolvers/interval certificates are valuable
+   implementation primitives but the current public shapes are temporary.
+   Do not preserve them merely for backwards compatibility.
+
+**Status semantics:** SUCCESS gives the complete requested result (with
+the requested proof strength), INCONCLUSIVE means not established and never
+asserts nonexistence, and UNSUPPORTED_DIMENSION handles order zero. Future
+handling of known non-diagonalizability must be distinguished from failure to
+certify it. For validated interval families never infer correlation between
+independently represented entries. Repeated enclosures and crossing
+eigenvalues require no artificial fixed sorting of eigenvalue boxes.
+
+**Implementation roadmap, in order:**
+- Stage A: stabilize CI baseline and implement independent Spectrum result
+  for 1x1/2x2 real input with complex pairs and repeated defective spectra,
+  plus triangular matrices of arbitrary order. Exercise DP/MP approximate
+  and validated families. Keep dense order >=3 explicitly inconclusive.
+- Stage B: introduce general approximate real Schur (Householder Hessenberg,
+  implicit double-shift QR, deflation and nonconvergence reporting), with
+  tests for nonreal pairs, Jordan cases, clusters and non-normal matrices.
+  Use Schur to supply Spectrum without requesting a diagonalization.
+- Stage C: extract complex eigenvectors when possible; define exact result
+  types for complete diagonalization and invariant subspaces, retaining
+  the already proved real validated pathways as internal building blocks.
+- Stage D: verified complex isolated eigenvalues and spectral clusters,
+  including multiplicities/invariant subspace enclosures where possible.
+  Failure to certify remains INCONCLUSIVE, never a false proof.
+- Stage E: hard numerical/semantic regressions, DP/MP precision studies,
+  benchmarks performed locally only (CI compile-only), coverage and format
+  review, and only then consider merging into main.
+
+**CI baseline investigation:** commit 919e3da passed functional macOS,
+Windows, Coverage and Sanitizers. Its sole Ubuntu x86 GCC 13 Release
+failure occurred during "Set up Linux dependencies" before CMake, any
+build or any test. This is not evidence of an RTL/C++ regression; the
+exact package/network error is not exposed in the available job metadata.
+No code or workflow change is justified solely by that result.
+The check-format and external Codecov policy failures remain separate,
+with format deferred until pre-merge as previously agreed.
+
+## Historical public API direction (superseded by current target architecture)
 
 - `EigenDecomposition<P, PR>`: algorithm/solver object, with `P` in `ApproximateTag` or `ValidatedTag` and `PR` denoting numeric precision.
 - `EigenDecompositionResult<P, PR>`: corresponding result type. `ApproximateTag` returns approximations without certification. `ValidatedTag` provides mathematically guaranteed enclosures **only when certified**, and an explicit inconclusive status otherwise.
@@ -20,7 +90,7 @@ Implement reusable approximate and validated spectral methods in Algebra. Evolut
 - Prefer an optional validated result over a success-looking empty or invalid enclosure.
 - Input matrices should use the existing Ariadne number/matrix conventions. The exact call signatures, storage of complex outputs, convergence controls and precision traits remain to be decided after checking available primitives.
 
-## Mathematical contracts
+## Historical mathematical contracts (superseded by current target architecture)
 
 For a real square matrix `M`, a diagonalization `M T = T D` requires `T` invertible. Some matrices are defective; some have nonreal eigenvalues. A general eigensolver should ideally expose a Schur-based result even if diagonalization fails.
 
@@ -48,7 +118,7 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - `include/numeric/float.decl.hpp`: `FloatApproximation<PR>` and `FloatBounds<PR>` for DP/MP.
 - No general non-symmetric eigensolver was identified during initial code search.
 
-## Proposed milestones
+## Historical proposed milestones (superseded)
 
 1. **Design and baseline:** this journal, API/contract specification, test matrix catalogue; preserve the baseline.
 2. **Approximate real eigenpairs:** implement a clearly delimited first solver with unit tests and convergence/failure handling.
@@ -441,3 +511,13 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Moved the existing strategy dispatch into a private `_attempt` while preserving the two public `operator()` overloads and recursive calls through the public interface. The public diagnostics overload now checks every successful eigenvalue and eigenvector element for finite raw values (approximate) or finite interval endpoints (validated), as well as result dimensions. If any output is invalid it returns `INCONCLUSIVE` with no data. It makes no new certification assertion, and does not change the numerical solvers, ordering, or selection of approximate candidates.
 - Added a binary64 approximate/validated 3x3 upper-triangular regression with exact diagonal `{1,2,3}` and off-diagonal couplings `2^600` at (0,1) and (1,2). Input coefficients are provably finite while unit-pivot back-substitution for eigenvalue 3 requires a component of magnitude `2^1200/2`, exceeding binary64 range. Both paradigms must now report `INCONCLUSIVE`, retain `TRIANGULAR` diagnostics, and return no data. Reducing both couplings to one must preserve `SUCCESS`. The positive-case DP/MP structural and dense regressions remain intact.
 - **Verification:** source edit and independent exponent reasoning checked. Full new-commit CI compilation/test results have not yet been observed; no claim of passing this new regression is made. Release CI compiles benchmark binaries without running them; `check-format` remains deferred.
+
+
+### 2026-11-27 — separate independent complex Spectrum from diagonalization (this commit)
+
+- Reviewed the 919e3da CI jobs: all functional workflows other than Ubuntu GCC 13 Release passed, and that job stopped at Linux dependency installation before configuration/compilation. No unverified claim of a solver regression, no weakening of numerical tests, and no changes to Format.
+- Superseded the original real-diagonalization-first API plan with Spectrum, SchurDecomposition and EigenDecomposition as distinct requested mathematical results. Explicitly removed all backwards-compatibility commitments: there are no API users yet. Kept the earlier journal sections as labelled historical records, not current mandates.
+- Implemented initial independent header-only Spectrum<P,PR> and SpectrumResult<P,PR>. Output is a vector of Ariadne Complex<FloatType<P,PR>> values, including algebraic repetitions; no eigenvector basis is needed. 1x1, 2x2 and upper/lower triangular real inputs of arbitrary positive order are supported. For 2x2, use a stable real quadratic branch or negative-discriminant conjugate pair, and allow exactly repeated roots of defective matrices. Reject uncertain discriminant sign or nonfinite results with INCONCLUSIVE.
+- For ValidatedTag, every reported complex rectangle encloses the corresponding root for every real matrix of the interval family, using outward arithmetic. Triangular eigenvalues preserve diagonal order (including independently overlapping diagonal intervals), rather than imposing impossible family-wide sorting constraints. Other dense orders >=3 remain INCONCLUSIVE until Schur is implemented: not a false claim of generality.
+- Registered standalone DP/MP tests for a rotation with conjugate complex eigenvalues (including an interval family), a defective Jordan 2x2 with a repeated real eigenvalue, higher-order defective triangular spectra and overlapping uncertain diagonal intervals, plus honest inconclusive dense fallback. Exposed Spectrum in the Algebra umbrella header. Existing EigenDecomposition remains available for now only as a working internal starting point, **not** for compatibility preservation.
+- **Verification:** source and mathematical contracts inspected. New CI compile/test results are pending; do not claim success yet. Release benchmark targets remain compile-only in CI, check-format deferred.

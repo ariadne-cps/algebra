@@ -44,6 +44,7 @@
 #include "algebra/multi_index.hpp"
 #include "algebra/polynomial.hpp"
 #include "algebra/series.hpp"
+#include "algebra/spectrum.hpp"
 #include "algebra/sweeper.hpp"
 #include "algebra/symmetric_matrix.hpp"
 #include "algebra/univariate_differential.hpp"
