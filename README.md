@@ -44,9 +44,10 @@ cmake --build build-release --parallel --target benchmarks
 ./build-release/benchmarks/benchmark_eigen_decomposition --sizes 3,8 --bits 128 --iterations 3 --samples 7 --warmups 1 --csv > eigen-benchmark.csv
 ```
 
-The Ubuntu Release CI **only compiles** the `benchmarks` target; it
-never executes benchmark binaries. Run them manually in a controlled Release
-environment for performance measurements and A/B comparisons.
+The Ubuntu, macOS and Windows Release CI jobs **only compile** the
+`benchmarks` target; they never execute benchmark binaries. Run them
+manually in a controlled Release environment for performance measurements
+and A/B comparisons.
 
 The deterministic workload catalogue includes dense 2x2, upper-triangular,
 dense symmetric with separated disks, and dense symmetric with overlapping

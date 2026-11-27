@@ -231,3 +231,11 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Extended the DP and MP tests: coupled 2x2 linear system and `x^2-2` must pass the Krawczyk unique-root check; a zero preconditioner, a wide Jacobian containing a critical point, and a nonpoint center must fail. Existing image-enclosure tests remain unchanged.
 - This algebraic predicate is immediately reusable by an eigenpair-specific Krawczyk contractor; defer updating `equation-solving` itself until a compatible Algebra revision is available through its pinned Function/Algebra dependency chain, avoiding broken builds or a dependency cycle.
 - **Verification:** source and contracts reviewed and committed, new CI to be checked. `check-format` remains deferred until pre-merge. Benchmarks are compiled but **never executed** in CI.
+
+### 2026-11-27 — compile benchmarks on every Release CI platform (this commit)
+
+- Corrected the previous Ubuntu-only scope after checking the actual `ariadne-cps/numeric` workflows: Numeric compiles `benchmarks` in **Ubuntu, macOS and Windows Release** (including MSVC x64/ARM64), always as a build-only target; no CI benchmark execution occurs.
+- Added to Algebra `.github/workflows/macos.yml` and `.github/workflows/win.yml` the same Release-only `Build Release benchmarks` step that Numeric uses, immediately after the main library/bindings compilation. macOS uses `cmake --build "${{ runner.workspace }}/build" --parallel "$NPROC" --target benchmarks`; Windows uses `cmake --build build --parallel --target benchmarks`.
+- Left the already verified Ubuntu Release build step unchanged, and did not add execution, smoke tests, benchmarking measurements or changes to any Debug, Format, Sanitizers or Coverage workflow.
+- Updated README to describe the three-platform, compile-only policy. This is a CI coverage change only: functional code and workload definitions are unchanged.
+- **Verification:** checked workflow content against Numeric and confirmed required steps and Release conditions in the committed source. Full macOS/Windows compile results for this commit remain pending. Ignore `check-format` until pre-merge as requested.
