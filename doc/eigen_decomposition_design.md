@@ -304,3 +304,11 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Added DP/MP tests of a non-diagonal upper triangular 3x3 with diagonal (1,2,1), a compatible repeated eigenpair, independently known spectrum (1,1,2), residuals in both paradigms, transpose (lower triangular), ambiguous repeated interval descriptions, and an incompatible Jordan block. Every successful validated result still encloses a consistently ordered real eigenbasis for every matrix member.
 - No changes to benchmark execution policy (Release CI **compiles** benchmark binaries only), no new tooling or dependencies, and no new profiling work.
 - **Verification:** source edit and proof obligations reviewed; CI for this new commit remains pending. Any errors found must be classified as RTL/implementation issues versus test expectation rather than suppressed to make regression pass.
+
+### 2026-11-27 — consolidate eigendecomposition template definitions (this commit)
+
+- Following a request to simplify the file structure, consolidated the entire Householder QR/approximate Newton implementation from `include/algebra/eigen_nonsymmetric.tpl.hpp` into the existing `include/algebra/eigen_decomposition.tpl.hpp`. Deleted the additional template header and its internal include.
+- Preserved the QR function definition and its Doxygen contract **verbatim** (apart from surrounding file namespace/guard wrappers). The primary template already includes `<exception>` and `<vector>`, so no new includes are needed.
+- The public `eigen_decomposition.hpp`, algorithm dispatch, test source, build targets, and benchmarks remain unchanged. This is a pure source-organization change, not a new spectral algorithm or an optimization.
+- Verified before commit that the independent QR definition appears exactly once in the merged source and the secondary include reference is gone. CI compilation/test outcomes for the resulting commit must still be checked.
+- Prior commit `2d8b694` had passed Ubuntu, macOS, Windows, Sanitizers and Coverage; `check-format` stays intentionally deferred until pre-merge. Benchmark executables are compiled in Release CI on all three OSes but **never run in CI**.
