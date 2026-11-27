@@ -1016,7 +1016,6 @@ EigenDecomposition<P, PR>::_krawczyk(
         const X one(1u, _precision);
         const AX approximate_zero(0u, _precision);
         const AX approximate_one(1u, _precision);
-        const AX half = approximate_one / AX(2u, _precision);
 
         // QR on the actual midpoint provides real nonsymmetric eigenpairs
         // when available. This is only candidate generation: every proof

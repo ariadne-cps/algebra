@@ -368,3 +368,10 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Added DP/MP validated regression tests with a fully coupled nonsymmetric 3x3 matrix with independently known spectrum `{1,3,5}`, and its interval family formed by a small nonnegative perturbation. Check eigenvalue enclosures and interval `A*V`/`V*D` overlap. Existing non-normal 4x4 tests and all prior pathways remain active.
 - No new dependencies, separate template files, tuning/profiling work or benchmark executions in CI. Benchmark executables remain **compile-only** on Ubuntu/macOS/Windows Release.
 - **Verification:** source semantics and fallback preservation reviewed; CI results for this commit remain pending. `check-format` remains deferred until pre-merge.
+
+### 2026-11-27 — eliminate duplicate local half in the QR/Krawczyk fallback (this commit)
+
+- The `79c2148` eigendecomposition refactor introduced two declarations of `const AX half` in the same `_krawczyk` function scope: one at the start of the method and another just before the symmetrized-Jacobi fallback. Clang fails to compile the header with `redefinition of 'half'` (reported by the macOS Release benchmark build, and other functional CI builds).
+- Removed the **unused outer declaration**. The sole retained `half` is declared immediately before constructing the fallback symmetric seed, its only use. The actual-midpoint QR candidate path, the fallback and all outward-rounded proof obligations are unchanged.
+- Verified the new source contains exactly one local `const AX half` in `_krawczyk`, with the fallback use intact; this is a **C++ compilation fix**, not a test-expectation or algorithm change. New CI outcomes must be checked before claiming compilation/test success.
+- `check-format` remains deferred until pre-merge. Release CI compiles benchmark binaries but never executes them.
