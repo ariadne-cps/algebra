@@ -78,16 +78,6 @@ jobs:
         if: matrix.build_type == 'Release'
         run: cmake --build "${{ runner.workspace }}/build" --parallel "$NPROC" --target benchmarks
 
-      - name: Smoke-test Release eigen benchmark
-        if: matrix.build_type == 'Release'
-        run: |
-          "${{ runner.workspace }}/build/benchmarks/benchmark_eigen_decomposition" \
-            --sizes 3 --bits 80 --iterations 1 --samples 3 \
-            --warmups 0 --summary median,mad
-          "${{ runner.workspace }}/build/benchmarks/benchmark_eigen_decomposition" \
-            --sizes 3 --bits 80 --iterations 1 --samples 3 \
-            --warmups 0 --csv
-
       - name: Install Release library
         if: matrix.build_type == 'Release'
         run: cmake --install "${{ runner.workspace }}/build" --prefix "${{ runner.workspace }}/install"

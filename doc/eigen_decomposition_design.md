@@ -214,3 +214,10 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Added a short Release execution exercising both formatted reporting and CSV with `--sizes 3 --bits 80 --iterations 1 --samples 3 --warmups 0`. This exercises DP and MP, ApproximateTag and ValidatedTag, and each matrix-workload family, while keeping timings outside correctness tests.
 - Documented the smoke check in README. CI timing results are **not performance benchmarks**: accurate A/B measurements require controlled Release runs on the same stable machine.
 - **Verification:** inspected workflow syntax and CMake/build target contracts; GitHub Actions results for this commit still pending. `check-format` remains deferred until the merge; no formatting or workflow changes related to Format.
+
+### 2026-11-27 — enforce compile-only benchmark CI (this commit)
+
+- User requirement: **CI must compile benchmarks, never execute benchmark binaries**. The preceding `a176b81` introduced a Release smoke execution step; this was explicitly rejected as contrary to the benchmarking policy.
+- Removed the `Smoke-test Release eigen benchmark` step in `.github/workflows/ubuntu.yml`. Kept the `Build Release eigen benchmarks` step and its `cmake --build ... --target benchmarks` command in the Release matrix, following Numeric.
+- Updated README to state that benchmark runs are manual and outside CI. No changes to benchmark algorithms, compiler configuration, functional tests or formatting workflows.
+- **Verification:** inspected the resulting workflow and README source; new CI results pending. The preceding commit may already have executed its smoke step before this corrective commit, but future runs of the updated workflow contain no benchmark invocation. `check-format` stays deferred.
