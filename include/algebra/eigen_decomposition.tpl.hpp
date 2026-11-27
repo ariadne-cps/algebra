@@ -472,10 +472,54 @@ EigenDecomposition<P, PR>::operator()(
                                         lifted[earlier[row]] = entry;
                                     }
                                 } catch (const SingularMatrixException&) {
-                                    // A failed interval inverse is not proof
-                                    // of a defective eigenvalue; try the
-                                    // existing dense solver instead.
-                                    viable = false;
+                                    // A singular shifted block may still
+                                    // admit a solution when the coupling
+                                    // has zero projection onto every
+                                    // eigenspace with eigenvalue lambda.
+                                    // Use its already certified eigenbasis,
+                                    // not a pseudoinverse of an interval
+                                    // matrix. Unproved compatibility is
+                                    // inconclusive and falls through.
+                                    const auto& earlier_data =
+                                        *solved_blocks[previous].data;
+                                    const auto inverse_basis =
+                                        earlier_data.inverse_eigenvector_matrix();
+                                    if (!inverse_basis) {
+                                        viable = false;
+                                    } else {
+                                        Vector<X> coefficients(m, zero);
+                                        for (SizeType eig = 0u; eig != m; ++eig) {
+                                            X projection(zero);
+                                            for (SizeType row = 0u; row != m; ++row) {
+                                                projection +=
+                                                    (*inverse_basis)[eig][row] * rhs[row];
+                                            }
+                                            const X difference =
+                                                earlier_data.eigenvalues[eig] - lambda;
+                                            if (this->_nonzero(difference)) {
+                                                coefficients[eig] = -projection / difference;
+                                            } else if (this->_zero(difference) &&
+                                                       this->_zero(projection)) {
+                                                // Compatible repeated exact
+                                                // eigenvalue: set this free
+                                                // eigenvector coordinate to 0.
+                                                coefficients[eig] = zero;
+                                            } else {
+                                                viable = false;
+                                                break;
+                                            }
+                                        }
+                                        if (viable) {
+                                            for (SizeType row = 0u; row != m; ++row) {
+                                                X entry(zero);
+                                                for (SizeType eig = 0u; eig != m; ++eig) {
+                                                    entry += earlier_data.eigenvectors[row][eig] *
+                                                        coefficients[eig];
+                                                }
+                                                lifted[earlier[row]] = entry;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             if (viable) {

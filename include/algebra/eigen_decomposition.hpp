@@ -138,7 +138,10 @@ struct EigenDecompositionResult {
 //! solved by triangular substitution. More general structurally block-upper-
 //! triangular matrices are decomposed into strongly connected diagonal
 //! blocks. Certified interval inverses lift their eigenvectors into the
-//! preceding blocks when spectral separation permits it. Exact repeated eigenvalues are
+//! preceding blocks when spectral separation permits it. When a shifted
+//! block is singular, spectral-coordinate lifting also permits compatible
+//! exactly repeated eigenvalues, provided the coupling has provably zero
+//! projection onto each corresponding eigenspace. Exact repeated eigenvalues are
 //! accepted when their normalized equations are compatible; a defective
 //! or interval-undecidable case is INCONCLUSIVE.
 //! Dense 2x2 real matrices with simple spectrum are supported by closed form.

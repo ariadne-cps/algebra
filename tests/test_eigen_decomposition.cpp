@@ -1264,6 +1264,105 @@ Void test_block_triangular_spectrum(PR precision) {
         !defective.data.has_value());
 }
 
+//! \brief Compatible exact repeated eigenvalues across coupled cyclic blocks.
+template<class PR>
+Void test_compatible_repeated_block_spectrum(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    EigenDecomposition<ValidatedTag, PR> validated(precision);
+
+    // A has an irreducible 2x2 block on {0,2} with spectrum {1,3}
+    // and a coupled singleton at {1} with eigenvalue 3. The coupling
+    // (1,-1) lies entirely in the eigenvalue-1 subspace, so the
+    // repeated eigenvalue 3 is semisimple: A is diagonalizable.
+    const Int coefficients[3][3] = {
+        {2, 1, 1},
+        {0, 3, 0},
+        {1, -1, 2}
+    };
+    Matrix<AX> a(3u, 3u, azero);
+    Matrix<VX> v(3u, 3u, vzero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            a[row][col] = AX(coefficients[row][col], precision);
+            v[row][col] = VX(coefficients[row][col], precision);
+        }
+    }
+
+    EigenDecompositionDiagnostics diagnostics;
+    const auto approximate_result = approximate(a, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate_result.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::BLOCK_TRIANGULAR);
+    const auto validated_result = validated(v, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated_result.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::BLOCK_TRIANGULAR);
+
+    const Int expected[3] = {1, 3, 3};
+    if (approximate_result.data) {
+        const auto& data = *approximate_result.data;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            data.inverse_eigenvector_matrix().has_value());
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(data.eigenvalues[col].get_d() -
+                    static_cast<double>(expected[col])) < 1e-10);
+            for (SizeType row = 0u; row != 3u; ++row) {
+                AX residual(azero);
+                for (SizeType k = 0u; k != 3u; ++k) {
+                    residual += a[row][k] * data.eigenvectors[k][col];
+                }
+                residual -= data.eigenvalues[col] * data.eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs(residual.get_d()) < 1e-10);
+            }
+        }
+    }
+    if (validated_result.data) {
+        const auto& data = *validated_result.data;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            data.inverse_eigenvector_matrix().has_value());
+        const Matrix<VX> left = v * data.eigenvectors;
+        const Matrix<VX> right = data.eigenvectors * data.diagonal_matrix();
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                encloses(data.eigenvalues[col], expected[col], precision));
+            for (SizeType row = 0u; row != 3u; ++row) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    left[row][col].lower_raw() <= right[row][col].upper_raw() &&
+                    left[row][col].upper_raw() >= right[row][col].lower_raw());
+            }
+        }
+    }
+
+    // A different coupling has a nonzero projection onto the
+    // eigenvalue-3 subspace. The two eigenvalues at 3 then form a
+    // defective Jordan chain; there is no complete eigenbasis.
+    a[2u][1u] = AX(1u, precision);
+    v[2u][1u] = VX(1u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate(a).status == Status::INCONCLUSIVE);
+    const auto defective = validated(v);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        defective.status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !defective.data.has_value());
+
+    // Restore exact compatibility and then perturb one independent
+    // coefficient: the interval family contains defective members
+    // and must not be certified as uniformly diagonalizable.
+    v[2u][1u] = VX(-1, precision);
+    v[0u][1u] += VX(0, 1, precision) / VX(1048576u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(v).status == Status::INCONCLUSIVE);
+}
+
 //! \brief Non-normal dense example requiring genuine validated dense certification.
 template<class PR>
 Void test_dense_nonnormal_validated(PR precision) {
@@ -1471,6 +1570,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_diagonal_spectrum(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_triangular_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_triangular_spectrum(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_compatible_repeated_block_spectrum(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_compatible_repeated_block_spectrum(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }
