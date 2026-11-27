@@ -542,6 +542,71 @@ Void test_krawczyk_nonnormal(PR precision) {
     check(A);
 }
 
+//! \brief Optional profiling must not alter eigenpairs or certification.
+template<class PR>
+Void test_eigen_diagnostics(PR precision) {
+    using VX = FloatBounds<PR>;
+    using AX = FloatApproximation<PR>;
+    const VX zero(0u, precision);
+    const VX one(1u, precision);
+    Matrix<VX> dense(3u, 3u, zero);
+    dense[0u][0u] = one;
+    dense[1u][1u] = VX(3u, precision);
+    dense[2u][2u] = VX(5u, precision);
+    const VX off = one / VX(16u, precision);
+    for (SizeType i = 0u; i != 3u; ++i) {
+        for (SizeType j = i + 1u; j != 3u; ++j) {
+            dense[i][j] = off;
+            dense[j][i] = off;
+        }
+    }
+    EigenDecomposition<ValidatedTag, PR> solver(precision);
+    const auto baseline = solver(dense);
+    EigenDecompositionDiagnostics diagnostics;
+    const auto instrumented = solver(dense, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     baseline.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     instrumented.status == baseline.status);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::GERSHGORIN);
+    if (baseline.data && instrumented.data) {
+        for (SizeType i = 0u; i != 3u; ++i) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                baseline.data->eigenvalues[i].lower_raw() ==
+                instrumented.data->eigenvalues[i].lower_raw());
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                baseline.data->eigenvalues[i].upper_raw() ==
+                instrumented.data->eigenvalues[i].upper_raw());
+        }
+    }
+
+    Matrix<AX> symmetric(3u, 3u, AX(0u, precision));
+    symmetric[0u][0u] = AX(2u, precision);
+    symmetric[1u][1u] = AX(2u, precision);
+    symmetric[2u][2u] = AX(2u, precision);
+    symmetric[0u][1u] = AX(1u, precision);
+    symmetric[1u][0u] = AX(1u, precision);
+    symmetric[1u][2u] = AX(1u, precision);
+    symmetric[2u][1u] = AX(1u, precision);
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    const auto approx_baseline = approximate(symmetric);
+    const auto approx_instrumented = approximate(symmetric, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     approx_baseline.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                                     approx_instrumented.status == approx_baseline.status);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::JACOBI);
+    if (approx_baseline.data && approx_instrumented.data) {
+        for (SizeType i = 0u; i != 3u; ++i) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                approx_baseline.data->eigenvalues[i].raw() ==
+                approx_instrumented.data->eigenvalues[i].raw());
+        }
+    }
+}
+
 //! \brief Regression for an MP-visible but binary64-invisible coupling.
 Void test_jacobi_multiprecision() {
     const MultiplePrecision pr(160u);
@@ -604,6 +669,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_jacobi_multiprecision());
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_krawczyk_nonnormal(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_diagnostics(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_eigen_diagnostics(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

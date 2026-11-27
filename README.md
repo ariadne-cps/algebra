@@ -42,6 +42,7 @@ cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON_BINDINGS=O
 cmake --build build-release --parallel --target benchmarks
 ./build-release/benchmarks/benchmark_eigen_decomposition --sizes 3,8,16 --bits 53,128 --iterations 3 --samples 7 --warmups 1 --summary median,mad,p95
 ./build-release/benchmarks/benchmark_eigen_decomposition --sizes 3,8 --bits 128 --iterations 3 --samples 7 --warmups 1 --csv > eigen-benchmark.csv
+./build-release/benchmarks/benchmark_eigen_decomposition --sizes 3,8 --bits 128 --iterations 3 --samples 7 --warmups 1 --profile --csv > eigen-profile.csv
 ```
 
 The Ubuntu, macOS and Windows Release CI jobs **only compile** the
@@ -60,6 +61,15 @@ Their fixed order four is independent of `--sizes`. Options:
 `--sizes` (orders 3–64), `--bits` (MP precision), `--iterations`,
 `--samples` (odd, >=3), `--warmups`, `--summary` and `--csv`.
 DP53 and MP at the selected bit widths are measured with both paradigms.
+
+An optional `--profile` switch instruments the eigendecomposition itself
+and adds the **actual algorithm strategy**, candidate-search median time and
+interval-verification median time (nanoseconds per call). These stage values
+are grouped into disjoint regions; dispatch and minor bookkeeping are not
+accounted for, so they need not sum to end-to-end time. The instrumentation
+adds overhead; compare profiled builds against other profiled builds, not
+against the normal uninstrumented mode. Warm-ups are excluded from all
+statistics. The default CSV columns and normal timing mode are unchanged.
 
 Results report nanoseconds per complete call and the semantic outcome.
 A fast `INCONCLUSIVE` outcome is not equivalent to a successful validated

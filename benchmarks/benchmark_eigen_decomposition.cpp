@@ -51,6 +51,7 @@ struct Selection {
     std::vector<unsigned> sizes{3u, 8u, 16u};
     std::vector<unsigned> bits{53u, 128u};
     bool csv = false;
+    bool profile = false;
 };
 
 /** @brief Parse distinct integral configuration values. */
@@ -110,6 +111,9 @@ List<ArgumentParser> arguments(Selection& selection) {
     parsers.append(make_unvalued_argument_parser(
         "", "csv", "Print CSV instead of a formatted table",
         [&selection] { selection.csv = true; }));
+    parsers.append(make_unvalued_argument_parser(
+        "", "profile", "Collect separate candidate and verification timings",
+        [&selection] { selection.profile = true; }));
     return parsers;
 }
 
@@ -205,7 +209,10 @@ struct Datum {
     unsigned n;
     unsigned bits;
     EigenDecompositionStatus status;
+    EigenDecompositionStrategy strategy;
     Bench::Statistics stats;
+    double candidate_median_ns = 0.0;
+    double verification_median_ns = 0.0;
 };
 
 /** @brief Human-readable outcome. */
@@ -218,6 +225,20 @@ const char* status_name(EigenDecompositionStatus status) {
     }
 }
 
+/** @brief Name the *actual* last attempted or successful algorithm. */
+const char* strategy_name(EigenDecompositionStrategy strategy) {
+    switch(strategy) {
+        case EigenDecompositionStrategy::NONE: return "none";
+        case EigenDecompositionStrategy::ANALYTIC: return "analytic";
+        case EigenDecompositionStrategy::TRIANGULAR: return "triangular";
+        case EigenDecompositionStrategy::JACOBI: return "jacobi";
+        case EigenDecompositionStrategy::GERSHGORIN: return "gershgorin";
+        case EigenDecompositionStrategy::SIMILARITY: return "similarity";
+        case EigenDecompositionStrategy::KRAWCZYK: return "krawczyk";
+        default: return "invalid";
+    }
+}
+
 /** @brief Benchmark full eigendecomposition; verify status outside timing. */
 template<class P, class PR>
 void measure(const char* backend, unsigned bits, PR precision,
@@ -227,7 +248,10 @@ void measure(const char* backend, unsigned bits, PR precision,
     using Status = EigenDecompositionStatus;
     const Matrix<X> input = matrix_for<X>(workload, size, precision);
     const EigenDecomposition<P, PR> solve(precision);
-    const auto pilot = solve(input);
+    EigenDecompositionDiagnostics pilot_diagnostics;
+    const auto pilot = options.profile
+        ? solve(input, &pilot_diagnostics)
+        : solve(input);
     const Status expected = pilot.status;
 
     // An inconclusive result in the rotated case is a genuine outcome.
@@ -243,22 +267,58 @@ void measure(const char* backend, unsigned bits, PR precision,
     Status observed = expected;
     const std::string name = std::string(backend) + "/" + label(workload) +
                              "/n=" + std::to_string(size);
-    const auto samples = runner.run(name, options.samples, [] {}, [&] {
+    Bench::Samples candidate_samples;
+    Bench::Samples verification_samples;
+    double round_candidate = 0.0;
+    double round_verification = 0.0;
+    unsigned completed_rounds = 0u;
+    const auto samples = runner.run(name, options.samples, [&] {
+            round_candidate = 0.0;
+            round_verification = 0.0;
+        }, [&] {
             for(unsigned i = 0u; i != options.iterations; ++i) {
-                const auto output = solve(input);
+                EigenDecompositionDiagnostics diagnostic;
+                const auto output = options.profile
+                    ? solve(input, &diagnostic)
+                    : solve(input);
                 observed = output.status;
+                if(options.profile) {
+                    if(diagnostic.strategy != pilot_diagnostics.strategy)
+                        throw std::runtime_error("inconsistent benchmark strategy: " + name);
+                    round_candidate += static_cast<double>(
+                        diagnostic.candidate_time.count());
+                    round_verification += static_cast<double>(
+                        diagnostic.verification_time.count());
+                }
                 Bench::keep_alive(output);
             }
         }, [&] {
             if(observed != expected)
                 throw std::runtime_error("inconsistent benchmark status: " + name);
+            // The Runner validates warm-ups as well, but reports samples
+            // only after warm-ups. Apply exactly the same filtering here.
+            if(options.profile && completed_rounds >= runner.warmups()) {
+                candidate_samples.add(round_candidate / options.iterations);
+                verification_samples.add(round_verification / options.iterations);
+            }
+            ++completed_rounds;
         }, static_cast<double>(options.iterations));
 
     auto statistics = Bench::summarize(samples);
     if(!std::isfinite(statistics.median) || statistics.median <= 0.0)
         throw std::runtime_error("invalid benchmark duration: " + name);
+    double candidate_median = 0.0;
+    double verification_median = 0.0;
+    if(options.profile) {
+        if(candidate_samples.size() != options.samples ||
+           verification_samples.size() != options.samples)
+            throw std::runtime_error("incomplete profiling samples: " + name);
+        candidate_median = Bench::summarize(candidate_samples).median;
+        verification_median = Bench::summarize(verification_samples).median;
+    }
     results.push_back({backend, label(workload), size, bits,
-                       expected, std::move(statistics)});
+                       expected, pilot_diagnostics.strategy, std::move(statistics),
+                       candidate_median, verification_median});
 }
 
 /** @brief Run each workload for the selected paradigm and precision. */
@@ -291,7 +351,11 @@ void measure_backend(const char* backend, unsigned bits, PR precision,
 void report(const std::vector<Datum>& rows, const Selection& options,
             const Bench::SummaryFields& fields) {
     if(options.csv) {
-        LOGGING_PRINTLN("backend,workload,n,bits,status,median_ns,mad_ns,min_ns,max_ns,p95_ns")
+        if(options.profile) {
+            LOGGING_PRINTLN("backend,workload,n,bits,status,median_ns,mad_ns,min_ns,max_ns,p95_ns,strategy,candidate_median_ns,verification_median_ns")
+        } else {
+            LOGGING_PRINTLN("backend,workload,n,bits,status,median_ns,mad_ns,min_ns,max_ns,p95_ns")
+        }
         for(const auto& row: rows) {
             const auto& s = row.stats;
             std::ostringstream record;
@@ -300,29 +364,62 @@ void report(const std::vector<Datum>& rows, const Selection& options,
                    << row.n << ',' << row.bits << ',' << status_name(row.status) << ','
                    << s.median << ',' << s.mad << ',' << s.minimum << ','
                    << s.maximum << ',' << s.p95;
+            if(options.profile) {
+                record << ',' << strategy_name(row.strategy) << ','
+                       << row.candidate_median_ns << ','
+                       << row.verification_median_ns;
+            }
             LOGGING_PRINTLN(record.str())
         }
     } else {
         Bench::Report table("EigenDecomposition: nanoseconds per call", fields);
-        table.set_dimension_columns({
-            {"Backend"}, {"Workload"},
-            {"n", 0u, Bench::TableAlignment::Right},
-            {"Bits", 0u, Bench::TableAlignment::Right},
-            {"Outcome"}
-        });
+        if(options.profile) {
+            table.set_dimension_columns({
+                {"Backend"}, {"Workload"},
+                {"n", 0u, Bench::TableAlignment::Right},
+                {"Bits", 0u, Bench::TableAlignment::Right},
+                {"Outcome"}, {"Strategy"},
+                {"Candidate ns", 0u, Bench::TableAlignment::Right},
+                {"Verify ns", 0u, Bench::TableAlignment::Right}
+            });
+        } else {
+            table.set_dimension_columns({
+                {"Backend"}, {"Workload"},
+                {"n", 0u, Bench::TableAlignment::Right},
+                {"Bits", 0u, Bench::TableAlignment::Right},
+                {"Outcome"}
+            });
+        }
         auto style = Bench::TableOptions::ruled();
         style.group_columns = {0u, 1u};
         table.set_table_options(style);
         for(const auto& row: rows) {
-            table.add_row({row.backend, row.workload, std::to_string(row.n),
-                           std::to_string(row.bits), status_name(row.status)},
-                          row.stats);
+            if(options.profile) {
+                std::ostringstream candidate;
+                std::ostringstream verified;
+                candidate << std::fixed << std::setprecision(1)
+                          << row.candidate_median_ns;
+                verified << std::fixed << std::setprecision(1)
+                         << row.verification_median_ns;
+                table.add_row({row.backend, row.workload, std::to_string(row.n),
+                               std::to_string(row.bits), status_name(row.status),
+                               strategy_name(row.strategy), candidate.str(),
+                               verified.str()}, row.stats);
+            } else {
+                table.add_row({row.backend, row.workload, std::to_string(row.n),
+                               std::to_string(row.bits), status_name(row.status)},
+                              row.stats);
+            }
         }
         LOGGING_PRINTLN("End-to-end eigenvalue + eigenvector decomposition; "
                         "matrix construction excluded.")
         LOGGING_PRINTLN("iterations=" << options.iterations
                                     << ", samples=" << options.samples
                                     << " (warm-ups via --warmups).")
+        if(options.profile) {
+            LOGGING_PRINTLN("Profiling adds timer overhead; candidate and verification times "
+                            "exclude dispatch/bookkeeping and need not sum to total.")
+        }
         table.print();
     }
 }

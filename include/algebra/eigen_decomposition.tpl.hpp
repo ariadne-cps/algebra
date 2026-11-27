@@ -38,6 +38,28 @@
 
 namespace Ariadne {
 
+//! \brief Account for one optional, non-overlapping algorithm stage.
+class EigenDecompositionSectionTimer {
+  public:
+    explicit EigenDecompositionSectionTimer(std::chrono::nanoseconds* counter)
+        : _counter(counter), _start(counter ? Clock::now() : Clock::time_point{}) {}
+    ~EigenDecompositionSectionTimer() { this->stop(); }
+    void stop() {
+        if (_counter) {
+            *_counter += std::chrono::duration_cast<std::chrono::nanoseconds>(
+                Clock::now() - _start);
+            _counter = nullptr;
+        }
+    }
+    EigenDecompositionSectionTimer(const EigenDecompositionSectionTimer&) = delete;
+    EigenDecompositionSectionTimer& operator=(const EigenDecompositionSectionTimer&) = delete;
+
+  private:
+    using Clock = std::chrono::steady_clock;
+    std::chrono::nanoseconds* _counter;
+    Clock::time_point _start;
+};
+
 template<class P, class PR>
 bool EigenDecomposition<P, PR>::_positive(const NumericType& x) const {
     if constexpr (std::is_same_v<P, ValidatedTag>) {
@@ -74,6 +96,17 @@ bool EigenDecomposition<P, PR>::_nonzero(const NumericType& x) const {
 template<class P, class PR>
 typename EigenDecomposition<P, PR>::ResultType
 EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
+    return this->operator()(M, nullptr);
+}
+
+template<class P, class PR>
+typename EigenDecomposition<P, PR>::ResultType
+EigenDecomposition<P, PR>::operator()(
+        const Matrix<NumericType>& M,
+        EigenDecompositionDiagnostics* diagnostics) const {
+    if (diagnostics) {
+        *diagnostics = {};
+    }
     using X = NumericType;
     using Status = EigenDecompositionStatus;
     ARIADNE_PRECONDITION(M.row_size() == M.column_size());
@@ -102,17 +135,36 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
         }
         if (!upper_triangular && !lower_triangular) {
             if constexpr (std::is_same_v<P, ApproximateTag>) {
+                if (diagnostics) {
+                    diagnostics->strategy = EigenDecompositionStrategy::JACOBI;
+                }
+                EigenDecompositionSectionTimer candidate(
+                    diagnostics ? &diagnostics->candidate_time : nullptr);
                 return this->_symmetric(M);
             } else {
-                const auto direct = this->_gershgorin(M);
+                if (diagnostics) {
+                    diagnostics->strategy = EigenDecompositionStrategy::GERSHGORIN;
+                }
+                ResultType direct;
+                {
+                    EigenDecompositionSectionTimer verified(
+                        diagnostics ? &diagnostics->verification_time : nullptr);
+                    direct = this->_gershgorin(M);
+                }
                 if (direct.status == Status::SUCCESS) {
                     return direct;
                 }
-                const auto preconditioned = this->_preconditioned(M);
+                if (diagnostics) {
+                    diagnostics->strategy = EigenDecompositionStrategy::SIMILARITY;
+                }
+                const auto preconditioned = this->_preconditioned(M, diagnostics);
                 if (preconditioned.status == Status::SUCCESS) {
                     return preconditioned;
                 }
-                return this->_krawczyk(M);
+                if (diagnostics) {
+                    diagnostics->strategy = EigenDecompositionStrategy::KRAWCZYK;
+                }
+                return this->_krawczyk(M, diagnostics);
             }
         }
 
@@ -175,9 +227,15 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
         // The eigenvector matrix is triangular after a column permutation,
         // with exact unit pivots and exact structural zero entries. This
         // proves invertibility without a pessimistic interval determinant.
+        if (diagnostics) {
+            diagnostics->strategy = EigenDecompositionStrategy::TRIANGULAR;
+        }
         return {Status::SUCCESS, EigenDecompositionData<P, PR>{std::move(values), std::move(vectors)}};
     }
 
+    if (diagnostics) {
+        diagnostics->strategy = EigenDecompositionStrategy::ANALYTIC;
+    }
     if (n == 1u) {
         values[0u] = M[0u][0u];
         vectors[0u][0u] = one;
@@ -579,13 +637,17 @@ EigenDecomposition<P, PR>::_gershgorin(const Matrix<NumericType>& input) const {
 /** @brief Certify a dense interval matrix by a validated similarity transform. */
 template<class P, class PR>
 typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::_preconditioned(const Matrix<NumericType>& A) const {
+EigenDecomposition<P, PR>::_preconditioned(
+        const Matrix<NumericType>& A,
+        EigenDecompositionDiagnostics* diagnostics) const {
     using Status = EigenDecompositionStatus;
     if constexpr (!std::is_same_v<P, ValidatedTag>) {
         return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
     } else {
         using X = NumericType;
         using ApproximateX = FloatApproximation<PR>;
+        EigenDecompositionSectionTimer candidate_timer(
+            diagnostics ? &diagnostics->candidate_time : nullptr);
         const SizeType n = A.row_size();
         const X zero(0u, _precision);
         const X one(1u, _precision);
@@ -611,6 +673,9 @@ EigenDecomposition<P, PR>::_preconditioned(const Matrix<NumericType>& A) const {
         if (candidate.status != Status::SUCCESS || !candidate.data) {
             return {Status::INCONCLUSIVE, std::nullopt};
         }
+        candidate_timer.stop();
+        EigenDecompositionSectionTimer verified_timer(
+            diagnostics ? &diagnostics->verification_time : nullptr);
 
         // S is a point matrix: its floating-point coefficients are treated
         // as exact dyadic constants when constructing the interval matrix.
@@ -702,7 +767,9 @@ EigenDecomposition<P, PR>::_preconditioned(const Matrix<NumericType>& A) const {
 /** @brief Verify normalized real eigenpairs by interval Krawczyk inclusion. */
 template<class P, class PR>
 typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::_krawczyk(const Matrix<NumericType>& A) const {
+EigenDecomposition<P, PR>::_krawczyk(
+        const Matrix<NumericType>& A,
+        EigenDecompositionDiagnostics* diagnostics) const {
     using Status = EigenDecompositionStatus;
     if constexpr (!std::is_same_v<P, ValidatedTag>) {
         return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
@@ -710,6 +777,8 @@ EigenDecomposition<P, PR>::_krawczyk(const Matrix<NumericType>& A) const {
         using X = NumericType;
         using AX = FloatApproximation<PR>;
         using Raw = typename AX::RawType;
+        EigenDecompositionSectionTimer candidate_timer(
+            diagnostics ? &diagnostics->candidate_time : nullptr);
         const SizeType n = A.row_size();
         const X zero(0u, _precision);
         const X one(1u, _precision);
@@ -744,12 +813,15 @@ EigenDecomposition<P, PR>::_krawczyk(const Matrix<NumericType>& A) const {
         if (candidates.status != Status::SUCCESS || !candidates.data) {
             return {Status::INCONCLUSIVE, std::nullopt};
         }
+        candidate_timer.stop();
 
         Vector<X> unordered_values(n, zero);
         Matrix<X> unordered_vectors(n, n, zero);
         const X eps(Raw::eps(_precision));
 
         for (SizeType col = 0u; col != n; ++col) {
+            EigenDecompositionSectionTimer newton_timer(
+                diagnostics ? &diagnostics->candidate_time : nullptr);
             SizeType pivot = 0u;
             for (SizeType row = 1u; row != n; ++row) {
                 if (abs(candidates.data->eigenvectors[row][col]).raw() >
@@ -835,6 +907,9 @@ EigenDecomposition<P, PR>::_krawczyk(const Matrix<NumericType>& A) const {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
 
+            newton_timer.stop();
+            EigenDecompositionSectionTimer verified_timer(
+                diagnostics ? &diagnostics->verification_time : nullptr);
             Vector<X> center(n, zero);
             Matrix<X> preconditioner(n, n, zero);
             for (SizeType k = 0u; k != n; ++k) {
@@ -928,6 +1003,8 @@ EigenDecomposition<P, PR>::_krawczyk(const Matrix<NumericType>& A) const {
             }
         }
 
+        EigenDecompositionSectionTimer ordering_timer(
+            diagnostics ? &diagnostics->verification_time : nullptr);
         // Each verified box contains a real normalized eigenpair for
         // every input matrix. Pairwise disjoint real eigenvalue boxes
         // imply exactly n simple real eigenvalues and an invertible

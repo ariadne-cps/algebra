@@ -29,6 +29,7 @@
 #ifndef ARIADNE_EIGEN_DECOMPOSITION_HPP
 #define ARIADNE_EIGEN_DECOMPOSITION_HPP
 
+#include <chrono>
 #include <optional>
 
 #include "algebra/matrix.hpp"
@@ -42,6 +43,29 @@ enum class EigenDecompositionStatus {
     SUCCESS,              //!< All real eigenpairs and an invertible eigenvector basis were obtained.
     INCONCLUSIVE,         //!< The requested real diagonalization was not established.
     UNSUPPORTED_DIMENSION //!< Unsupported structure or dimension for the requested paradigm.
+};
+
+//! \brief Algorithm attempted or successfully used by a decomposition.
+enum class EigenDecompositionStrategy {
+    NONE,          //!< No strategy attempted.
+    ANALYTIC,      //!< 1x1/2x2 closed form.
+    TRIANGULAR,    //!< Triangular eigenvector substitution.
+    JACOBI,        //!< Approximate symmetric Jacobi rotations.
+    GERSHGORIN,    //!< Direct validated disk separation.
+    SIMILARITY,    //!< Verified similarity plus disk separation.
+    KRAWCZYK      //!< Verified eigenpair root inclusion.
+};
+
+//! \brief Optional per-call performance diagnostics for benchmark analysis.
+//! \details Timings are collected only when explicitly requested.
+//! The two disjoint counters cover approximate candidate generation and
+//! interval verification. Algorithm dispatch and minor bookkeeping are
+//! included in neither. Timing incurs overhead and is not a certification.
+//! On failure, strategy identifies the last attempted algorithm.
+struct EigenDecompositionDiagnostics {
+    EigenDecompositionStrategy strategy = EigenDecompositionStrategy::NONE;
+    std::chrono::nanoseconds candidate_time{0};
+    std::chrono::nanoseconds verification_time{0};
 };
 
 //! \brief Eigenvalues (in ascending order) and eigenvectors stored by columns.
@@ -97,6 +121,12 @@ class EigenDecomposition {
 //! or have separated Gershgorin disks in ValidatedTag.
     ResultType operator()(const Matrix<NumericType>& M) const;
 
+    //! \brief Run the same eigendecomposition, collecting optional timings.
+    //! \details Diagnostics are reset on entry; passing nullptr is equivalent
+    //! to the ordinary overload, with no clock reads.
+    ResultType operator()(const Matrix<NumericType>& M,
+                          EigenDecompositionDiagnostics* diagnostics) const;
+
   private:
     //! \brief Decide strict positivity using the requested paradigm.
     bool _positive(const NumericType& x) const;
@@ -122,13 +152,15 @@ class EigenDecomposition {
     //! \details Uses an approximate Jacobi basis as a *candidate* fixed
     //! coordinate change, verifies its inverse by interval elimination,
     //! then invokes the rigorous Gershgorin eigenpair certificate.
-    ResultType _preconditioned(const Matrix<NumericType>& A) const;
+    ResultType _preconditioned(const Matrix<NumericType>& A,
+                               EigenDecompositionDiagnostics* diagnostics) const;
 
     //! \brief Certify each real simple eigenpair via a Krawczyk root box.
     //! \details Fixes one eigenvector component to one, performs approximate
     //! Newton refinement only for seeding, and verifies pointwise-real
     //! eigenpairs using the shared interval Krawczyk root predicate.
-    ResultType _krawczyk(const Matrix<NumericType>& A) const;
+    ResultType _krawczyk(const Matrix<NumericType>& A,
+                          EigenDecompositionDiagnostics* diagnostics) const;
 
     PR _precision;
 };
