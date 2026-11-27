@@ -81,7 +81,7 @@ class Spectrum {
             return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
         }
         const X zero(0u, _precision);
-        const X two(2u, _precision);
+        const X two_value(2u, _precision);
         for (SizeType i = 0u; i != n; ++i) {
             for (SizeType j = 0u; j != n; ++j) {
                 if (!this->_finite(A[i][j])) {
@@ -104,8 +104,8 @@ class Spectrum {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
             if (this->_negative(discriminant)) {
-                const X real_part = trace / two;
-                const X imaginary_part = sqrt(-discriminant) / two;
+                const X real_part = trace / two_value;
+                const X imaginary_part = sqrt(-discriminant) / two_value;
                 result.eigenvalues.emplace_back(real_part, -imaginary_part);
                 result.eigenvalues.emplace_back(real_part, imaginary_part);
             } else if (this->_positive(discriminant)) {
@@ -113,25 +113,25 @@ class Spectrum {
                 const X determinant = a * d - b * c;
                 X lower(zero), upper(zero);
                 if (this->_positive(trace)) {
-                    upper = (trace + root) / two;
+                    upper = (trace + root) / two_value;
                     if (!this->_nonzero(upper)) {
                         return {Status::INCONCLUSIVE, std::nullopt};
                     }
                     lower = determinant / upper;
                 } else if (this->_negative(trace)) {
-                    lower = (trace - root) / two;
+                    lower = (trace - root) / two_value;
                     if (!this->_nonzero(lower)) {
                         return {Status::INCONCLUSIVE, std::nullopt};
                     }
                     upper = determinant / lower;
                 } else {
-                    lower = (trace - root) / two;
-                    upper = (trace + root) / two;
+                    lower = (trace - root) / two_value;
+                    upper = (trace + root) / two_value;
                 }
                 result.eigenvalues.emplace_back(lower, zero);
                 result.eigenvalues.emplace_back(upper, zero);
             } else if (this->_zero(discriminant)) {
-                const X repeated = trace / two;
+                const X repeated = trace / two_value;
                 result.eigenvalues.emplace_back(repeated, zero);
                 result.eigenvalues.emplace_back(repeated, zero);
             } else {
