@@ -28,6 +28,11 @@
 #ifndef ARIADNE_ARIADNE_ALGEBRA_HPP
 #define ARIADNE_ARIADNE_ALGEBRA_HPP
 
+// Include Spectrum before other algebra headers: the dependent alias
+// TranscendentalType in numeric/complex.hpp is also declared in
+// numeric/operators.hpp, and intervening sin overloads make GCC reject it.
+#include "algebra/spectrum.hpp"
+
 #include "algebra/algebra.hpp"
 #include "algebra/chebyshev_polynomial.hpp"
 #include "algebra/covector.hpp"
@@ -44,7 +49,6 @@
 #include "algebra/multi_index.hpp"
 #include "algebra/polynomial.hpp"
 #include "algebra/series.hpp"
-#include "algebra/spectrum.hpp"
 #include "algebra/sweeper.hpp"
 #include "algebra/symmetric_matrix.hpp"
 #include "algebra/univariate_differential.hpp"
