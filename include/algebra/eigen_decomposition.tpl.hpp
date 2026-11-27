@@ -95,7 +95,7 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
     const X& b = M[0u][1u];
     const X& c = M[1u][0u];
     const X& d = M[1u][1u];
-    const X two(2u, _precision);
+    const X two_value(2u, _precision);
     const X four(4u, _precision);
 
     // sqr rather than multiplication is necessary for interval inputs:
@@ -106,8 +106,8 @@ EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
     }
 
     const X root = sqrt(discriminant);
-    values[0u] = (a + d - root) / two;
-    values[1u] = (a + d + root) / two;
+    values[0u] = (a + d - root) / two_value;
+    values[1u] = (a + d + root) / two_value;
 
     // A diagonal matrix has a canonical exact eigenbasis even if both
     // off-diagonal coefficients are identically zero.

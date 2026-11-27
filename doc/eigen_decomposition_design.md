@@ -84,3 +84,9 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - All new C++ files use repository GPL headers with copyright 2026 Luca Geretti.
 - **Verification status:** Code and tests committed for CI; a complete local build cannot run in the available environment (GitHub clone/dependencies unavailable). Passing tests are NOT claimed. Revisit compiler/runtime diagnostics before broadening scope.
 - **Out of scope:** general dimension, complex spectra, clusters, Schur, QR, Krawczyk, and end-to-end PDE integration.
+
+### 2026-11-27 — fix clang -Wshadow in the eigendecomposition (this commit)
+
+- CI macOS/arm64 with Clang and `-Werror -Wshadow` rejected the local `const X two` in `EigenDecomposition<P,PR>::operator()`; `Ariadne::two` is already declared in `numeric/twoexp.hpp`.
+- Renamed the local constant to `two_value` and updated both eigenvalue formulas. This is a naming-only correction; no change to numerical behavior or test coverage.
+- **Verification:** inspected the reported diagnostic and the relevant source; checked the replacement locations. Full compilation and regression results for this new commit remain pending; the earlier CI build was stopped before the test binary could be produced.
