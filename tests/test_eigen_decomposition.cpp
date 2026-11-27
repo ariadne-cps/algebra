@@ -1363,6 +1363,153 @@ Void test_compatible_repeated_block_spectrum(PR precision) {
         validated(v).status == Status::INCONCLUSIVE);
 }
 
+//! \brief Nonfinite input must be rejected even by structural fast paths.
+template<class PR>
+Void test_nonfinite_eigen_inputs(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    using Raw = typename AX::RawType;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    const AX ainf(Raw::inf(precision));
+    const VX vinf(Raw::inf(precision));
+    const AX anan(Raw::nan(precision));
+    const VX vnan(Raw::nan(precision));
+
+    Matrix<AX> scalar_a(1u, 1u, azero);
+    Matrix<VX> scalar_v(1u, 1u, vzero);
+    scalar_a[0u][0u] = ainf;
+    scalar_v[0u][0u] = vinf;
+    const auto infinite_a = approximate(scalar_a);
+    const auto infinite_v = validated(scalar_v);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        infinite_a.status == Status::INCONCLUSIVE &&
+        !infinite_a.data.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        infinite_v.status == Status::INCONCLUSIVE &&
+        !infinite_v.data.has_value());
+
+    scalar_a[0u][0u] = anan;
+    scalar_v[0u][0u] = vnan;
+    const auto nan_a = approximate(scalar_a);
+    const auto nan_v = validated(scalar_v);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        nan_a.status == Status::INCONCLUSIVE && !nan_a.data.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        nan_v.status == Status::INCONCLUSIVE && !nan_v.data.has_value());
+
+    // Infinity in an otherwise structurally triangular system must
+    // not create an unbounded eigenvector with a SUCCESS status.
+    Matrix<AX> three_a(3u, 3u, azero);
+    Matrix<VX> three_v(3u, 3u, vzero);
+    for (SizeType i = 0u; i != 3u; ++i) {
+        three_a[i][i] = AX(static_cast<unsigned>(i + 1u), precision);
+        three_v[i][i] = VX(static_cast<unsigned>(i + 1u), precision);
+    }
+    three_a[0u][2u] = ainf;
+    three_v[0u][2u] = vinf;
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate(three_a).status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(three_v).status == Status::INCONCLUSIVE);
+}
+
+//! \brief Two coupled cyclic diagonal blocks with known real spectrum.
+template<class PR>
+Void test_two_coupled_cyclic_blocks(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    EigenDecomposition<ValidatedTag, PR> validated(precision);
+
+    // The strongly connected blocks {0,2} and {1,3} have spectra
+    // {1,3} and {5,7}; their one-way coupling prevents a block
+    // diagonal dispatch. Exact characteristic polynomial:
+    // (lambda-1)(lambda-3)(lambda-5)(lambda-7).
+    const Int entries[4][4] = {
+        {2, 1, 1, 2},
+        {0, 6, 0, 1},
+        {1, 3, 2, 4},
+        {0, 1, 0, 6}
+    };
+    Matrix<AX> a(4u, 4u, azero);
+    Matrix<VX> v(4u, 4u, vzero);
+    for (SizeType row = 0u; row != 4u; ++row) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            a[row][col] = AX(entries[row][col], precision);
+            v[row][col] = VX(entries[row][col], precision);
+        }
+    }
+
+    EigenDecompositionDiagnostics diagnostics;
+    const auto point = approximate(a, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        point.status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::BLOCK_TRIANGULAR);
+    if (point.data) {
+        const auto& data = *point.data;
+        for (SizeType col = 0u; col != 4u; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(data.eigenvalues[col].get_d() -
+                    static_cast<double>(2u * col + 1u)) < 1e-10);
+            for (SizeType row = 0u; row != 4u; ++row) {
+                AX residual(azero);
+                for (SizeType k = 0u; k != 4u; ++k) {
+                    residual += a[row][k] * data.eigenvectors[k][col];
+                }
+                residual -= data.eigenvalues[col] *
+                    data.eigenvectors[row][col];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs(residual.get_d()) < 1e-10);
+            }
+        }
+    }
+
+    const auto check = [&](const Matrix<VX>& input) {
+        const auto answer = validated(input, &diagnostics);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            answer.status == Status::SUCCESS);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            diagnostics.strategy == EigenDecompositionStrategy::BLOCK_TRIANGULAR);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            answer.data.has_value());
+        if (answer.data) {
+            const auto& data = *answer.data;
+            const Matrix<VX> left = input * data.eigenvectors;
+            for (SizeType col = 0u; col != 4u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    encloses(data.eigenvalues[col],
+                        static_cast<Int>(2u * col + 1u), precision));
+                if (col > 0u) {
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        data.eigenvalues[col - 1u].upper_raw() <
+                        data.eigenvalues[col].lower_raw());
+                }
+                for (SizeType row = 0u; row != 4u; ++row) {
+                    const VX rhs = data.eigenvalues[col] *
+                        data.eigenvectors[row][col];
+                    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                        left[row][col].lower_raw() <= rhs.upper_raw() &&
+                        left[row][col].upper_raw() >= rhs.lower_raw());
+                }
+            }
+        }
+    };
+    check(v);
+
+    // Independent uncertainty affects both a diagonal SCC and an
+    // inter-block coefficient; the exact point remains in the family.
+    const VX delta = VX(0, 1, precision) / VX(1048576u, precision);
+    v[0u][0u] += delta;
+    v[0u][1u] += delta;
+    check(v);
+}
+
 //! \brief Non-normal dense example requiring genuine validated dense certification.
 template<class PR>
 Void test_dense_nonnormal_validated(PR precision) {
@@ -1572,6 +1719,10 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_triangular_spectrum(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_compatible_repeated_block_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_compatible_repeated_block_spectrum(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_two_coupled_cyclic_blocks(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_two_coupled_cyclic_blocks(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonfinite_eigen_inputs(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_nonfinite_eigen_inputs(MultiplePrecision(80u)));
     });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

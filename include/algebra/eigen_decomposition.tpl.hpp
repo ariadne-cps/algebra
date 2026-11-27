@@ -116,6 +116,21 @@ EigenDecomposition<P, PR>::operator()(
     if (n == 0u) {
         return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
     }
+    // Check all input entries before any structural shortcut, including
+    // the 1x1 and block-triangular paths. Only finite real eigenpairs
+    // belong to the result contract.
+    for (SizeType row = 0u; row != n; ++row) {
+        for (SizeType col = 0u; col != n; ++col) {
+            if constexpr (std::is_same_v<P, ValidatedTag>) {
+                if (!is_finite(M[row][col].lower_raw()) ||
+                    !is_finite(M[row][col].upper_raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            } else if (!is_finite(M[row][col].raw())) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+        }
+    }
     const X zero(0u, _precision);
     const X one(1u, _precision);
     Vector<X> values(n, zero);

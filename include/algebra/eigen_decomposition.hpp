@@ -156,6 +156,8 @@ struct EigenDecompositionResult {
 //! eigenpair equations. This also applies to some nonsymmetric matrices.
 //! These are sufficient conditions, not a general-purpose spectral solver.
 //! An approximate result is never claimed to be validated.
+//! Nonfinite input coefficients (including NaN and infinity) are
+//! inconclusive for all positive orders; SUCCESS implies finite input.
 //! Interval input denotes a family of matrices; a successful validated
 //! result encloses eigenpairs of every member, with consistent ascending
 //! eigenvalue order. This is not yet a general-purpose eigensolver.
