@@ -518,6 +518,180 @@ Void test_reordered_schur_subspaces(PR precision) {
     }
 }
 
+//! \brief Check a selected Schur invariant subspace against the original A.
+template<class PR>
+Void check_selected_schur_subspace(
+        const Matrix<FloatApproximation<PR>>& A,
+        const std::optional<SchurInvariantSubspaceData<ApproximateTag, PR>>&
+            selected,
+        SizeType required_dimension) {
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        selected.has_value());
+    if (!selected) { return; }
+    const SizeType n = A.row_size();
+    const SizeType k = selected->basis.column_size();
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        k == required_dimension && selected->basis.row_size() == n &&
+        selected->restriction.row_size() == k &&
+        selected->restriction.column_size() == k);
+    const Matrix<FloatApproximation<PR>> action =
+        A * selected->basis;
+    const Matrix<FloatApproximation<PR>> represented =
+        selected->basis * selected->restriction;
+    const Matrix<FloatApproximation<PR>> gram =
+        transpose(selected->basis) * selected->basis;
+    for (SizeType row = 0u; row != n; ++row) {
+        for (SizeType col = 0u; col != k; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs((action[row][col] -
+                    represented[row][col]).get_d()) < 1e-8);
+        }
+    }
+    for (SizeType row = 0u; row != k; ++row) {
+        for (SizeType col = 0u; col != k; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(gram[row][col].get_d() -
+                    (row == col ? 1.0 : 0.0)) < 1e-8);
+        }
+    }
+}
+
+//! \brief Select complete conjugate-closed spectral groups in real Schur.
+template<class PR>
+Void test_selected_schur_spectral_groups(PR precision) {
+    using AX = FloatApproximation<PR>;
+    const AX zero(0u, precision);
+    const AX half = AX(1u, precision) / AX(2u, precision);
+
+    // Three coupled blocks: real 7, conjugates +/-3i, and real 9.
+    // The upper couplings make the nonleading invariant subspaces
+    // nontrivial: their bases cannot be read as coordinate columns.
+    Matrix<AX> A(4u, 4u, zero);
+    A[0u][0u] = AX(7u, precision);
+    A[1u][2u] = AX(-3, precision);
+    A[2u][1u] = AX(3u, precision);
+    A[3u][3u] = AX(9u, precision);
+    A[0u][1u] = AX(2u, precision);
+    A[0u][2u] = AX(-1, precision);
+    A[0u][3u] = AX(3u, precision);
+    A[1u][3u] = AX(1u, precision);
+    A[2u][3u] = AX(-2, precision);
+    const SchurDecompositionData<ApproximateTag, PR> factors{
+        Matrix<AX>::identity(4u, precision), A, {1u, 2u, 1u}};
+
+    // Explicit selection uses block IDs, NOT individual complex roots.
+    check_selected_schur_subspace(A,
+        factors.selected_invariant_subspace({1u}, precision), 2u);
+    check_selected_schur_subspace(A,
+        factors.selected_invariant_subspace({2u}, precision), 1u);
+    check_selected_schur_subspace(A,
+        factors.selected_invariant_subspace({0u, 2u}, precision), 2u);
+    check_selected_schur_subspace(A,
+        factors.selected_invariant_subspace({2u, 1u, 0u}, precision), 4u);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !factors.selected_invariant_subspace({}, precision) &&
+        !factors.selected_invariant_subspace({1u, 1u}, precision) &&
+        !factors.selected_invariant_subspace({3u}, precision));
+
+    // A real-axis disk is closed under conjugation; +/-3i are
+    // selected TOGETHER without any complex matrix operations.
+    const auto conjugate_pair = factors.invariant_subspace_in_real_disk(
+        zero, AX(4u, precision), precision);
+    check_selected_schur_subspace(A, conjugate_pair, 2u);
+    if (conjugate_pair) {
+        const auto& B = conjugate_pair->restriction;
+        const AX block_trace = B[0u][0u] + B[1u][1u];
+        const AX block_determinant = B[0u][0u] * B[1u][1u] -
+            B[0u][1u] * B[1u][0u];
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            std::abs(block_trace.get_d()) < 1e-8 &&
+            std::abs((block_determinant - AX(9u, precision)).get_d()) < 1e-8);
+    }
+    check_selected_schur_subspace(A,
+        factors.invariant_subspace_in_real_disk(
+            AX(9u, precision), half, precision), 1u);
+    check_selected_schur_subspace(A,
+        factors.invariant_subspace_in_real_disk(
+            AX(8u, precision), AX(2u, precision), precision), 2u);
+    check_selected_schur_subspace(A,
+        factors.invariant_subspace_in_real_disk(
+            zero, AX(20u, precision), precision), 4u);
+
+    // A boundary is INCONCLUSIVE, not a guessed eigenvalue count.
+    // The radius 3 touches the conjugate pair, and the disk about
+    // 8 of radius 1 touches both real roots 7 and 9.
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !factors.invariant_subspace_in_real_disk(
+            zero, AX(3u, precision), precision) &&
+        !factors.invariant_subspace_in_real_disk(
+            AX(8u, precision), AX(1u, precision), precision) &&
+        !factors.invariant_subspace_in_real_disk(
+            zero, AX(1u, precision), precision) &&
+        !factors.invariant_subspace_in_real_disk(
+            zero, zero, precision) &&
+        !factors.invariant_subspace_in_real_disk(
+            zero, AX(-1, precision), precision));
+
+    // Splitting a 2x2 real Schur block via forged metadata must
+    // be rejected. No root sorting or hidden scalarization.
+    auto invalid = factors;
+    invalid.block_sizes = {1u, 1u, 1u, 1u};
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !invalid.invariant_subspace_in_real_disk(
+            zero, AX(4u, precision), precision));
+
+    // The source factorization is unchanged by extraction/reordering.
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        factors.block_sizes.size() == 3u &&
+        factors.block_sizes[0u] == 1u &&
+        factors.block_sizes[1u] == 2u &&
+        factors.block_sizes[2u] == 1u &&
+        std::abs((factors.quasi_triangular[0u][0u] -
+            AX(7u, precision)).get_d()) < 1e-8);
+
+    // A defective Jordan block: the selected disk contains all
+    // three repeated roots, so its FULL real invariant subspace
+    // exists. An arbitrary selected block swap of repeated roots
+    // is singular in Sylvester and must be inconclusive.
+    Matrix<AX> jordan(3u, 3u, zero);
+    for (SizeType i = 0u; i != 3u; ++i) {
+        jordan[i][i] = AX(2u, precision);
+    }
+    jordan[0u][1u] = AX(1u, precision);
+    jordan[1u][2u] = AX(1u, precision);
+    const SchurDecompositionData<ApproximateTag, PR> jordan_factors{
+        Matrix<AX>::identity(3u, precision), jordan, {1u, 1u, 1u}};
+    check_selected_schur_subspace(jordan,
+        jordan_factors.invariant_subspace_in_real_disk(
+            AX(2u, precision), half, precision), 3u);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !jordan_factors.selected_invariant_subspace({1u}, precision));
+
+    // Exercise the same selection against Q,T produced by Francis
+    // rather than only against a supplied synthetic Schur matrix.
+    const Int coefficients[3][3] = {
+        {4, 5, 0}, {3, 4, -4}, {-4, 0, 1}
+    };
+    Matrix<AX> dense(3u, 3u, zero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            dense[row][col] = AX(coefficients[row][col], precision);
+        }
+    }
+    const auto schur =
+        SchurDecomposition<ApproximateTag, PR>(precision)(dense);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        schur.status == SchurStatus::SUCCESS && schur.data.has_value());
+    if (schur.data) {
+        check_selected_schur_subspace(dense,
+            schur.data->invariant_subspace_in_real_disk(
+                zero, AX(4u, precision), precision), 2u);
+        check_selected_schur_subspace(dense,
+            schur.data->invariant_subspace_in_real_disk(
+                AX(9u, precision), half, precision), 1u);
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -541,6 +715,10 @@ int main(int argc, char** argv) {
                 test_reordered_schur_subspaces(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_reordered_schur_subspaces(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_selected_schur_spectral_groups(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_selected_schur_spectral_groups(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

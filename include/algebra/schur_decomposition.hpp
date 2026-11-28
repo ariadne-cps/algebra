@@ -517,6 +517,171 @@ struct SchurDecompositionData {
         }
     }
 
+
+    //! \brief Extract a real invariant subspace for selected Schur blocks.
+    //! \param selected_blocks Indices of complete diagonal blocks in
+    //! the ORIGINAL Schur ordering, without duplicates.
+    //! \param precision Arithmetic precision for block exchanges.
+    //! \return An orthonormal n-by-k basis and k-by-k restriction,
+    //! or no result if selection/reordering is invalid or unstable.
+    //!
+    //! \details The selected blocks are moved to the leading positions
+    //! in the supplied order. Unselected blocks retain their relative
+    //! order. The exchange uses the orthogonal Sylvester-based Schur
+    //! reordering and then leading_invariant_subspace; it never
+    //! separates a conjugate real 2x2 block or assumes that A is
+    //! diagonalizable. The original Schur factors are untouched.
+    //! See reorder_blocks and LAPACK DTREXC (Bai-Demmel, LAWN 54)
+    //! for the mathematical mechanism and its limitations.
+    std::optional<SchurInvariantSubspaceData<P, PR>>
+    selected_invariant_subspace(
+            const std::vector<SizeType>& selected_blocks,
+            PR precision) const {
+        const SizeType count = block_sizes.size();
+        if (selected_blocks.empty() || selected_blocks.size() > count) {
+            return std::nullopt;
+        }
+        std::vector<bool> used(count, false);
+        std::vector<SizeType> permutation;
+        permutation.reserve(count);
+        for (const SizeType index: selected_blocks) {
+            if (index >= count || used[index]) {
+                return std::nullopt;
+            }
+            used[index] = true;
+            permutation.push_back(index);
+        }
+        for (SizeType i = 0u; i != count; ++i) {
+            if (!used[i]) { permutation.push_back(i); }
+        }
+        const auto reordered = this->reorder_blocks(permutation, precision);
+        if (!reordered) { return std::nullopt; }
+        return reordered->leading_invariant_subspace(
+            selected_blocks.size(), precision);
+    }
+
+    //! \brief Select real invariant subspaces inside a conjugation-closed disk.
+    //! \param center Real center of a disk in the complex plane.
+    //! \param radius Strictly positive real radius.
+    //! \param precision Precision for boundary tests and block swaps.
+    //! \return A real invariant subspace for every Schur block strictly
+    //! inside the disk, or no value if the selection is empty,
+    //! intersects a numerically uncertain boundary, or cannot be
+    //! stably reordered.
+    //!
+    //! \details The eigenvalues in a scalar Schur block are real,
+    //! and a nonreal 2x2 real Schur block contains a conjugate pair.
+    //! A disk centered ON THE REAL AXIS is invariant under complex
+    //! conjugation, so it can never select just one member of a
+    //! conjugate pair. For a 2x2 block [a b;c d] with negative
+    //! discriminant Delta=(a-d)^2+4bc, the two eigenvalues have
+    //! real part (a+d)/2 and squared imaginary magnitude -Delta/4.
+    //! Both have the SAME squared distance from the real center r:
+    //! \f[ d^2 = ((a+d)/2-r)^2-\Delta/4. \f]
+    //! For a scalar block lambda, d^2=(lambda-r)^2.
+    //! Classify complete blocks by d^2 compared with radius^2;
+    //! if they approach the boundary within a scale/precision
+    //! tolerance, report INCONCLUSIVE instead of guessing inclusion.
+    //! Selected blocks are then reordered before extraction.
+    //!
+    //! This is an APPROXIMATE spectral selection, not a verified
+    //! eigenvalue-count or contour certificate. In particular the
+    //! chosen radius must be separated from the approximate spectrum.
+    //! Real-only arithmetic is sufficient, and this method is
+    //! explicitly requested rather than invoked by the real fast path.
+    //! See Wilkinson (1965), Chapters 6 and 8, and the Schur
+    //! reordering literature cited by reorder_blocks.
+    std::optional<SchurInvariantSubspaceData<P, PR>>
+    invariant_subspace_in_real_disk(
+            const X& center, const X& radius, PR precision) const {
+        if constexpr (!std::is_same_v<P, ApproximateTag>) {
+            return std::nullopt;
+        } else {
+            using Raw = typename X::RawType;
+            const SizeType n = quasi_triangular.row_size();
+            if (n == 0u || quasi_triangular.column_size() != n ||
+                orthogonal.row_size() != n ||
+                orthogonal.column_size() != n ||
+                block_sizes.empty() ||
+                !is_finite(center.raw()) ||
+                !is_finite(radius.raw())) {
+                return std::nullopt;
+            }
+            const X zero(0u, precision);
+            const X one(1u, precision);
+            const X two(2u, precision);
+            const X four(4u, precision);
+            if (!(radius.raw() > zero.raw())) {
+                return std::nullopt;
+            }
+            X scale(one);
+            if (abs(center).raw() > scale.raw()) { scale = abs(center); }
+            if (radius.raw() > scale.raw()) { scale = radius; }
+            for (SizeType i = 0u; i != n; ++i) {
+                for (SizeType j = 0u; j != n; ++j) {
+                    const X entry = quasi_triangular[i][j];
+                    if (!is_finite(entry.raw())) { return std::nullopt; }
+                    if (abs(entry).raw() > scale.raw()) {
+                        scale = abs(entry);
+                    }
+                }
+            }
+            const X eps(Raw::eps(precision));
+            const X radius_squared = sqr(radius);
+            const X tolerance = X(512u, precision) * eps *
+                sqr(scale) * X(static_cast<unsigned>(n), precision);
+            if (!is_finite(radius_squared.raw()) ||
+                !is_finite(tolerance.raw())) {
+                return std::nullopt;
+            }
+            SizeType offset = 0u;
+            std::vector<SizeType> selected_blocks;
+            selected_blocks.reserve(block_sizes.size());
+            for (SizeType i = 0u; i != block_sizes.size(); ++i) {
+                const SizeType width = block_sizes[i];
+                if ((width != 1u && width != 2u) ||
+                    width > n - offset) {
+                    return std::nullopt;
+                }
+                X distance_squared(zero);
+                if (width == 1u) {
+                    distance_squared = sqr(
+                        quasi_triangular[offset][offset] - center);
+                } else {
+                    const X a = quasi_triangular[offset][offset];
+                    const X b = quasi_triangular[offset][offset + 1u];
+                    const X c = quasi_triangular[offset + 1u][offset];
+                    const X d = quasi_triangular[offset + 1u][offset + 1u];
+                    const X discriminant = sqr(a - d) + four * b * c;
+                    if (!is_finite(discriminant.raw()) ||
+                        !(discriminant.raw() < zero.raw())) {
+                        return std::nullopt;
+                    }
+                    const X real_part = (a + d) / two;
+                    distance_squared = sqr(real_part - center) -
+                        discriminant / four;
+                }
+                if (!is_finite(distance_squared.raw())) {
+                    return std::nullopt;
+                }
+                const X boundary_gap = abs(distance_squared - radius_squared);
+                if (!is_finite(boundary_gap.raw()) ||
+                    boundary_gap.raw() <= tolerance.raw()) {
+                    return std::nullopt;
+                }
+                if (distance_squared.raw() < radius_squared.raw()) {
+                    selected_blocks.push_back(i);
+                }
+                offset += width;
+            }
+            if (offset != n || selected_blocks.empty()) {
+                return std::nullopt;
+            }
+            return this->selected_invariant_subspace(
+                selected_blocks, precision);
+        }
+    }
+
 };
 
 //! \brief Status and optional factors on SUCCESS.
