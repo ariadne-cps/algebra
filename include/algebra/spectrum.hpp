@@ -34,6 +34,7 @@
 #include <utility>
 
 #include "algebra/matrix.hpp"
+#include "algebra/schur_decomposition.hpp"
 #include "numeric/complex.hpp"
 
 namespace Ariadne {
@@ -66,7 +67,9 @@ struct SpectrumResult {
 //! \brief Calculate eigenvalues without requiring diagonalizability.
 //! \details Handles scalar, 2x2 and structurally block-upper-triangular
 //! matrices whose strongly connected diagonal blocks have order at most two.
-//! General dense higher-order strongly connected blocks await Schur.
+//! ApproximateTag also uses a numerical real Schur reduction for dense
+//! higher-order strongly connected blocks; validated dense complex
+//! spectra require a separate certification.
 //! ValidatedTag requires a discriminant with verified sign or exact zero.
 template<class P, class PR>
 class Spectrum {
@@ -191,7 +194,7 @@ class Spectrum {
                         }
                     }
                     if (component.size() > 2u) {
-                        return {Status::INCONCLUSIVE, std::nullopt};
+                        return this->_schur_spectrum(A);
                     }
                     components.push_back(std::move(component));
                 }
@@ -263,6 +266,58 @@ class Spectrum {
     }
 
   private:
+    //! \brief Obtain the approximate spectrum from a complete real Schur form.
+    //! \details Only the approximate paradigm is implemented here;
+    //! validated inputs do not inherit an uncertified Schur approximation.
+    ResultType _schur_spectrum(const Matrix<X>& A) const {
+        using Status = SpectralStatus;
+        if constexpr (!std::is_same_v<P, ApproximateTag>) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        } else {
+            const auto schur = SchurDecomposition<P, PR>(_precision)(A);
+            if (schur.status != SchurStatus::SUCCESS || !schur.data) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            const auto& triangular = schur.data->quasi_triangular;
+            const X zero(0u, _precision);
+            SpectrumData<P, PR> result;
+            SizeType offset = 0u;
+            for (const auto size: schur.data->block_sizes) {
+                if (size == 1u) {
+                    result.eigenvalues.emplace_back(triangular[offset][offset], zero);
+                } else if (size == 2u) {
+                    Matrix<X> block(2u, 2u, zero);
+                    for (SizeType row = 0u; row != 2u; ++row) {
+                        for (SizeType col = 0u; col != 2u; ++col) {
+                            block[row][col] =
+                                triangular[offset + row][offset + col];
+                        }
+                    }
+                    const auto roots = (*this)(block);
+                    if (roots.status != Status::SUCCESS || !roots.data) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    for (const auto& root: roots.data->eigenvalues) {
+                        result.eigenvalues.push_back(root);
+                    }
+                } else {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                offset += size;
+            }
+            if (offset != A.row_size()) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            for (const auto& root: result.eigenvalues) {
+                if (!this->_finite(root.real_part()) ||
+                    !this->_finite(root.imaginary_part())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+            return {Status::SUCCESS, std::move(result)};
+        }
+    }
+
     bool _finite(const X& x) const {
         if constexpr (std::is_same_v<P, ValidatedTag>) {
             return is_finite(x.lower_raw()) && is_finite(x.upper_raw());
