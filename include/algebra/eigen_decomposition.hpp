@@ -23,7 +23,7 @@
  */
 
 /** @file algebra/eigen_decomposition.hpp
- *  @brief Approximate and validated real eigenvalue decompositions.
+ *  @brief Approximate and validated real or complex eigendecomposition.
  */
 
 #ifndef ARIADNE_EIGEN_DECOMPOSITION_HPP
@@ -34,13 +34,15 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
-#include "algebra/complex_eigen_decomposition.hpp"
 #include "algebra/diagonal_matrix.hpp"
 #include "algebra/matrix.hpp"
 #include "algebra/schur_decomposition.hpp"
+#include "algebra/spectrum.hpp"
 #include "foundation/paradigm.hpp"
 #include "numeric/float.decl.hpp"
+#include "numeric/complex.hpp"
 
 namespace Ariadne {
 
@@ -79,6 +81,161 @@ struct EigenDecompositionDiagnostics {
 };
 
 namespace detail {
+
+//! \brief Dense, explicitly initialized storage of complex entries.
+//! \details The generic Matrix<Complex<X>> currently requires scalar
+//! characteristics metadata not provided by numeric/complex.hpp.
+//! Its mutable element proxies also introduce ambiguous complex
+//! operators. Here each indexed element is an actual Complex<X>&,
+//! so arithmetic and assignment retain their intended scalar type.
+//! This storage type is not a second QR or eigendecomposition backend.
+//! It may be replaced once Matrix supports complex coefficients.
+template<class X>
+class ComplexMatrix {
+  public:
+    using ValueType = Complex<X>;
+    using Row = std::vector<ValueType>;
+
+    //! \brief Initialize every entry in an m-by-n matrix.
+    ComplexMatrix(SizeType m, SizeType n, const ValueType& value)
+        : _rows(m, Row(n, value)), _columns(n) {}
+
+    //! \brief Number of rows.
+    SizeType row_size() const { return _rows.size(); }
+    //! \brief Number of columns.
+    SizeType column_size() const { return _columns; }
+
+    //! \brief Mutable row access with ordinary Complex<X> references.
+    Row& operator[](SizeType i) { return _rows.at(i); }
+    //! \brief Read-only row access.
+    const Row& operator[](SizeType i) const { return _rows.at(i); }
+
+  private:
+    std::vector<Row> _rows;
+    SizeType _columns;
+};
+
+//! \brief Outcome of complex diagonalization; failure is not nonexistence.
+enum class ComplexEigenDecompositionStatus {
+    SUCCESS,              //!< Complete complex eigenbasis, numerically checked.
+    INCONCLUSIVE,         //!< A complete well-conditioned basis was not established.
+    UNSUPPORTED_DIMENSION //!< Order-zero matrices are not supported.
+};
+
+//! \brief Approximate A*V = V*D over the complex numbers.
+//! \details The eigenvalues (including conjugate pairs) correspond to
+//! columns of V. The inverse of V is provided and checked numerically.
+//! The factors are approximate: no interval/eigenvalue certification
+//! follows from a small residual alone.
+template<class P, class PR>
+struct ComplexEigenDecompositionData {
+    using X = FloatType<P, PR>;
+    using CX = Complex<X>;
+    std::vector<CX> eigenvalues;
+    ComplexMatrix<X> eigenvectors;
+    ComplexMatrix<X> inverse_eigenvectors;
+};
+
+//! \brief Status and optional diagonalization factors.
+template<class P, class PR>
+struct ComplexEigenDecompositionResult {
+    ComplexEigenDecompositionStatus status;
+    std::optional<ComplexEigenDecompositionData<P, PR>> data;
+};
+
+//! \brief Internal complex eigenvector engine called only by the unified EigenDecomposition.
+//!
+//! \details This internal ApproximateTag implementation is used only
+//! by the single public EigenDecomposition facade when nonreal Schur
+//! blocks require a complex basis. It is restricted to numerically
+//! simple, separated eigenvalues. It does not provide a competing
+//! public eigendecomposition API or duplicate the Schur QR solver.
+//!
+//! \par Method derived from the real Schur form
+//! Take A*Q = Q*T from SchurDecomposition (Householder Hessenberg
+//! reduction and Francis/Wilkinson shifted QR). The unified facade
+//! supplies the already computed Schur factors instead of rerunning QR.
+//! A real Schur diagonal block is either 1x1 with a real eigenvalue or 2x2
+//! with a pair of conjugate complex eigenvalues. The eigenvalues
+//! are extracted with Spectrum's 2x2 quadratic formula.
+//!
+//! For a scalar diagonal block T_kk=lambda, initialize w_k=1.
+//! For a 2x2 block B=[a b;c d] and an eigenvalue lambda,
+//! initialize the corresponding two entries using
+//! \f$w_k=b,\quad w_{k+1}=\lambda-a\f$. Earlier Schur blocks
+//! are solved by block back-substitution in
+//! \f[(T-\lambda I)w=0.\f]
+//! For an earlier 2x2 block, this requires an ordinary complex
+//! 2x2 linear solve; two distinct Schur blocks with nearly
+//! coincident eigenvalues are deliberately rejected rather than
+//! dividing by an unreliable determinant. Lift to the original
+//! coordinates by v=Q*w and scale each vector.
+//!
+//! \par Numerical acceptance and limitations
+//! Before SUCCESS, verify all eigenvalues are separated, all complex
+//! entries are finite, A*V-V*D is small for the ORIGINAL real matrix,
+//! the complex eigenvector matrix V is invertible by pivoted complex
+//! Gauss-Jordan elimination, and both V*V^{-1} and V^{-1}*V are close
+//! to identity. These are approximate numerical checks, not proofs.
+//! Repeated/defective and poorly conditioned spectra may be
+//! INCONCLUSIVE even when a basis mathematically exists. ValidatedTag
+//! currently returns INCONCLUSIVE: no floating Schur transform or
+//! complex Gauss-Jordan inverse is a rigorous interval certificate.
+//!
+//! \par Mathematical sources
+//! - J. H. Wilkinson, The Algebraic Eigenvalue Problem (1965),
+//!   Chapters 6-8: Hessenberg, Schur/QR and eigenvectors.
+//! - J. G. F. Francis, "The QR Transformation", Parts 1 and 2,
+//!   The Computer Journal 4 (1961-1962).
+//! - See SchurDecomposition for the historical references and Doxygen
+//!   derivation of Householder reflections and implicit QR.
+template<class P, class PR>
+class ComplexEigenDecomposition {
+  public:
+    using X = FloatType<P, PR>;
+    using CX = Complex<X>;
+    using Result = ComplexEigenDecompositionResult<P, PR>;
+
+    //! \brief Select the requested real coefficient precision.
+    explicit ComplexEigenDecomposition(PR precision) : _precision(precision) {}
+
+    //! \brief Attempt complex diagonalization by first computing Schur.
+    //! \details Convenience entry point for direct internal testing.
+    //! The unified public facade uses the overload accepting the Schur
+    //! factors it already computed, avoiding duplicate QR reduction.
+    Result operator()(const Matrix<X>& A) const;
+
+    //! \brief Construct complex eigenvectors from supplied real Schur factors.
+    //! \param A Original real matrix; all residual checks use A, not T.
+    //! \param schur_data Factors Q,T from A*Q approximately equal to Q*T.
+    //! \details Reusing Schur data avoids repeating Householder/Hessenberg
+    //! reduction and Francis/Wilkinson QR in the complex fallback.
+    //! The provided factors must be for A; internal structural, residual,
+    //! and inverse-basis checks are retained. This is a numerical method,
+    //! not a validated interval certificate. See SchurDecomposition for
+    //! mathematical derivation and original algorithm references.
+    Result operator()(const Matrix<X>& A,
+                      const SchurDecompositionData<P, PR>& schur_data) const;
+
+  private:
+    bool _finite_real(const X& value) const;
+
+    bool _finite(const CX& value) const;
+
+    X _norm2(const CX& value) const;
+
+    //! \brief Compute and check an approximate complex matrix inverse.
+    //! \details Gauss-Jordan elimination with maximal-modulus-squared
+    //! row pivoting implements invertibility testing without relying
+    //! on real ordered comparisons for complex numbers. A pivot
+    //! below the precision-relative threshold is inconclusive.
+    //! The caller also verifies both inverse residuals.
+    std::optional<ComplexMatrix<X>> _inverse(const ComplexMatrix<X>& V,
+                                       const X& pivot_limit) const;
+
+    PR _precision;
+};
+
 
 //! \brief Eigenvalues (in ascending order) and eigenvectors stored by columns.
 //! \details For validated coefficients, each entry encloses the corresponding

@@ -23,7 +23,7 @@
  */
 
 /** @file algebra/eigen_decomposition.tpl.hpp
- *  @brief Template implementation of real eigendecomposition.
+ *  @brief Template implementations of real and complex eigendecomposition.
  */
 
 #ifndef ARIADNE_EIGEN_DECOMPOSITION_TPL_HPP
@@ -39,6 +39,347 @@
 
 namespace Ariadne {
 namespace detail {
+
+// Complex diagonalization is an implementation detail of the unified solver.
+// Keep its algorithm in this template implementation header.
+
+template<class P, class PR>
+auto ComplexEigenDecomposition<P, PR>::operator()(const Matrix<X>& A) const -> Result {
+        using Status = ComplexEigenDecompositionStatus;
+        ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+        if (A.row_size() == 0u) {
+            return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+        }
+        if constexpr (!std::is_same_v<P, ApproximateTag>) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        } else {
+            const auto schur = SchurDecomposition<P, PR>(_precision)(A);
+            if (schur.status != SchurStatus::SUCCESS || !schur.data) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            return (*this)(A, *schur.data);
+        }
+    }
+
+template<class P, class PR>
+auto ComplexEigenDecomposition<P, PR>::operator()(const Matrix<X>& A,
+                      const SchurDecompositionData<P, PR>& schur_data) const -> Result {
+        using Status = ComplexEigenDecompositionStatus;
+        ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+        const SizeType n = A.row_size();
+        if (n == 0u) {
+            return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+        }
+        if constexpr (!std::is_same_v<P, ApproximateTag>) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        } else {
+            using Raw = typename X::RawType;
+            const X zero(0u, _precision);
+            const X one(1u, _precision);
+            const CX complex_zero(zero, zero);
+            const CX complex_one(one, zero);
+            const X eps(Raw::eps(_precision));
+            X scale(one);
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = 0u; col != n; ++col) {
+                    if (!this->_finite_real(A[row][col])) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    const X size = abs(A[row][col]);
+                    if (size.raw() > scale.raw()) { scale = size; }
+                }
+            }
+            const X separation = X(256u, _precision) * eps * scale;
+            const X residual_limit = X(32768u, _precision) * eps * scale *
+                X(static_cast<unsigned>(n * n), _precision);
+            const X basis_limit = X(32768u, _precision) * eps *
+                X(static_cast<unsigned>(n * n), _precision);
+            const X pivot_limit = X(256u, _precision) * eps *
+                X(static_cast<unsigned>(n), _precision);
+            if (!this->_finite_real(residual_limit) ||
+                !this->_finite_real(separation) ||
+                !this->_finite_real(basis_limit) ||
+                !this->_finite_real(pivot_limit)) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+
+            const Matrix<X>& T = schur_data.quasi_triangular;
+            const Matrix<X>& Q = schur_data.orthogonal;
+            if (T.row_size() != n || T.column_size() != n ||
+                Q.row_size() != n || Q.column_size() != n) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+
+            struct Block {
+                SizeType start;
+                SizeType width;
+            };
+            struct SpectralRootEntry {
+                SizeType block;
+                CX eigenvalue;
+            };
+            std::vector<Block> blocks;
+            std::vector<SpectralRootEntry> roots;
+            SizeType offset = 0u;
+            for (const SizeType width: schur_data.block_sizes) {
+                if ((width != 1u && width != 2u) ||
+                    offset >= n || width > n - offset) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                const SizeType id = blocks.size();
+                blocks.push_back({offset, width});
+                if (width == 1u) {
+                    roots.push_back({id, CX(T[offset][offset], zero)});
+                } else {
+                    Matrix<X> subblock(2u, 2u, zero);
+                    for (SizeType row = 0u; row != 2u; ++row) {
+                        for (SizeType col = 0u; col != 2u; ++col) {
+                            subblock[row][col] = T[offset + row][offset + col];
+                        }
+                    }
+                    const auto pair = Spectrum<P, PR>(_precision)(subblock);
+                    if (pair.status != SpectralStatus::SUCCESS || !pair.data ||
+                        pair.data->eigenvalues.size() != 2u) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    for (const CX& root: pair.data->eigenvalues) {
+                        roots.push_back({id, root});
+                    }
+                }
+                offset += width;
+            }
+            if (offset != n || roots.size() != n) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+
+            // A simple-spectrum contract makes every earlier Schur
+            // block nonsingular at each target eigenvalue. Do not
+            // confuse an unresolved cluster with a valid eigenbasis.
+            const X min_gap_squared = sqr(separation);
+            for (SizeType i = 0u; i != n; ++i) {
+                if (!this->_finite(roots[i].eigenvalue)) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                for (SizeType j = 0u; j != i; ++j) {
+                    const X distance_squared = this->_norm2(
+                        roots[i].eigenvalue - roots[j].eigenvalue);
+                    if (!this->_finite_real(distance_squared) ||
+                        distance_squared.raw() <= min_gap_squared.raw()) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                }
+            }
+
+            ComplexMatrix<X> V(n, n, complex_zero);
+            for (SizeType col = 0u; col != n; ++col) {
+                const CX& lambda = roots[col].eigenvalue;
+                const SizeType id = roots[col].block;
+                const Block& target = blocks[id];
+                std::vector<CX> w(n, complex_zero);
+                if (target.width == 1u) {
+                    w[target.start] = complex_one;
+                } else {
+                    const SizeType k = target.start;
+                    // The vector (b,lambda-a) solves the first
+                    // row of (B-lambda I)w=0 identically. Since
+                    // the discriminant is negative, b is nonzero.
+                    w[k] = CX(T[k][k + 1u], zero);
+                    w[k + 1u] = lambda - CX(T[k][k], zero);
+                }
+
+                for (SizeType before = id; before > 0u;) {
+                    --before;
+                    const Block& block = blocks[before];
+                    const SizeType k = block.start;
+                    const SizeType end = k + block.width;
+                    CX rhs0(complex_zero);
+                    CX rhs1(complex_zero);
+                    for (SizeType j = end; j != n; ++j) {
+                        rhs0 += CX(T[k][j], zero) * w[j];
+                        if (block.width == 2u) {
+                            rhs1 += CX(T[k + 1u][j], zero) * w[j];
+                        }
+                    }
+                    if (block.width == 1u) {
+                        const CX divisor = lambda - CX(T[k][k], zero);
+                        const X size = this->_norm2(divisor);
+                        if (!this->_finite_real(size) ||
+                            size.raw() <= min_gap_squared.raw()) {
+                            return {Status::INCONCLUSIVE, std::nullopt};
+                        }
+                        w[k] = rhs0 / divisor;
+                    } else {
+                        const CX lambda_a = lambda - CX(T[k][k], zero);
+                        const CX lambda_d = lambda - CX(T[k + 1u][k + 1u], zero);
+                        const CX b(T[k][k + 1u], zero);
+                        const CX c(T[k + 1u][k], zero);
+                        const CX determinant = lambda_a * lambda_d - b * c;
+                        const X size = this->_norm2(determinant);
+                        // A 2x2 determinant has eigenvalue^2 units.
+                        const X threshold = sqr(min_gap_squared);
+                        if (!this->_finite_real(size) ||
+                            size.raw() <= threshold.raw()) {
+                            return {Status::INCONCLUSIVE, std::nullopt};
+                        }
+                        w[k] = (lambda_d * rhs0 + b * rhs1) / determinant;
+                        w[k + 1u] = (c * rhs0 + lambda_a * rhs1) / determinant;
+                    }
+                }
+
+                // Lift the Schur eigenvector through the REAL
+                // orthogonal similarity into the original coordinates.
+                X largest(zero);
+                std::vector<CX> lifted(n, complex_zero);
+                for (SizeType row = 0u; row != n; ++row) {
+                    for (SizeType k = 0u; k != n; ++k) {
+                        lifted[row] += CX(Q[row][k], zero) * w[k];
+                    }
+                    const X size = this->_norm2(lifted[row]);
+                    if (!this->_finite_real(size)) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    if (size.raw() > largest.raw()) { largest = size; }
+                }
+                if (!(largest.raw() > zero.raw())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                const X magnitude = sqrt(largest);
+                for (SizeType row = 0u; row != n; ++row) {
+                    V[row][col] = lifted[row] / CX(magnitude, zero);
+                    if (!this->_finite(V[row][col])) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                }
+            }
+
+            const X residual_squared = sqr(residual_limit);
+            for (SizeType col = 0u; col != n; ++col) {
+                for (SizeType row = 0u; row != n; ++row) {
+                    CX action(complex_zero);
+                    for (SizeType k = 0u; k != n; ++k) {
+                        action += CX(A[row][k], zero) * V[k][col];
+                    }
+                    const CX residual = action - roots[col].eigenvalue * V[row][col];
+                    const X size = this->_norm2(residual);
+                    if (!this->_finite_real(size) ||
+                        size.raw() > residual_squared.raw()) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                }
+            }
+
+            auto inverse = this->_inverse(V, pivot_limit);
+            if (!inverse) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            const X basis_squared = sqr(basis_limit);
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = 0u; col != n; ++col) {
+                    CX first(complex_zero);
+                    CX second(complex_zero);
+                    for (SizeType k = 0u; k != n; ++k) {
+                        first += V[row][k] * (*inverse)[k][col];
+                        second += (*inverse)[row][k] * V[k][col];
+                    }
+                    const CX identity = row == col ? complex_one : complex_zero;
+                    const X first_error = this->_norm2(first - identity);
+                    const X second_error = this->_norm2(second - identity);
+                    if (!this->_finite_real(first_error) ||
+                        !this->_finite_real(second_error) ||
+                        first_error.raw() > basis_squared.raw() ||
+                        second_error.raw() > basis_squared.raw()) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                }
+            }
+
+            std::vector<CX> eigenvalues;
+            eigenvalues.reserve(n);
+            for (const SpectralRootEntry& root: roots) {
+                eigenvalues.push_back(root.eigenvalue);
+            }
+            return {Status::SUCCESS, ComplexEigenDecompositionData<P, PR>{
+                std::move(eigenvalues), std::move(V), std::move(*inverse)}};
+        }
+    }
+
+template<class P, class PR>
+bool ComplexEigenDecomposition<P, PR>::_finite_real(const X& value) const {
+        if constexpr (std::is_same_v<P, ApproximateTag>) {
+            return is_finite(value.raw());
+        } else {
+            return is_finite(value.lower_raw()) && is_finite(value.upper_raw());
+        }
+    }
+
+template<class P, class PR>
+bool ComplexEigenDecomposition<P, PR>::_finite(const CX& value) const {
+        return this->_finite_real(value.real_part()) &&
+               this->_finite_real(value.imaginary_part());
+    }
+
+template<class P, class PR>
+auto ComplexEigenDecomposition<P, PR>::_norm2(const CX& value) const -> X {
+        return sqr(value.real_part()) + sqr(value.imaginary_part());
+    }
+
+template<class P, class PR>
+auto ComplexEigenDecomposition<P, PR>::_inverse(const ComplexMatrix<X>& V,
+                                       const X& pivot_limit) const -> std::optional<ComplexMatrix<X>> {
+        const SizeType n = V.row_size();
+        const X zero(0u, _precision);
+        const X one(1u, _precision);
+        const CX complex_zero(zero, zero);
+        const CX complex_one(one, zero);
+        ComplexMatrix<X> work(V);
+        ComplexMatrix<X> inverse(n, n, complex_zero);
+        for (SizeType i = 0u; i != n; ++i) {
+            inverse[i][i] = complex_one;
+        }
+        const X threshold = sqr(pivot_limit);
+        for (SizeType col = 0u; col != n; ++col) {
+            SizeType pivot = col;
+            X largest(zero);
+            for (SizeType row = col; row != n; ++row) {
+                const X size = this->_norm2(work[row][col]);
+                if (!this->_finite_real(size)) { return std::nullopt; }
+                if (size.raw() > largest.raw()) {
+                    largest = size;
+                    pivot = row;
+                }
+            }
+            if (largest.raw() <= threshold.raw()) { return std::nullopt; }
+            if (pivot != col) {
+                for (SizeType j = 0u; j != n; ++j) {
+                    std::swap(work[pivot][j], work[col][j]);
+                    std::swap(inverse[pivot][j], inverse[col][j]);
+                }
+            }
+            const CX diagonal = work[col][col];
+            for (SizeType j = 0u; j != n; ++j) {
+                work[col][j] /= diagonal;
+                inverse[col][j] /= diagonal;
+            }
+            for (SizeType row = 0u; row != n; ++row) {
+                if (row == col) { continue; }
+                const CX factor = work[row][col];
+                for (SizeType j = 0u; j != n; ++j) {
+                    work[row][j] -= factor * work[col][j];
+                    inverse[row][j] -= factor * inverse[col][j];
+                }
+            }
+        }
+        for (SizeType row = 0u; row != n; ++row) {
+            for (SizeType col = 0u; col != n; ++col) {
+                if (!this->_finite(work[row][col]) ||
+                    !this->_finite(inverse[row][col])) {
+                    return std::nullopt;
+                }
+            }
+        }
+        return inverse;
+    }
+
 
 //! \brief Account for one optional, non-overlapping algorithm stage.
 class EigenDecompositionSectionTimer {
