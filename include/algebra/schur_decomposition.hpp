@@ -107,7 +107,11 @@ struct SchurDecompositionResult {
 //! \par Step 3: deflation and acceptance criteria
 //! A sufficiently small subdiagonal entry is set to zero using a
 //! precision/scale-dependent tolerance, splitting off a real 1x1
-//! block or a nonreal 2x2 block. Iterations are bounded. Before
+//! block or a nonreal 2x2 block. A final 2x2 with a real spectrum
+//! is converted to upper triangular form by an orthogonal rotation
+//! built from a real eigenvector; this also permits a defective
+//! repeated real root without requiring a diagonalization.
+//! Iterations are bounded. Before
 //! SUCCESS, finite factors, the 1x1/2x2 block structure, approximate
 //! orthogonality and the ORIGINAL-input residual A*Q-Q*T are checked.
 //! The tolerances are numerical heuristics, not proof of a backward
@@ -242,7 +246,13 @@ class SchurDecomposition {
             SizeType active = n;
             const SizeType limit = 512u * n * n;
             for (SizeType iter = 0u; active != 0u && iter != limit; ++iter) {
-                if (active == 1u) { --active; continue; }
+                // The trailing subdiagonal exists only for active >= 2.
+                // In particular, never form active-2 for a singleton:
+                // SizeType is unsigned and would wrap to its maximum.
+                if (active < 2u) {
+                    active = 0u;
+                    break;
+                }
                 if (abs(T[active - 1u][active - 2u]).raw() <= tolerance.raw()) {
                     T[active - 1u][active - 2u] = zero;
                     --active;
@@ -257,7 +267,60 @@ class SchurDecomposition {
                     return {SchurStatus::INCONCLUSIVE, std::nullopt};
                 }
                 const bool pair = disc.raw() < zero.raw();
-                if (pair && active == 2u) { active = 0u; break; }
+                // At order two, a real Schur block can be finished
+                // directly: with nonreal roots keep the 2x2 block;
+                // with real roots rotate a real eigenvector to e_1.
+                // This also handles a defective repeated real root
+                // without demanding two independent eigenvectors.
+                if (active == 2u) {
+                    if (pair) {
+                        active = 0u;
+                        break;
+                    }
+                    const X root = sqrt(disc);
+                    const X lambda = (a + d + root) / two_value;
+                    // Both vectors are in ker(B-lambda*I) in exact
+                    // arithmetic. Choose the larger to reduce loss
+                    // through cancellation before normalization.
+                    const X first_x = b;
+                    const X first_y = lambda - a;
+                    const X second_x = lambda - d;
+                    const X second_y = c;
+                    const X first_norm = sqr(first_x) + sqr(first_y);
+                    const X second_norm = sqr(second_x) + sqr(second_y);
+                    if (!this->_finite(first_norm) || !this->_finite(second_norm)) {
+                        return {SchurStatus::INCONCLUSIVE, std::nullopt};
+                    }
+                    const bool use_first = first_norm.raw() > second_norm.raw();
+                    const X vx = use_first ? first_x : second_x;
+                    const X vy = use_first ? first_y : second_y;
+                    const X squared = use_first ? first_norm : second_norm;
+                    if (!(squared.raw() > zero.raw())) {
+                        return {SchurStatus::INCONCLUSIVE, std::nullopt};
+                    }
+                    const X magnitude = sqrt(squared);
+                    const X cs = vx / magnitude;
+                    const X sn = vy / magnitude;
+                    if (!this->_finite(cs) || !this->_finite(sn)) {
+                        return {SchurStatus::INCONCLUSIVE, std::nullopt};
+                    }
+                    Matrix<X> final_step = Matrix<X>::identity(n, _precision);
+                    final_step[0u][0u] = cs;
+                    final_step[1u][0u] = sn;
+                    final_step[0u][1u] = -sn;
+                    final_step[1u][1u] = cs;
+                    // Apply the similarity to the full matrix so that
+                    // couplings to previously deflated blocks rotate too.
+                    T = transpose(final_step) * (T * final_step);
+                    Q = Q * final_step;
+                    if (!this->_finite_matrix(T) || !this->_finite_matrix(Q) ||
+                        abs(T[1u][0u]).raw() > tolerance.raw()) {
+                        return {SchurStatus::INCONCLUSIVE, std::nullopt};
+                    }
+                    T[1u][0u] = zero;
+                    active = 0u;
+                    break;
+                }
                 if (pair && active > 2u &&
                     abs(T[active - 2u][active - 3u]).raw() <= tolerance.raw()) {
                     T[active - 2u][active - 3u] = zero;

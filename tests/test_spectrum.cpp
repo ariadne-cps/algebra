@@ -148,11 +148,43 @@ Void test_spectrum(PR precision) {
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         validated(triangular_v).status == Status::SUCCESS);
 
-    // Dense 3x3 complex Schur support has not yet been implemented.
+    // Closing the 3x3 cycle produces a dense, non-triangular real
+    // matrix with characteristic polynomial
+    // lambda^3 - 9*lambda^2 + 24*lambda - 21.
+    // Its independently computed roots are one real and one
+    // nonreal conjugate pair. The new approximate Schur backend
+    // must report the complete spectrum, without eigenvectors.
     triangular[2u][0u] = AX(1u, precision);
     triangular_v[2u][0u] = VX(1u, precision);
+    const auto dense = approximate(triangular);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-        approximate(triangular).status == Status::INCONCLUSIVE);
+        dense.status == Status::SUCCESS && dense.data.has_value());
+    if (dense.data) {
+        const double expected_real = 5.10380340273554;
+        const double expected_pair_real = 1.94809829863223;
+        const double expected_pair_imag = 0.565235851677171;
+        SizeType real_count = 0u;
+        SizeType negative_count = 0u;
+        SizeType positive_count = 0u;
+        for (const auto& eigenvalue: dense.data->eigenvalues) {
+            const double real_part = eigenvalue.real_part().get_d();
+            const double imaginary_part = eigenvalue.imaginary_part().get_d();
+            if (std::abs(real_part - expected_real) < 1e-8 &&
+                std::abs(imaginary_part) < 1e-8) {
+                ++real_count;
+            } else if (std::abs(real_part - expected_pair_real) < 1e-8 &&
+                       std::abs(imaginary_part + expected_pair_imag) < 1e-8) {
+                ++negative_count;
+            } else if (std::abs(real_part - expected_pair_real) < 1e-8 &&
+                       std::abs(imaginary_part - expected_pair_imag) < 1e-8) {
+                ++positive_count;
+            }
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            dense.data->eigenvalues.size() == 3u &&
+            real_count == 1u && negative_count == 1u && positive_count == 1u);
+    }
+    // The interval family has no general complex certification yet.
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         validated(triangular_v).status == Status::INCONCLUSIVE);
 }
@@ -235,12 +267,41 @@ Void test_structural_complex_spectrum(PR precision) {
     v[1u][1u] += VX(0, 1, precision) / VX(1024u, precision);
     check(v);
 
-    // The closing edge makes all 4 vertices mutually reachable; the
-    // present exact structural method must refuse to assert a result.
+    // A closing edge makes all four vertices strongly connected.
+    // It is no longer a structural 1x1/2x2 case, but the new
+    // approximate Schur backend must still compute the spectrum.
+    // Characteristic polynomial:
+    // lambda^4-8*lambda^3+16*lambda^2-9*lambda+16.
     a[3u][0u] = AX(1u, precision);
     v[3u][0u] = VX(1u, precision);
+    const auto dense = approximate(a);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-        approximate(a).status == SpectralStatus::INCONCLUSIVE);
+        dense.status == SpectralStatus::SUCCESS && dense.data.has_value());
+    if (dense.data) {
+        const double expected_real[2] = {2.90371299040682, 5.07346898592983};
+        const double pair_real = 0.0114090118316761;
+        const double pair_imag = 1.04208853101622;
+        SizeType real_count = 0u, positive_count = 0u, negative_count = 0u;
+        for (const auto& eigenvalue: dense.data->eigenvalues) {
+            const double re = eigenvalue.real_part().get_d();
+            const double im = eigenvalue.imaginary_part().get_d();
+            if (std::abs(im) < 1e-8 &&
+                (std::abs(re - expected_real[0u]) < 1e-8 ||
+                 std::abs(re - expected_real[1u]) < 1e-8)) {
+                ++real_count;
+            } else if (std::abs(re - pair_real) < 1e-8 &&
+                       std::abs(im - pair_imag) < 1e-8) {
+                ++positive_count;
+            } else if (std::abs(re - pair_real) < 1e-8 &&
+                       std::abs(im + pair_imag) < 1e-8) {
+                ++negative_count;
+            }
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            dense.data->eigenvalues.size() == 4u &&
+            real_count == 2u && negative_count == 1u && positive_count == 1u);
+    }
+    // The full interval-family complex spectrum is not certified.
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         validated(v).status == SpectralStatus::INCONCLUSIVE);
 }
