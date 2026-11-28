@@ -297,6 +297,29 @@ Void test_unified_eigen_decomposition(PR precision) {
         complex_result.complex_data() != nullptr);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         diagnostics.strategy == EigenDecompositionStrategy::COMPLEX_SCHUR);
+
+    // Default overload: complex factorization succeeds without a
+    // diagnostics pointer, with the same ordered Schur eigenvalues.
+    const auto without_diagnostics = solver(rotation);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        without_diagnostics.status == Status::SUCCESS &&
+        without_diagnostics.complex_data() != nullptr &&
+        without_diagnostics.real_data() == nullptr);
+    if (without_diagnostics.complex_data() && complex_result.complex_data()) {
+        const auto& first = without_diagnostics.complex_data()->eigenvalues;
+        const auto& second = complex_result.complex_data()->eigenvalues;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            first.size() == second.size());
+        if (first.size() == second.size()) {
+            for (SizeType i = 0u; i != first.size(); ++i) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs((first[i].real_part() -
+                              second[i].real_part()).get_d()) < 1e-8 &&
+                    std::abs((first[i].imaginary_part() -
+                              second[i].imaginary_part()).get_d()) < 1e-8);
+            }
+        }
+    }
     if (complex_result.complex_data()) {
         const auto& data = *complex_result.complex_data();
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
@@ -322,10 +345,39 @@ Void test_unified_eigen_decomposition(PR precision) {
     jordan[0u][0u] = AX(2u, precision);
     jordan[0u][1u] = AX(1u, precision);
     jordan[1u][1u] = AX(2u, precision);
-    const auto defective = solver(jordan);
+    const auto defective = solver(jordan, &diagnostics);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         defective.status == Status::INCONCLUSIVE &&
-        !defective.data.has_value());
+        !defective.data.has_value() &&
+        defective.real_data() == nullptr &&
+        defective.complex_data() == nullptr &&
+        diagnostics.strategy != EigenDecompositionStrategy::COMPLEX_SCHUR);
+
+    // Two independent identical conjugate pairs have a mathematically
+    // complete complex eigenbasis, but the current complex back-solver
+    // deliberately requires a separated simple spectrum.
+    Matrix<AX> repeated_pairs(4u, 4u, zero);
+    repeated_pairs[0u][1u] = AX(-1, precision);
+    repeated_pairs[1u][0u] = AX(1u, precision);
+    repeated_pairs[2u][3u] = AX(-1, precision);
+    repeated_pairs[3u][2u] = AX(1u, precision);
+    const auto repeated = solver(repeated_pairs, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        repeated.status == Status::INCONCLUSIVE &&
+        !repeated.data.has_value() &&
+        repeated.real_data() == nullptr &&
+        repeated.complex_data() == nullptr &&
+        diagnostics.strategy == EigenDecompositionStrategy::COMPLEX_SCHUR);
+
+    // Order zero has its own unsupported status; querying either
+    // absent representation must remain safe.
+    Matrix<AX> empty(0u, 0u, zero);
+    const auto unsupported = solver(empty, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        unsupported.status == Status::UNSUPPORTED_DIMENSION &&
+        !unsupported.data.has_value() &&
+        unsupported.real_data() == nullptr &&
+        unsupported.complex_data() == nullptr);
 
     // Preserve validated real-basis certificates as real data.
     Matrix<VX> certified(2u, 2u, VX(0u, precision));
@@ -344,7 +396,9 @@ Void test_unified_eigen_decomposition(PR precision) {
     const auto unverified = validated(validated_rotation);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         unverified.status == Status::INCONCLUSIVE &&
-        !unverified.data.has_value());
+        !unverified.data.has_value() &&
+        unverified.real_data() == nullptr &&
+        unverified.complex_data() == nullptr);
 }
 
 
