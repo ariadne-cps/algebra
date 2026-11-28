@@ -375,16 +375,15 @@ Void test_mixed_schur_components(PR precision) {
 
     // A numerical Schur factor for the 3x3 block is not a rigorous
     // enclosure for the corresponding interval matrix family.
+    const Spectrum<ValidatedTag, PR> validated(precision);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-        Spectrum<ValidatedTag, PR>(precision)(v).status ==
-            SpectralStatus::INCONCLUSIVE);
+        validated(v).status == SpectralStatus::INCONCLUSIVE);
 
     // An uncertain cross-block coefficient may include zero but
     // must never create a reverse directed edge in SCC analysis.
     v[0u][1u] += VX(-1, 1, precision);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-        Spectrum<ValidatedTag, PR>(precision)(v).status ==
-            SpectralStatus::INCONCLUSIVE);
+        validated(v).status == SpectralStatus::INCONCLUSIVE);
 }
 
 } // namespace
