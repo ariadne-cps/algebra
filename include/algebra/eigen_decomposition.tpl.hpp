@@ -1770,11 +1770,17 @@ EigenDecomposition<P, PR>::_krawczyk(
 }
 
 /** @brief Compute a real nonsymmetric eigendecomposition when numerically resolvable.
- *  @details Real-shift Householder QR with trailing-row deflation gives initial
- *  eigenvalues and approximate Schur vectors. Eigenpairs are subsequently
- *  refined with Newton's method on the normalized equations
- *  (A-lambda I)v=0, v[pivot]=1. All decisions use the input DP/MP precision.
- *  This is an approximate method, NOT a proof of diagonalizability.
+ *  @details The algorithm performs real-shift Householder QR iterations
+ *  on the full current active matrix, without a prior Hessenberg
+ *  reduction (unlike SchurDecomposition). It uses trailing-row deflation
+ *  to find approximate real roots and back-substitutes approximate
+ *  vectors, then applies Newton iteration to (A-lambda I)v=0 with
+ *  v[pivot]=1 on the ORIGINAL matrix. It rejects unresolved or non-real
+ *  eigenvalues, small spectral gaps and invalid bases.
+ *  The factorization uses Householder's orthogonal reflections (1958);
+ *  shifted QR and deflation are in Francis (1961-1962) and Wilkinson
+ *  (1965), The Algebraic Eigenvalue Problem, Chapter 8.
+ *  This is a numerical approximation, NOT a validation certificate.
  */
 template<class P, class PR>
 typename EigenDecomposition<P, PR>::ResultType

@@ -201,21 +201,46 @@ class EigenDecomposition {
     bool _nonzero(const NumericType& x) const;
 
     //! \brief Approximate a real orthogonal eigenbasis of a symmetric dense matrix.
-    //! \details Implemented using Jacobi plane rotations for ApproximateTag.
+    //! \details Uses the classical Jacobi eigenvalue method: successive
+    //! orthogonal rotations in coordinate planes (p,q) annihilate
+    //! off-diagonal entries of a real symmetric matrix. The same rotations
+    //! are accumulated into an approximate orthogonal eigenvector basis.
+    //! Symmetry is checked; no non-symmetric input is silently symmetrized.
+    //! See J. H. Wilkinson, The Algebraic Eigenvalue Problem (1965),
+    //! Chapter 5 (symmetric/Hermitian eigenproblems).
     //! Other paradigms or inconclusive numerical convergence report failure.
     ResultType _symmetric(const Matrix<NumericType>& A) const;
 
-    //! \brief Approximate a complete simple real spectrum of a dense matrix.
-    //! \details Uses shifted real Householder QR followed by normalized
-    //! Newton eigenpair refinement; does not enclose or certify eigenpairs.
-    //! Non-real, multiple, unresolved or ill-conditioned spectra return
-    //! INCONCLUSIVE rather than an incorrect real diagonalization.
+    //! \brief Approximate real diagonalization of a dense nonsymmetric matrix.
+    //! \details Applies QR iteration with a real shift chosen from the
+    //! trailing 2x2 block, using Householder reflections (1958) to
+    //! factor the shifted matrix without Gram-Schmidt instability.
+    //! A shifted QR step is an approximate orthogonal similarity
+    //! \f$T-\mu I=QR,\quad T_{\mathrm{new}}=RQ+\mu I\f$.
+    //! The resulting real triangular approximation seeds Newton
+    //! refinement of the original eigenpair equations
+    //! \f$(A-\lambda I)v=0\f$ under a fixed unit-pivot normalization.
+    //! Unlike SchurDecomposition, this older diagonalization path does
+    //! NOT first reduce the input to Hessenberg form and cannot
+    //! provide a complex or repeated spectrum in general.
+    //! See Householder, JACM 5(4) (1958), Francis, Computer Journal
+    //! 4 (1961-1962), and Wilkinson, The Algebraic Eigenvalue Problem
+    //! (1965), Chapter 8. No result here is a validation certificate.
+    //! Non-real, multiple, unresolved or ill-conditioned cases return
+    //! INCONCLUSIVE instead of claiming a complete real basis.
     ResultType _nonsymmetric(const Matrix<NumericType>& A) const;
 
-    //! \brief Certify a dense matrix with pairwise disjoint Gershgorin disks.
-    //! \details Encloses a real eigenpair for every disk and every matrix in
-    //! the interval input; succeeds only after interval linear solves and
-    //! strict column-diagonal-dominance verification of the eigenvector basis.
+    //! \brief Certify a dense matrix using disjoint Gershgorin disks.
+    //! \details Gershgorin's circle theorem (1931) localizes eigenvalues
+    //! of A within disks centered at diagonal entries, with radii given
+    //! by sums of absolute off-diagonal entries. A disjoint disk contains
+    //! exactly one eigenvalue with algebraic multiplicity. Here outward
+    //! interval arithmetic, certified linear solves, and strict
+    //! column-diagonal-dominance establish a real eigenbasis for all
+    //! matrices in the input interval family when successful.
+    //! See S. Gerschgorin, "Ueber die Abgrenzung der Eigenwerte einer
+    //! Matrix", Bulletin de l'Academie des Sciences de l'URSS,
+    //! no. 6, 749-754 (1931), https://www.mathnet.ru/eng/im5235.
     ResultType _gershgorin(const Matrix<NumericType>& A) const;
 
     //! \brief Certify dense eigenpairs after an interval-verified similarity.
@@ -228,12 +253,17 @@ class EigenDecomposition {
     ResultType _preconditioned(const Matrix<NumericType>& A,
                                EigenDecompositionDiagnostics* diagnostics) const;
 
-    //! \brief Certify each real simple eigenpair via a Krawczyk root box.
-    //! \details Fixes one eigenvector component to one, performs approximate
-    //! Newton refinement only for seeding, preferring a QR eigenbasis of
-    //! the actual midpoint and falling back to symmetrized Jacobi, then
-    //! verifies pointwise-real eigenpairs using the shared interval
-    //! Krawczyk root predicate.
+    //! \brief Certify a real simple eigenpair with an interval Krawczyk operator.
+    //! \details Treats the normalized eigenpair equations
+    //! \f$F(\lambda,v)=(Av-\lambda v,\ v_p-1)=0\f$ as a square
+    //! nonlinear system after fixing a pivot component. Approximate
+    //! QR/Newton (or Jacobi) supplies only a candidate center; an
+    //! interval Jacobian and approximate inverse enter Krawczyk's
+    //! inclusion test. Only a verified inclusion yields SUCCESS.
+    //! The interval fixed-point method originates with R. Krawczyk,
+    //! "Newton-Algorithmen zur Bestimmung von Nullstellen mit
+    //! Fehlerschranken", Computing 4, 187-201 (1969).
+    //! Uncertified candidates remain INCONCLUSIVE.
     ResultType _krawczyk(const Matrix<NumericType>& A,
                           EigenDecompositionDiagnostics* diagnostics) const;
 

@@ -23,7 +23,11 @@
  */
 
 /** @file algebra/schur_decomposition.hpp
- *  @brief Approximate real Schur form by Hessenberg and shifted QR.
+ *  @brief Real Schur reduction using Householder reflections and shifted QR.
+ *
+ *  @details Mathematical background and historical references are documented
+ *  on SchurDecomposition. The present double shift is explicit: it must not
+ *  be confused with Francis's implicit double-shift algorithm.
  */
 #ifndef ARIADNE_SCHUR_DECOMPOSITION_HPP
 #define ARIADNE_SCHUR_DECOMPOSITION_HPP
@@ -40,9 +44,13 @@ namespace Ariadne {
 //! \brief Status of a Schur computation; INCONCLUSIVE is not nonexistence.
 enum class SchurStatus { SUCCESS, INCONCLUSIVE, UNSUPPORTED_DIMENSION };
 
-//! \brief Approximate A*Q=Q*T, with real quasi-triangular T.
-//! \details Blocks have sizes one or two. A two-block is reserved for
-//! a strictly nonreal conjugate pair. This is NOT a validated certificate.
+//! \brief Real Schur factors approximating A*Q = Q*T.
+//! \details Q is approximately orthogonal; T is real upper quasi-triangular.
+//! Its diagonal 1x1 blocks hold real eigenvalues, while 2x2 blocks hold
+//! complex-conjugate eigenvalue pairs (negative 2x2 discriminant).
+//! A real Schur form exists even if A is defective and has no eigenbasis.
+//! The factors are floating-point approximations, NOT interval certificates.
+//! \see SchurDecomposition for the underlying reductions and references.
 template<class P, class PR>
 struct SchurDecompositionData {
     using X = FloatType<P, PR>;
@@ -58,20 +66,85 @@ struct SchurDecompositionResult {
     std::optional<SchurDecompositionData<P, PR>> data;
 };
 
-//! \brief Conservative first real Schur backend.
-//! \details ApproximateTag: Householder Hessenberg reduction followed by
-//! real Wilkinson single shifts or explicit quadratic double shifts.
-//! All successful outputs pass finite, structure, orthogonality and
-//! original-matrix residual checks. An implicit Francis bulge-chasing
-//! implementation will replace the explicit polynomial QR in future.
-//! ValidatedTag is not yet supported and always returns INCONCLUSIVE.
+//! \brief Approximate a real Schur decomposition of a real square matrix.
+//!
+//! \details The real Schur theorem gives an orthogonal Q and a real
+//! quasi-upper-triangular T such that
+//! \f[ A = Q T Q^{\mathsf T}, \qquad Q^{\mathsf T}Q=I. \f]
+//! Scalar diagonal blocks encode real eigenvalues; irreducible 2x2
+//! diagonal blocks encode conjugate nonreal eigenvalues. Schur reduction
+//! does not assume diagonalizability and does not produce eigenvectors.
+//!
+//! \par Step 1: Householder reflections and Hessenberg reduction
+//! A Householder reflector is an orthogonal, symmetric matrix
+//! \f[ U = I - 2vv^{\mathsf T}/(v^{\mathsf T}v). \f]
+//! Choosing v from the portion of column k below the diagonal makes
+//! the components below the first subdiagonal vanish after applying
+//! the similarity T <- U*T*U, while accumulating Q <- Q*U. Repeating
+//! this for k=0,...,n-3 yields an upper Hessenberg matrix H, i.e.
+//! H(i,j)=0 when i>j+1. Orthogonal similarity preserves eigenvalues
+//! and is preferable to a nonorthogonal triangularization because
+//! it does not amplify errors through an ill-conditioned basis.
+//! The reflection construction derives from Householder's 1958
+//! orthogonal triangularization; its use for Hessenberg eigenvalue
+//! reduction is described by Wilkinson (1965, Chapter 6).
+//!
+//! \par Step 2: shifted QR transformations
+//! For a real shift mu, form H-mu*I=U*R by Householder QR, then set
+//! \f[ H_{\mathrm{new}} = R U+\mu I = U^{\mathsf T} H U. \f]
+//! The shift is chosen as the real eigenvalue of the trailing 2x2
+//! block closest to its bottom-right diagonal entry (a Wilkinson-type
+//! shift). When that 2x2 has a negative discriminant, its eigenvalues
+//! are a conjugate pair and one instead forms the REAL quadratic
+//! polynomial
+//! \f[ p(H)=H^2-\operatorname{tr}(B)H+\det(B)I, \f]
+//! where B is the trailing 2x2 block. Factoring p(H)=U*R and applying
+//! H <- U^T*H*U is an explicit real double-shift QR step. This is
+//! based on the QR iteration of Francis (1961-1962), NOT its implicit
+//! bulge-chasing implementation. Forming H^2 explicitly is slower
+//! and less robust than implicit Francis QR, which remains future work.
+//!
+//! \par Step 3: deflation and acceptance criteria
+//! A sufficiently small subdiagonal entry is set to zero using a
+//! precision/scale-dependent tolerance, splitting off a real 1x1
+//! block or a nonreal 2x2 block. Iterations are bounded. Before
+//! SUCCESS, finite factors, the 1x1/2x2 block structure, approximate
+//! orthogonality and the ORIGINAL-input residual A*Q-Q*T are checked.
+//! The tolerances are numerical heuristics, not proof of a backward
+//! error bound in the ValidatedTag sense. ApproximateTag can return
+//! INCONCLUSIVE on clusters, overflows and lack of convergence;
+//! ValidatedTag currently always returns INCONCLUSIVE.
+//!
+//! \par Historical sources
+//! - A. S. Householder, "Unitary Triangularization of a Nonsymmetric
+//!   Matrix", Journal of the ACM 5(4), 339-342 (1958).
+//!   https://doi.org/10.1145/320941.320947
+//! - J. G. F. Francis, "The QR Transformation", Parts 1 and 2,
+//!   The Computer Journal 4(3), 265-271 (1961) and 4(4), 332-345 (1962).
+//!   https://doi.org/10.1093/comjnl/4.3.265
+//!   https://doi.org/10.1093/comjnl/4.4.332
+//! - J. H. Wilkinson, The Algebraic Eigenvalue Problem, Clarendon
+//!   Press, Oxford (1965), Chapters 6 and 8 (Hessenberg and QR).
+//!
+//! \see Spectrum for extracting the eigenvalue multiset without an
+//! eigenvector basis; EigenDecomposition for the stronger requirement
+//! of a complete real diagonalization.
 template<class P, class PR>
 class SchurDecomposition {
   public:
     using X = FloatType<P, PR>;
     using Result = SchurDecompositionResult<P, PR>;
+    //! \brief Select the floating-point precision used by the QR iteration.
     explicit SchurDecomposition(PR pr) : _precision(pr) {}
 
+    //! \brief Attempt approximate real Schur reduction of A.
+    //! \param A Real square matrix (non-square input violates precondition).
+    //! \return Schur factors only on SUCCESS. Zero order is unsupported;
+    //! the validated paradigm is deliberately inconclusive.
+    //! \details First uses orthogonal Householder similarities to obtain
+    //! Hessenberg form, then performs shifted QR with deflation and
+    //! checks A*Q-Q*T and Q^T*Q-I. See the class documentation for
+    //! derivation, numerical limitations and historical references.
     Result operator()(const Matrix<X>& A) const {
         ARIADNE_PRECONDITION(A.row_size() == A.column_size());
         const SizeType n = A.row_size();
@@ -108,7 +181,12 @@ class SchurDecomposition {
             Matrix<X> T(A);
             Matrix<X> Q = Matrix<X>::identity(n, _precision);
 
-            // Initial orthogonal Householder reduction to Hessenberg form.
+            /** \brief Householder reduction to upper Hessenberg form.
+             *  \details Each reflector annihilates the tail of a column
+             *  by choosing its sign to avoid cancellation. Apply the
+             *  reflector on both sides (orthogonal similarity), and
+             *  multiply it into Q. See Householder (1958), Wilkinson (1965).
+             */
             for (SizeType k = 0u; k + 2u < n; ++k) {
                 X norm(zero);
                 for (SizeType i = k + 1u; i != n; ++i) {
@@ -189,8 +267,13 @@ class SchurDecomposition {
 
                 Matrix<X> polynomial(active, active, zero);
                 if (pair) {
-                    // Explicit double shift p(H)=H^2-tr(B)H+det(B)I;
-                    // use purely real arithmetic for a conjugate pair.
+                    /** \brief Explicit REAL quadratic QR double shift.
+                     *  \details p(H)=H^2-tr(B)*H+det(B)*I for the final
+                     *  2x2 block B. Its two shifts are complex conjugates,
+                     *  so p has real coefficients. This construction
+                     *  follows the Francis QR framework, but it is NOT
+                     *  the implicit Francis bulge-chasing algorithm.
+                     */
                     const X trace = a + d;
                     const X det = a * d - b * c;
                     for (SizeType i = 0u; i != active; ++i) {
@@ -204,6 +287,9 @@ class SchurDecomposition {
                         }
                     }
                 } else {
+                    // Wilkinson-type single shift: choose the nearer
+                    // real root of the trailing 2x2 characteristic
+                    // polynomial. See Wilkinson (1965), Chapter 8.
                     const X root = sqrt(disc);
                     const X low = (a + d - root) / two_value;
                     const X high = (a + d + root) / two_value;
@@ -304,8 +390,17 @@ class SchurDecomposition {
         return true;
     }
 
-    // Full Householder QR, returning its orthogonal factor.
-    // Zero columns in rank-deficient shift polynomials are allowed.
+    //! \brief Orthogonal factor of a full Householder QR factorization.
+    //! \details Repeated reflections of the form
+    //! \f$U=I-2vv^{\mathsf T}/(v^{\mathsf T}v)\f$ reduce an arbitrary
+    //! shifted matrix (or real quadratic shift polynomial) to
+    //! triangular form R. The accumulated Q satisfies input=Q*R
+    //! approximately. A rank-deficient column with zero norm is
+    //! skipped, not normalized. The reflector sign reduces cancellation.
+    //! This is Householder QR, not classical Gram-Schmidt; see
+    //! Householder (1958) and Wilkinson (1965), Chapter 4.
+    //! \return Orthogonal Q, or no value if an intermediate value
+    //! is not finite or a reflector cannot be formed.
     std::optional<Matrix<X>> _qr(const Matrix<X>& input) const {
         const SizeType n = input.row_size();
         const X zero(0u, _precision);

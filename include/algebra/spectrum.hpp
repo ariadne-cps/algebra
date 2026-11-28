@@ -266,9 +266,17 @@ class Spectrum {
     }
 
   private:
-    //! \brief Obtain the approximate spectrum from a complete real Schur form.
-    //! \details Only the approximate paradigm is implemented here;
-    //! validated inputs do not inherit an uncertified Schur approximation.
+    //! \brief Extract the eigenvalue multiset from a real Schur form.
+    //! \details By the real Schur theorem, orthogonal similarity preserves
+    //! characteristic polynomials and an upper block-triangular matrix
+    //! has the product of its diagonal blocks' characteristic polynomials.
+    //! Thus the complete spectrum is the union, with algebraic
+    //! multiplicity, of 1x1 real roots and 2x2 conjugate pairs.
+    //! SchurDecomposition supplies approximate Q,T (Householder reduction
+    //! followed by shifted QR; see its Doxygen mathematical background).
+    //! This method is only for ApproximateTag: neither Q nor its
+    //! eigenvalues are interval-certified by a floating QR residual.
+    //! ValidatedTag therefore remains INCONCLUSIVE for this path.
     ResultType _schur_spectrum(const Matrix<X>& A) const {
         using Status = SpectralStatus;
         if constexpr (!std::is_same_v<P, ApproximateTag>) {
