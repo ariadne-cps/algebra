@@ -161,6 +161,362 @@ struct SchurDecompositionData {
                 std::move(basis), std::move(restriction)};
         }
     }
+
+    //! \brief Reorder complete real Schur blocks by orthogonal similarity.
+    //! \param order A permutation of the ORIGINAL diagonal block indices.
+    //! \param precision Precision for the numerical 1x1/2x2 swaps.
+    //! \return Independently owned reordered factors, or no value if
+    //! any adjacent exchange is ill-conditioned or fails verification.
+    //!
+    //! \details A desired block order is realized by adjacent swaps.
+    //! For adjacent blocks A (p-by-p), B (q-by-q) and coupling C,
+    //! \f[ S=\begin{pmatrix}A&C\\0&B\end{pmatrix}, \f]
+    //! solve the SMALL real Sylvester equation
+    //! \f[ A X-X B=-C. \f]
+    //! The graph columns of W=[X;I] span an S-invariant subspace
+    //! corresponding to the eigenvalues of B. Orthonormalizing W
+    //! and completing its columns gives a local orthogonal Z for
+    //! which Z^T*S*Z has block order B,A. Apply Z as a similarity to
+    //! the entire Schur matrix and accumulate the same factor in Q.
+    //! The Sylvester equation has at most four unknowns, and all
+    //! calculations are real even for 2x2 complex-conjugate blocks.
+    //!
+    //! \par Numerical acceptance
+    //! Each adjacent exchange checks scaled Sylvester pivots and
+    //! finite entries, orthogonalizes with two Gram-Schmidt passes,
+    //! verifies 1x1/2x2 quasi-triangular structure, and zeros
+    //! roundoff-only off-block fill. A final check verifies Q^T Q
+    //! and preservation of the original Schur factorization.
+    //! Nearly coincident block spectra can make Sylvester singular:
+    //! this operation then returns no value rather than silently
+    //! producing an unreliable invariant subspace. The original
+    //! factors remain unchanged on any failure.
+    //!
+    //! \par Mathematical provenance
+    //! See Bai and Demmel, "On Swapping Diagonal Blocks in Real Schur
+    //! Form" (LAPACK Working Note 54), and LAPACK DTREXC for real
+    //! Schur reordering by orthogonal adjacent block exchanges.
+    //! This is a conservative SMALL-block Sylvester implementation,
+    //! not LAPACK's more sophisticated canonicalization/conditioning.
+    //! https://netlib.org/lapack/lawnspdf/lawn54.pdf
+    //! https://netlib.org/lapack/explore-html/
+    //!
+    //! \see leading_invariant_subspace for extracting the selected
+    //! leading subspace AFTER a successful reorder. ValidatedTag
+    //! is not supported: floating Schur swaps are not certificates.
+    std::optional<SchurDecompositionData<P, PR>>
+    reorder_blocks(const std::vector<SizeType>& order, PR precision) const {
+        if constexpr (!std::is_same_v<P, ApproximateTag>) {
+            return std::nullopt;
+        } else {
+            using Raw = typename X::RawType;
+            const SizeType n = orthogonal.row_size();
+            const SizeType count = block_sizes.size();
+            if (n == 0u || orthogonal.column_size() != n ||
+                quasi_triangular.row_size() != n ||
+                quasi_triangular.column_size() != n ||
+                count == 0u || order.size() != count) {
+                return std::nullopt;
+            }
+            const X zero(0u, precision);
+            const X one(1u, precision);
+            const X eps(Raw::eps(precision));
+            const auto finite = [](const X& x) {
+                return is_finite(x.raw());
+            };
+            std::vector<bool> seen(count, false);
+            SizeType covered = 0u;
+            for (SizeType j = 0u; j != count; ++j) {
+                const SizeType width = block_sizes[j];
+                if ((width != 1u && width != 2u) || width > n - covered) {
+                    return std::nullopt;
+                }
+                if (width == 2u) {
+                    const SizeType k = covered;
+                    const X discriminant =
+                        sqr(quasi_triangular[k][k] -
+                            quasi_triangular[k + 1u][k + 1u]) +
+                        X(4u, precision) * quasi_triangular[k][k + 1u] *
+                            quasi_triangular[k + 1u][k];
+                    if (!finite(discriminant) ||
+                        !(discriminant.raw() < zero.raw())) {
+                        return std::nullopt;
+                    }
+                }
+                covered += width;
+            }
+            if (covered != n) { return std::nullopt; }
+            for (const SizeType desired: order) {
+                if (desired >= count || seen[desired]) {
+                    return std::nullopt;
+                }
+                seen[desired] = true;
+            }
+            X scale(one);
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = 0u; col != n; ++col) {
+                    const X& q = orthogonal[row][col];
+                    const X& t = quasi_triangular[row][col];
+                    if (!finite(q) || !finite(t)) {
+                        return std::nullopt;
+                    }
+                    const X magnitude = abs(t);
+                    if (magnitude.raw() > scale.raw()) {
+                        scale = magnitude;
+                    }
+                }
+            }
+            const X factor = X(static_cast<unsigned>(n * n), precision);
+            const X residual_limit =
+                X(32768u, precision) * eps * scale * factor;
+            const X orthogonal_limit =
+                X(32768u, precision) * eps * factor;
+            const X structure_limit =
+                X(2048u, precision) * eps * scale * factor;
+            const X minimum_squared = sqr(X(128u, precision) * eps);
+            if (!finite(residual_limit) || !finite(orthogonal_limit) ||
+                !finite(structure_limit) || !finite(minimum_squared)) {
+                return std::nullopt;
+            }
+
+            SchurDecompositionData reordered(*this);
+            std::vector<SizeType> current(count);
+            for (SizeType i = 0u; i != count; ++i) { current[i] = i; }
+
+            // Swap the blocks at positions left and left+1.
+            // This is never used by the ordinary eigensolver, only
+            // upon an explicit request to select a Schur subspace.
+            const auto exchange = [&](SizeType left) {
+                SizeType start = 0u;
+                for (SizeType i = 0u; i != left; ++i) {
+                    start += reordered.block_sizes[i];
+                }
+                const SizeType p = reordered.block_sizes[left];
+                const SizeType q = reordered.block_sizes[left + 1u];
+                const SizeType total = p + q;
+                const SizeType unknowns = p * q;
+                Matrix<X>& T = reordered.quasi_triangular;
+                Matrix<X>& Q = reordered.orthogonal;
+
+                // Row-major Sylvester system for A*X-X*B=-C.
+                std::vector<std::vector<X>> system(
+                    unknowns, std::vector<X>(unknowns + 1u, zero));
+                for (SizeType i = 0u; i != p; ++i) {
+                    for (SizeType j = 0u; j != q; ++j) {
+                        const SizeType row = i * q + j;
+                        for (SizeType k = 0u; k != p; ++k) {
+                            system[row][k * q + j] += T[start + i][start + k];
+                        }
+                        for (SizeType k = 0u; k != q; ++k) {
+                            system[row][i * q + k] -=
+                                T[start + p + k][start + p + j];
+                        }
+                        system[row][unknowns] =
+                            -T[start + i][start + p + j];
+                    }
+                }
+                X system_scale(one);
+                for (SizeType row = 0u; row != unknowns; ++row) {
+                    for (SizeType col = 0u; col <= unknowns; ++col) {
+                        if (!finite(system[row][col])) { return false; }
+                        if (col != unknowns &&
+                            abs(system[row][col]).raw() > system_scale.raw()) {
+                            system_scale = abs(system[row][col]);
+                        }
+                    }
+                }
+                const X pivot_limit =
+                    X(128u, precision) * eps * system_scale;
+                if (!finite(pivot_limit)) { return false; }
+
+                // Small partial-pivoting Gaussian elimination, at
+                // most four unknowns. Reject near-singular exchanges.
+                for (SizeType col = 0u; col != unknowns; ++col) {
+                    SizeType pivot = col;
+                    X biggest(zero);
+                    for (SizeType row = col; row != unknowns; ++row) {
+                        const X magnitude = abs(system[row][col]);
+                        if (!finite(magnitude)) { return false; }
+                        if (magnitude.raw() > biggest.raw()) {
+                            biggest = magnitude;
+                            pivot = row;
+                        }
+                    }
+                    if (biggest.raw() <= pivot_limit.raw()) { return false; }
+                    if (pivot != col) {
+                        std::swap(system[pivot], system[col]);
+                    }
+                    for (SizeType row = col + 1u; row != unknowns; ++row) {
+                        const X multiplier =
+                            system[row][col] / system[col][col];
+                        if (!finite(multiplier)) { return false; }
+                        for (SizeType j = col + 1u; j <= unknowns; ++j) {
+                            system[row][j] -= multiplier * system[col][j];
+                            if (!finite(system[row][j])) { return false; }
+                        }
+                        system[row][col] = zero;
+                    }
+                }
+                std::vector<X> solution(unknowns, zero);
+                for (SizeType back = unknowns; back > 0u;) {
+                    --back;
+                    X value(system[back][unknowns]);
+                    for (SizeType j = back + 1u; j != unknowns; ++j) {
+                        value -= system[back][j] * solution[j];
+                    }
+                    solution[back] = value / system[back][back];
+                    if (!finite(solution[back])) { return false; }
+                }
+
+                // First q columns span graph([X;I]). Complete that
+                // orthonormal basis in R^(p+q) with unit vectors.
+                std::vector<std::vector<X>> basis;
+                const auto orthogonalize = [&](std::vector<X> v,
+                                               bool required) {
+                    X maximum(zero);
+                    for (const X& x: v) {
+                        if (!finite(x)) { return false; }
+                        if (abs(x).raw() > maximum.raw()) { maximum = abs(x); }
+                    }
+                    if (!(maximum.raw() > zero.raw())) { return !required; }
+                    for (X& x: v) { x /= maximum; }
+                    // Reorthogonalized modified Gram-Schmidt,
+                    // on at most four-dimensional real vectors.
+                    for (SizeType repeat = 0u; repeat != 2u; ++repeat) {
+                        for (const auto& u: basis) {
+                            X dot(zero);
+                            for (SizeType row = 0u; row != total; ++row) {
+                                dot += u[row] * v[row];
+                            }
+                            for (SizeType row = 0u; row != total; ++row) {
+                                v[row] -= dot * u[row];
+                            }
+                        }
+                    }
+                    X squared(zero);
+                    for (const X& x: v) { squared += sqr(x); }
+                    if (!finite(squared)) { return false; }
+                    if (squared.raw() <= minimum_squared.raw()) {
+                        return !required;
+                    }
+                    const X magnitude = sqrt(squared);
+                    if (!finite(magnitude) ||
+                        !(magnitude.raw() > zero.raw())) {
+                        return false;
+                    }
+                    for (X& x: v) { x /= magnitude; }
+                    basis.push_back(std::move(v));
+                    return true;
+                };
+                for (SizeType col = 0u; col != q; ++col) {
+                    std::vector<X> v(total, zero);
+                    for (SizeType row = 0u; row != p; ++row) {
+                        v[row] = solution[row * q + col];
+                    }
+                    v[p + col] = one;
+                    if (!orthogonalize(std::move(v), true)) { return false; }
+                }
+                for (SizeType col = 0u; col != total; ++col) {
+                    if (basis.size() == total) { break; }
+                    std::vector<X> v(total, zero);
+                    v[col] = one;
+                    if (!orthogonalize(std::move(v), false)) { return false; }
+                }
+                if (basis.size() != total) { return false; }
+
+                Matrix<X> step = Matrix<X>::identity(n, precision);
+                for (SizeType col = 0u; col != total; ++col) {
+                    for (SizeType row = 0u; row != total; ++row) {
+                        step[start + row][start + col] = basis[col][row];
+                    }
+                }
+                T = transpose(step) * (T * step);
+                Q = Q * step;
+                std::swap(reordered.block_sizes[left],
+                          reordered.block_sizes[left + 1u]);
+
+                // Preserve only 1x1 and conjugate 2x2 blocks. Floating
+                // fill outside those diagonal blocks may be discarded
+                // ONLY below the conservative structure threshold.
+                std::vector<bool> allowed(n, false);
+                SizeType offset = 0u;
+                for (const SizeType width: reordered.block_sizes) {
+                    if (width == 2u) {
+                        allowed[offset] = true;
+                        const X discriminant =
+                            sqr(T[offset][offset] -
+                                T[offset + 1u][offset + 1u]) +
+                            X(4u, precision) * T[offset][offset + 1u] *
+                                T[offset + 1u][offset];
+                        if (!finite(discriminant) ||
+                            !(discriminant.raw() < zero.raw())) {
+                            return false;
+                        }
+                    }
+                    offset += width;
+                }
+                if (offset != n) { return false; }
+                for (SizeType col = 0u; col != n; ++col) {
+                    for (SizeType row = 0u; row != n; ++row) {
+                        if (!finite(T[row][col]) || !finite(Q[row][col])) {
+                            return false;
+                        }
+                        if (row <= col ||
+                            (row == col + 1u && allowed[col])) {
+                            continue;
+                        }
+                        if (abs(T[row][col]).raw() >
+                            structure_limit.raw()) {
+                            return false;
+                        }
+                        T[row][col] = zero;
+                    }
+                }
+                return true;
+            };
+
+            for (SizeType target = 0u; target != count; ++target) {
+                SizeType from = target;
+                while (from < count && current[from] != order[target]) {
+                    ++from;
+                }
+                if (from == count) { return std::nullopt; }
+                while (from > target) {
+                    if (!exchange(from - 1u)) {
+                        return std::nullopt;
+                    }
+                    std::swap(current[from - 1u], current[from]);
+                    --from;
+                }
+            }
+
+            // Reordering must preserve the ORIGINAL Schur-factor
+            // reconstruction, not merely produce an orthogonal Q.
+            const Matrix<X> old_reconstruction =
+                orthogonal * quasi_triangular * transpose(orthogonal);
+            const Matrix<X> new_action =
+                old_reconstruction * reordered.orthogonal;
+            const Matrix<X> new_represented =
+                reordered.orthogonal * reordered.quasi_triangular;
+            const Matrix<X> new_gram =
+                transpose(reordered.orthogonal) * reordered.orthogonal;
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = 0u; col != n; ++col) {
+                    const X error = abs(new_action[row][col] -
+                                        new_represented[row][col]);
+                    const X ortho = abs(new_gram[row][col] -
+                        (row == col ? one : zero));
+                    if (!finite(error) || !finite(ortho) ||
+                        error.raw() > residual_limit.raw() ||
+                        ortho.raw() > orthogonal_limit.raw()) {
+                        return std::nullopt;
+                    }
+                }
+            }
+            return reordered;
+        }
+    }
+
 };
 
 //! \brief Status and optional factors on SUCCESS.

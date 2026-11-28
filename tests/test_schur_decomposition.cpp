@@ -363,6 +363,161 @@ Void test_leading_invariant_subspaces(PR precision) {
     }
 }
 
+//! \brief Reorder adjacent Schur blocks and select nonleading subspaces.
+//! \details Small Sylvester exchanges follow orthogonal real Schur
+//! reordering (Bai-Demmel, LAPACK Working Note 54 / DTREXC).
+template<class PR>
+Void test_reordered_schur_subspaces(PR precision) {
+    using AX = FloatApproximation<PR>;
+    const AX zero_value(0u, precision);
+
+    // Two distinct 1x1 blocks. Swapping their invariant graph
+    // must expose the nonleading eigenvalue 5 as a leading line.
+    Matrix<AX> real(2u, 2u, zero_value);
+    real[0u][0u] = AX(2u, precision);
+    real[0u][1u] = AX(1u, precision);
+    real[1u][1u] = AX(5u, precision);
+    const SchurDecompositionData<ApproximateTag, PR> real_factors{
+        Matrix<AX>::identity(2u, precision), real, {1u, 1u}};
+    const std::vector<SizeType> swap_two{1u, 0u};
+    const auto swapped = real_factors.reorder_blocks(swap_two, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        swapped.has_value());
+    if (swapped) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            swapped->block_sizes.size() == 2u &&
+            std::abs((swapped->quasi_triangular[0u][0u] -
+                AX(5u, precision)).get_d()) < 1e-8);
+        check_schur_invariant_prefix(real, *swapped, 1u, precision);
+        check_schur_invariant_prefix(real, *swapped, 2u, precision);
+    }
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        std::abs((real_factors.quasi_triangular[0u][0u] -
+            AX(2u, precision)).get_d()) < 1e-8);
+
+    const std::vector<SizeType> duplicate{0u, 0u};
+    const std::vector<SizeType> wrong_size{0u};
+    const std::vector<SizeType> out_of_range{0u, 2u};
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !real_factors.reorder_blocks(duplicate, precision) &&
+        !real_factors.reorder_blocks(wrong_size, precision) &&
+        !real_factors.reorder_blocks(out_of_range, precision));
+
+    // Equal diagonal eigenvalues with a nonzero coupling give a
+    // SINGULAR Sylvester equation. Never certify a block swap.
+    Matrix<AX> repeated(real);
+    repeated[1u][1u] = AX(2u, precision);
+    const SchurDecompositionData<ApproximateTag, PR> repeated_factors{
+        Matrix<AX>::identity(2u, precision), repeated, {1u, 1u}};
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !repeated_factors.reorder_blocks(swap_two, precision));
+
+    // Interleaved block types 1x1, 2x2 and 1x1. Reorder to
+    // last scalar / conjugate pair / first scalar, traversing
+    // all combinations of adjacent 1x1 and 2x2 exchanges.
+    Matrix<AX> mixed(4u, 4u, zero_value);
+    mixed[0u][0u] = AX(7u, precision);
+    mixed[1u][2u] = AX(-3, precision);
+    mixed[2u][1u] = AX(3u, precision);
+    mixed[3u][3u] = AX(9u, precision);
+    mixed[0u][1u] = AX(2u, precision);
+    mixed[0u][2u] = AX(-1, precision);
+    mixed[0u][3u] = AX(3u, precision);
+    mixed[1u][3u] = AX(1u, precision);
+    mixed[2u][3u] = AX(-2, precision);
+    const SchurDecompositionData<ApproximateTag, PR> mixed_factors{
+        Matrix<AX>::identity(4u, precision), mixed, {1u, 2u, 1u}};
+    const std::vector<SizeType> reversed{2u, 1u, 0u};
+    const auto mixed_reordered =
+        mixed_factors.reorder_blocks(reversed, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        mixed_reordered.has_value());
+    if (mixed_reordered) {
+        const auto& data = *mixed_reordered;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            data.block_sizes.size() == 3u &&
+            data.block_sizes[0u] == 1u &&
+            data.block_sizes[1u] == 2u &&
+            data.block_sizes[2u] == 1u &&
+            std::abs((data.quasi_triangular[0u][0u] -
+                AX(9u, precision)).get_d()) < 1e-8 &&
+            std::abs((data.quasi_triangular[3u][3u] -
+                AX(7u, precision)).get_d()) < 1e-8);
+        for (SizeType k = 1u; k <= 3u; ++k) {
+            check_schur_invariant_prefix(mixed, data, k, precision);
+        }
+    }
+
+    // Two different conjugate pairs with a nonzero coupling.
+    // Neither 2x2 block may be split by the swap.
+    Matrix<AX> pairs(4u, 4u, zero_value);
+    pairs[0u][1u] = AX(-1, precision);
+    pairs[1u][0u] = AX(1u, precision);
+    pairs[2u][3u] = AX(-3, precision);
+    pairs[3u][2u] = AX(3u, precision);
+    pairs[0u][2u] = AX(1u, precision);
+    pairs[0u][3u] = AX(-2, precision);
+    pairs[1u][2u] = AX(3u, precision);
+    pairs[1u][3u] = AX(1u, precision);
+    const SchurDecompositionData<ApproximateTag, PR> pair_factors{
+        Matrix<AX>::identity(4u, precision), pairs, {2u, 2u}};
+    const auto pair_reordered =
+        pair_factors.reorder_blocks(swap_two, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        pair_reordered.has_value());
+    if (pair_reordered) {
+        const auto& data = *pair_reordered;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            data.block_sizes.size() == 2u &&
+            data.block_sizes[0u] == 2u && data.block_sizes[1u] == 2u);
+        for (SizeType i = 0u; i != 2u; ++i) {
+            const SizeType k = 2u * i;
+            const AX disc =
+                sqr(data.quasi_triangular[k][k] -
+                    data.quasi_triangular[k + 1u][k + 1u]) +
+                AX(4u, precision) * data.quasi_triangular[k][k + 1u] *
+                    data.quasi_triangular[k + 1u][k];
+            const double imaginary = std::sqrt(-disc.get_d()) / 2.0;
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                disc.get_d() < 0.0 &&
+                std::abs(imaginary - (i == 0u ? 3.0 : 1.0)) < 1e-8);
+        }
+        check_schur_invariant_prefix(pairs, data, 1u, precision);
+        check_schur_invariant_prefix(pairs, data, 2u, precision);
+    }
+
+    // Actual Francis-computed Schur factors, not only synthetic
+    // already-triangular matrices: reorder a 3x3 with spectrum
+    // {9,-3i,+3i} and verify the first invariant subspace.
+    const Int entries[3][3] = {
+        {4, 5, 0}, {3, 4, -4}, {-4, 0, 1}
+    };
+    Matrix<AX> coupled(3u, 3u, zero_value);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            coupled[row][col] = AX(entries[row][col], precision);
+        }
+    }
+    const auto schur =
+        SchurDecomposition<ApproximateTag, PR>(precision)(coupled);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        schur.status == SchurStatus::SUCCESS && schur.data.has_value());
+    if (schur.data) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            schur.data->block_sizes.size() == 2u);
+        const auto reordered =
+            schur.data->reorder_blocks(swap_two, precision);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            reordered.has_value());
+        if (reordered) {
+            check_schur_invariant_prefix(
+                coupled, *reordered, 1u, precision);
+            check_schur_invariant_prefix(
+                coupled, *reordered, 2u, precision);
+        }
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -382,6 +537,10 @@ int main(int argc, char** argv) {
                 test_leading_invariant_subspaces(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_leading_invariant_subspaces(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_reordered_schur_subspaces(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_reordered_schur_subspaces(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }
