@@ -687,6 +687,125 @@ Void test_automatic_schur_graph_certificate(PR precision) {
             rotation, {0u}, precision));
 }
 
+//! \brief Certify the REAL invariant plane of a conjugate Schur pair.
+//! \details Although the eigenvalues are nonreal, the conjugate pair
+//! spans a real invariant graph. Schur block selection uses the
+//! Bai-Demmel/Wilkinson real Schur theorem; the verification is
+//! the original-input interval Riccati/Krawczyk theorem (1969).
+template<class PR>
+Void test_automatic_schur_conjugate_plane(PR precision) {
+    using X = FloatBounds<PR>;
+    const X zero(0u, precision);
+    const X one(1u, precision);
+    // 2 is a scalar Schur root; the trailing 2x2 rotation has
+    // +/-i. The nonleading invariant plane has the exact
+    // graph X=[1,0], so U=[e0+e2,e1] and A*U=U*[0 1;-1 0].
+    Matrix<X> matrix(3u, 3u, zero);
+    matrix[0u][0u] = X(2u, precision);
+    matrix[0u][1u] = one;
+    matrix[0u][2u] = X(-2, precision);
+    matrix[1u][2u] = X(-1, precision);
+    matrix[2u][1u] = one;
+
+    const auto real_plane = certified_invariant_graph_from_schur(
+        matrix, {1u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        real_plane.has_value());
+    if (real_plane) {
+        const auto& graph = real_plane->graph_enclosure;
+        const auto& basis = real_plane->basis_enclosure;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            graph.row_size() == 1u && graph.column_size() == 2u &&
+            basis.row_size() == 3u && basis.column_size() == 2u &&
+            graph[0u][0u].lower_raw() < one.lower_raw() &&
+            graph[0u][0u].upper_raw() > one.upper_raw() &&
+            graph[0u][1u].lower_raw() < zero.lower_raw() &&
+            graph[0u][1u].upper_raw() > zero.upper_raw());
+    }
+
+    // Perturb an UPPER coupling independently in the original
+    // interval family. The real invariant plane changes with
+    // A; a Schur midpoint basis alone cannot certify it.
+    matrix[0u][1u] +=
+        X(-1, 1, precision) / X(1048576u, precision);
+    const auto family = certified_invariant_graph_from_schur(
+        matrix, {1u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        family.has_value());
+    if (family) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            family->graph_enclosure.row_size() == 1u &&
+            family->graph_enclosure.column_size() == 2u &&
+            family->graph_enclosure[0u][0u].lower_raw() < one.lower_raw() &&
+            family->graph_enclosure[0u][0u].upper_raw() > one.upper_raw());
+    }
+
+    // Selecting the scalar block describes another subspace,
+    // not the requested conjugate plane. Reject a whole-space
+    // selection as an inappropriate graph chart.
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_from_schur(
+            matrix, {0u, 1u}, precision));
+}
+
+//! \brief Distinguish isolated near-Jordan roots from an uncertain
+//! family containing point matrices with NONREAL eigenvalues.
+//! \details Krawczyk must establish a uniformly existing real
+//! graph, not merely converge on the midpoint (Stewart-Sun 1990).
+template<class PR>
+Void test_automatic_schur_nearly_defective(PR precision) {
+    using X = FloatBounds<PR>;
+    const X zero(0u, precision);
+    const X one(1u, precision);
+    const X two_value(2u, precision);
+
+    // The two eigenvalues of [[2,1],[0,2+delta]] are separated
+    // by delta=1/64. The nonleading real eigenvector has graph
+    // x=delta; a sufficiently thin input family preserves a
+    // locally unique real invariant graph.
+    const X separation = one / X(64u, precision);
+    Matrix<X> matrix(2u, 2u, zero);
+    matrix[0u][0u] = two_value;
+    matrix[0u][1u] = one;
+    matrix[1u][1u] = two_value + separation;
+    const auto isolated = certified_invariant_graph_from_schur(
+        matrix, {1u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        isolated.has_value());
+    if (isolated) {
+        const X& graph = isolated->graph_enclosure[0u][0u];
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            graph.lower_raw() < separation.lower_raw() &&
+            graph.upper_raw() > separation.upper_raw());
+    }
+    matrix[1u][0u] =
+        X(-1, 1, precision) / X(4194304u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        certified_invariant_graph_from_schur(
+            matrix, {1u}, precision).has_value());
+
+    // With delta=1/1024 and an independent A21 interval
+    // [-delta^2,delta^2], the characteristic discriminant
+    // delta^2+4*A21 is negative for some point matrices.
+    // Those members admit NO invariant real line, so an
+    // enclosure common to the whole family cannot be proved.
+    const X narrow_separation = one / X(1024u, precision);
+    matrix[1u][1u] = two_value + narrow_separation;
+    matrix[1u][0u] =
+        X(-1, 1, precision) / X(1048576u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_from_schur(
+            matrix, {1u}, precision));
+
+    // Exactly coalesced Jordan roots remain INCONCLUSIVE for
+    // the nonleading Schur-block swap, not SUCCESS by tolerance.
+    matrix[1u][1u] = two_value;
+    matrix[1u][0u] = zero;
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_from_schur(
+            matrix, {1u}, precision));
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -714,6 +833,14 @@ int main(int argc, char** argv) {
                 test_automatic_schur_graph_certificate(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_automatic_schur_graph_certificate(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_automatic_schur_conjugate_plane(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_automatic_schur_conjugate_plane(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_automatic_schur_nearly_defective(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_automatic_schur_nearly_defective(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }
