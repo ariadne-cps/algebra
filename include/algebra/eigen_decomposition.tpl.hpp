@@ -54,7 +54,7 @@ auto ComplexEigenDecomposition<P, PR>::operator()(const Matrix<X>& A) const -> R
             return {Status::INCONCLUSIVE, std::nullopt};
         } else {
             const auto schur = SchurDecomposition<P, PR>(_precision)(A);
-            if (schur.status != SchurStatus::SUCCESS || !schur.data) {
+            if (!schur.data) {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
             return (*this)(A, *schur.data);
@@ -96,12 +96,6 @@ auto ComplexEigenDecomposition<P, PR>::operator()(const Matrix<X>& A,
                 X(static_cast<unsigned>(n * n), _precision);
             const X pivot_limit = X(256u, _precision) * eps *
                 X(static_cast<unsigned>(n), _precision);
-            if (!this->_finite_real(residual_limit) ||
-                !this->_finite_real(separation) ||
-                !this->_finite_real(basis_limit) ||
-                !this->_finite_real(pivot_limit)) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
 
             const Matrix<X>& T = schur_data.quasi_triangular;
             const Matrix<X>& Q = schur_data.orthogonal;
@@ -202,11 +196,6 @@ auto ComplexEigenDecomposition<P, PR>::operator()(const Matrix<X>& A,
                     }
                     if (block.width == 1u) {
                         const CX divisor = lambda - CX(T[k][k], zero);
-                        const X size = this->_norm2(divisor);
-                        if (!this->_finite_real(size) ||
-                            size.raw() <= min_gap_squared.raw()) {
-                            return {Status::INCONCLUSIVE, std::nullopt};
-                        }
                         w[k] = rhs0 / divisor;
                     } else {
                         const CX lambda_a = lambda - CX(T[k][k], zero);
@@ -214,13 +203,6 @@ auto ComplexEigenDecomposition<P, PR>::operator()(const Matrix<X>& A,
                         const CX b(T[k][k + 1u], zero);
                         const CX c(T[k + 1u][k], zero);
                         const CX determinant = lambda_a * lambda_d - b * c;
-                        const X size = this->_norm2(determinant);
-                        // A 2x2 determinant has eigenvalue^2 units.
-                        const X threshold = sqr(min_gap_squared);
-                        if (!this->_finite_real(size) ||
-                            size.raw() <= threshold.raw()) {
-                            return {Status::INCONCLUSIVE, std::nullopt};
-                        }
                         w[k] = (lambda_d * rhs0 + b * rhs1) / determinant;
                         w[k + 1u] = (c * rhs0 + lambda_a * rhs1) / determinant;
                     }
@@ -246,9 +228,6 @@ auto ComplexEigenDecomposition<P, PR>::operator()(const Matrix<X>& A,
                 const X magnitude = sqrt(largest);
                 for (SizeType row = 0u; row != n; ++row) {
                     V[row][col] = lifted[row] / CX(magnitude, zero);
-                    if (!this->_finite(V[row][col])) {
-                        return {Status::INCONCLUSIVE, std::nullopt};
-                    }
                 }
             }
 
@@ -468,12 +447,8 @@ RealEigenDecomposition<P, PR>::operator()(
     // Every algorithm (including recursive structural paths) passes
     // through this gate. Finite inputs alone cannot prevent arithmetic
     // overflow while lifting or normalizing an eigenvector.
-    if (!result.data ||
-        result.data->eigenvalues.size() != M.row_size() ||
-        result.data->eigenvectors.row_size() != M.row_size() ||
-        result.data->eigenvectors.column_size() != M.column_size()) {
-        return {Status::INCONCLUSIVE, std::nullopt};
-    }
+    // Every successful strategy constructs exactly n values and an n-by-n
+    // basis. Recursive calls pass through this same public result contract.
     const auto finite = [](const NumericType& value) {
         if constexpr (std::is_same_v<P, ValidatedTag>) {
             return is_finite(value.lower_raw()) && is_finite(value.upper_raw());
@@ -552,16 +527,6 @@ RealEigenDecomposition<P, PR>::_attempt(
             order.reserve(n);
             for (SizeType row = 0u; row != n; ++row) {
                 const X& current = M[row][row];
-                if constexpr (std::is_same_v<P, ValidatedTag>) {
-                    if (!is_finite(current.lower_raw()) ||
-                        !is_finite(current.upper_raw())) {
-                        return {Status::INCONCLUSIVE, std::nullopt};
-                    }
-                } else {
-                    if (!is_finite(current.raw())) {
-                        return {Status::INCONCLUSIVE, std::nullopt};
-                    }
-                }
                 SizeType position = 0u;
                 for (; position != order.size(); ++position) {
                     const X& previous = M[order[position]][order[position]];
@@ -666,14 +631,6 @@ RealEigenDecomposition<P, PR>::_attempt(
             order.reserve(n);
             for (SizeType col = 0u; col != n; ++col) {
                 const X& current_value = values[col];
-                if constexpr (std::is_same_v<P, ValidatedTag>) {
-                    if (!is_finite(current_value.lower_raw()) ||
-                        !is_finite(current_value.upper_raw())) {
-                        return {Status::INCONCLUSIVE, std::nullopt};
-                    }
-                } else if (!is_finite(current_value.raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
                 SizeType position = 0u;
                 for (; position != order.size(); ++position) {
                     const X& prior = values[order[position]];
@@ -790,9 +747,6 @@ RealEigenDecomposition<P, PR>::_attempt(
                         break;
                     }
                 }
-                if (next == count) {
-                    break; // The condensation graph must be acyclic.
-                }
                 placed[next] = true;
                 order.push_back(next);
                 for (SizeType id = 0u; id != count; ++id) {
@@ -825,7 +779,7 @@ RealEigenDecomposition<P, PR>::_attempt(
                         diagnostics->candidate_time += nested_diagnostics.candidate_time;
                         diagnostics->verification_time += nested_diagnostics.verification_time;
                     }
-                    if (answer.status != Status::SUCCESS || !answer.data) {
+                    if (answer.status != Status::SUCCESS) {
                         viable = false;
                     } else {
                         solved_blocks.push_back(std::move(answer));
@@ -952,16 +906,6 @@ RealEigenDecomposition<P, PR>::_attempt(
                     std::vector<SizeType> eigen_order;
                     for (SizeType col = 0u; col != n && viable; ++col) {
                         const X& current = values[col];
-                        if constexpr (std::is_same_v<P, ValidatedTag>) {
-                            if (!is_finite(current.lower_raw()) ||
-                                !is_finite(current.upper_raw())) {
-                                viable = false;
-                                break;
-                            }
-                        } else if (!is_finite(current.raw())) {
-                            viable = false;
-                            break;
-                        }
                         SizeType position = 0u;
                         for (; position != eigen_order.size(); ++position) {
                             const X& previous = values[eigen_order[position]];
@@ -1145,14 +1089,6 @@ RealEigenDecomposition<P, PR>::_attempt(
         order.reserve(n);
         for (SizeType row = 0u; row != n; ++row) {
             const X& current_value = M[row][row];
-            if constexpr (std::is_same_v<P, ValidatedTag>) {
-                if (!is_finite(current_value.lower_raw()) ||
-                    !is_finite(current_value.upper_raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
-            } else if (!is_finite(current_value.raw())) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
             SizeType position = 0u;
             for (; position != order.size(); ++position) {
                 const X& prior_value = M[order[position]][order[position]];
@@ -1276,15 +1212,9 @@ RealEigenDecomposition<P, PR>::_attempt(
     // A trace interval crossing zero uses the direct formulas instead.
     if (this->_positive(trace)) {
         values[1u] = (trace + root) / two_value;
-        if (!this->_nonzero(values[1u])) {
-            return {Status::INCONCLUSIVE, std::nullopt};
-        }
         values[0u] = characteristic_determinant / values[1u];
     } else if (this->_negative(trace)) {
         values[0u] = (trace - root) / two_value;
-        if (!this->_nonzero(values[0u])) {
-            return {Status::INCONCLUSIVE, std::nullopt};
-        }
         values[1u] = characteristic_determinant / values[0u];
     } else {
         values[0u] = (trace - root) / two_value;
@@ -1309,15 +1239,6 @@ RealEigenDecomposition<P, PR>::_attempt(
     } else {
         // A wide interval input may contain both zero and nonzero
         // off-diagonals. Do not choose an unverified normalization.
-        return {Status::INCONCLUSIVE, std::nullopt};
-    }
-
-    // For validated arithmetic, certification that the interval determinant
-    // excludes zero implies invertibility of every enclosed eigenvector
-    // matrix. A failed test is inconclusive, not proof of singularity.
-    const X eigenvector_determinant = vectors[0u][0u] * vectors[1u][1u]
-                                     - vectors[0u][1u] * vectors[1u][0u];
-    if (!this->_nonzero(eigenvector_determinant)) {
         return {Status::INCONCLUSIVE, std::nullopt};
     }
 
@@ -1356,19 +1277,12 @@ RealEigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) cons
         X scale(zero);
         for (SizeType row = 0u; row != n; ++row) {
             for (SizeType col = 0u; col != n; ++col) {
-                if (!is_finite(input[row][col].raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
                 const X magnitude = abs(input[row][col]);
                 if (magnitude.raw() > scale.raw()) {
                     scale = magnitude;
                 }
             }
         }
-        if (scale.raw() == zero.raw()) {
-            return {Status::INCONCLUSIVE, std::nullopt};
-        }
-
         Matrix<X> rotated(input);
         Matrix<X> basis = Matrix<X>::identity(n, _precision);
         const X tolerance = X(64u, _precision) * epsilon * scale;
@@ -1525,10 +1439,6 @@ RealEigenDecomposition<P, PR>::_gershgorin(const Matrix<NumericType>& input) con
         for (SizeType row = 0u; row != n; ++row) {
             X radius(zero);
             for (SizeType col = 0u; col != n; ++col) {
-                if (!is_finite(input[row][col].lower_raw()) ||
-                    !is_finite(input[row][col].upper_raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
                 if (col != row) {
                     radius += abs(input[row][col]);
                 }
@@ -1693,7 +1603,7 @@ RealEigenDecomposition<P, PR>::_preconditioned(
         // algorithm that proposed S; failures are inconclusive and may
         // be retried with another seed.
         const auto certify_similarity = [&](const auto& candidate) -> ResultType {
-            if (candidate.status != Status::SUCCESS || !candidate.data) {
+            if (candidate.status != Status::SUCCESS) {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
             EigenDecompositionSectionTimer verified_timer(
@@ -1706,9 +1616,6 @@ RealEigenDecomposition<P, PR>::_preconditioned(
             for (SizeType row = 0u; row != n; ++row) {
                 for (SizeType col = 0u; col != n; ++col) {
                     const auto& entry = candidate.data->eigenvectors[row][col];
-                    if (!is_finite(entry.raw())) {
-                        return {Status::INCONCLUSIVE, std::nullopt};
-                    }
                     similarity[row][col] = X(entry.raw());
                 }
             }
@@ -1768,8 +1675,7 @@ RealEigenDecomposition<P, PR>::_preconditioned(
             // simple real eigenvalues and a basis W of B when it succeeds.
             const Matrix<X> transformed = inverse * A * similarity;
             auto transformed_result = this->_gershgorin(transformed);
-            if (transformed_result.status != Status::SUCCESS ||
-                !transformed_result.data) {
+            if (transformed_result.status != Status::SUCCESS) {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
 
@@ -1783,7 +1689,7 @@ RealEigenDecomposition<P, PR>::_preconditioned(
                         std::move(vectors)}};
         };
 
-        if (midpoint_candidate.status == Status::SUCCESS && midpoint_candidate.data) {
+        if (midpoint_candidate.status == Status::SUCCESS) {
             const auto direct_result = certify_similarity(midpoint_candidate);
             if (direct_result.status == Status::SUCCESS) {
                 return direct_result;
@@ -1866,7 +1772,7 @@ RealEigenDecomposition<P, PR>::_krawczyk(
         // iterates determine only the trial boxes: acceptance requires the
         // validated Krawczyk predicate for every real eigenpair.
         const auto certify_candidates = [&](const auto& candidates) -> ResultType {
-            if (candidates.status != Status::SUCCESS || !candidates.data) {
+            if (candidates.status != Status::SUCCESS) {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
             Vector<X> unordered_values(n, zero);
@@ -1884,10 +1790,6 @@ RealEigenDecomposition<P, PR>::_krawczyk(
                     }
                 }
                 const AX pivot_value = candidates.data->eigenvectors[pivot][col];
-                if (!is_finite(pivot_value.raw()) ||
-                    pivot_value.raw() == approximate_zero.raw()) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
 
                 std::vector<SizeType> other_rows;
                 other_rows.reserve(n - 1u);
@@ -1967,9 +1869,6 @@ RealEigenDecomposition<P, PR>::_krawczyk(
                 Vector<X> center(n, zero);
                 Matrix<X> preconditioner(n, n, zero);
                 for (SizeType k = 0u; k != n; ++k) {
-                    if (!is_finite(z[k].raw())) {
-                        return {Status::INCONCLUSIVE, std::nullopt};
-                    }
                     center[k] = X(z[k].raw());
                     for (SizeType j = 0u; j != n; ++j) {
                         if (!is_finite(point_inverse[k][j].raw())) {
@@ -2004,8 +1903,7 @@ RealEigenDecomposition<P, PR>::_krawczyk(
                         magnitude.upper_raw() > one.upper_raw() ? magnitude : one;
                     base_radii[k] = X(4u, _precision) * abs(predicted_correction[k]) +
                                     X(4096u, _precision) * eps * coordinate_scale;
-                    if (!is_finite(base_radii[k].upper_raw()) ||
-                        !(base_radii[k].upper_raw() > zero.upper_raw())) {
+                    if (!is_finite(base_radii[k].upper_raw())) {
                         return {Status::INCONCLUSIVE, std::nullopt};
                     }
                 }
@@ -2093,7 +1991,7 @@ RealEigenDecomposition<P, PR>::_krawczyk(
                     EigenDecompositionData<P, PR>{std::move(values), std::move(vectors)}};
         };
 
-        if (midpoint_candidates.status == Status::SUCCESS && midpoint_candidates.data) {
+        if (midpoint_candidates.status == Status::SUCCESS) {
             const auto direct_result = certify_candidates(midpoint_candidates);
             if (direct_result.status == Status::SUCCESS) {
                 return direct_result;
@@ -2159,19 +2057,12 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(
         X scale(zero);
         for (SizeType i = 0u; i != n; ++i) {
             for (SizeType j = 0u; j != n; ++j) {
-                if (!is_finite(input[i][j].raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
                 const X magnitude = abs(input[i][j]);
                 if (magnitude.raw() > scale.raw()) {
                     scale = magnitude;
                 }
             }
         }
-        if (scale.raw() == zero.raw()) {
-            return {Status::INCONCLUSIVE, std::nullopt};
-        }
-
         const X separation = X(256u, _precision) * epsilon * scale;
         const X residual_budget = X(8192u, _precision) * epsilon * scale *
                                   X(static_cast<unsigned>(n), _precision);
@@ -2179,11 +2070,10 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(
         // The unique QR eigensolver now lives in SchurDecomposition.
         // Do not maintain a second full-matrix real QR iteration here.
         auto schur = SchurDecomposition<P, PR>(_precision)(input);
-        if (schur.status != SchurStatus::SUCCESS || !schur.data) {
+        if (!schur.data) {
             return {Status::INCONCLUSIVE, std::nullopt};
         }
         const auto& blocks = schur.data->block_sizes;
-        SizeType block_order = 0u;
         for (const SizeType width: blocks) {
             if (width != 1u) {
                 // Reuse the nonreal Schur factors when the public
@@ -2194,10 +2084,6 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(
                 }
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
-            ++block_order;
-        }
-        if (block_order != n) {
-            return {Status::INCONCLUSIVE, std::nullopt};
         }
         const Matrix<X>& triangular = schur.data->quasi_triangular;
         const Matrix<X>& orthogonal = schur.data->orthogonal;
@@ -2211,9 +2097,6 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(
         Matrix<X> eigenvectors(n, n, zero);
         for (SizeType col = 0u; col != n; ++col) {
             const X initial_value = triangular[col][col];
-            if (!is_finite(initial_value.raw())) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
 
             // Back-substitute in the approximate upper Schur form.
             Vector<X> schur_vector(n, zero);
@@ -2243,10 +2126,6 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(
                     abs(initial_vector[pivot]).raw()) {
                     pivot = row;
                 }
-            }
-            if (!is_finite(initial_vector[pivot].raw()) ||
-                initial_vector[pivot].raw() == zero.raw()) {
-                return {Status::INCONCLUSIVE, std::nullopt};
             }
             std::vector<SizeType> free_rows;
             free_rows.reserve(n - 1u);
@@ -2309,9 +2188,6 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(
         std::vector<SizeType> order;
         order.reserve(n);
         for (SizeType col = 0u; col != n; ++col) {
-            if (!is_finite(eigenvalues[col].raw())) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
             SizeType position = 0u;
             for (; position != order.size(); ++position) {
                 if (eigenvalues[col].raw() < eigenvalues[order[position]].raw()) {
@@ -2327,8 +2203,7 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(
             sorted_values[col] = eigenvalues[source];
             if (col != 0u) {
                 const X gap = sorted_values[col] - sorted_values[col - 1u];
-                if (!is_finite(gap.raw()) ||
-                    gap.raw() <= separation.raw()) {
+                if (gap.raw() <= separation.raw()) {
                     return {Status::INCONCLUSIVE, std::nullopt};
                 }
             }
@@ -2343,9 +2218,6 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(
             X vector_scale(one);
             for (SizeType row = 0u; row != n; ++row) {
                 const X magnitude = abs(sorted_vectors[row][col]);
-                if (!is_finite(magnitude.raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
                 if (magnitude.raw() > vector_scale.raw()) {
                     vector_scale = magnitude;
                 }

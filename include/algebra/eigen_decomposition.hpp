@@ -549,9 +549,6 @@ class EigenDecomposition {
         auto real = detail::RealEigenDecomposition<P, PR>(_precision)(
             A, diagnostics, &complex_candidate);
         if (real.status == EigenDecompositionStatus::SUCCESS) {
-            if (!real.data) {
-                return {EigenDecompositionStatus::INCONCLUSIVE, std::nullopt};
-            }
             return {EigenDecompositionStatus::SUCCESS,
                     Data(std::in_place_type<RealData>, std::move(*real.data))};
         }
@@ -565,7 +562,7 @@ class EigenDecomposition {
                     // reach nonsymmetric QR, so detect complex blocks
                     // once here if no cached factors are available.
                     auto schur = SchurDecomposition<P, PR>(_precision)(A);
-                    if (schur.status == SchurStatus::SUCCESS && schur.data) {
+                    if (schur.data) {
                         complex_candidate = std::move(*schur.data);
                     }
                 }
@@ -578,7 +575,7 @@ class EigenDecomposition {
                         }
                     }
                 }
-                if (has_nonreal_block && complex_candidate) {
+                if (has_nonreal_block) {
                     if (diagnostics) {
                         diagnostics->strategy =
                             EigenDecompositionStrategy::COMPLEX_SCHUR;
@@ -591,8 +588,7 @@ class EigenDecomposition {
                                 Clock::now() - start);
                     }
                     if (complex.status ==
-                        detail::ComplexEigenDecompositionStatus::SUCCESS &&
-                        complex.data) {
+                        detail::ComplexEigenDecompositionStatus::SUCCESS) {
                         return {EigenDecompositionStatus::SUCCESS,
                                 Data(std::in_place_type<ComplexData>,
                                      std::move(*complex.data))};

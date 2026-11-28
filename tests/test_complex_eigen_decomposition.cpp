@@ -225,6 +225,7 @@ Void test_complex_diagonalization(PR precision) {
 template<class PR>
 Void test_invalid_complex_schur_factors(PR precision) {
     using X = FloatApproximation<PR>;
+    using Raw = typename X::RawType;
     using Status = detail::ComplexEigenDecompositionStatus;
     Matrix<X> rotation(2u, 2u, X(0u, precision));
     rotation[0u][1u] = X(-1, precision);
@@ -257,6 +258,71 @@ Void test_invalid_complex_schur_factors(PR precision) {
     auto overfull = *original.data;
     overfull.block_sizes = {1u, 1u, 1u};
     reject(overfull);
+
+    // Shared-factor entry points must reject an empty problem and every
+    // nonfinite value before attempting complex back-substitution.
+    Matrix<X> zero_order(0u, 0u, X(0u, precision));
+    SchurDecompositionData<ApproximateTag, PR> empty_factors{
+        Matrix<X>(0u, 0u, X(0u, precision)),
+        Matrix<X>(0u, 0u, X(0u, precision)), {}};
+    const auto unsupported = solver(zero_order, empty_factors);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        unsupported.status == Status::UNSUPPORTED_DIMENSION &&
+        !unsupported.data.has_value());
+
+    Matrix<X> nonfinite_input(rotation);
+    nonfinite_input[0u][0u] = X(Raw::nan(precision));
+    const auto rejected_input = solver(nonfinite_input, *original.data);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        rejected_input.status == Status::INCONCLUSIVE &&
+        !rejected_input.data.has_value());
+    const auto rejected_direct = solver(nonfinite_input);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        rejected_direct.status == Status::INCONCLUSIVE &&
+        !rejected_direct.data.has_value());
+
+    // Nonfinite roots and subblocks are distinct malformed-metadata cases.
+    Matrix<X> scalar(1u, 1u, X(0u, precision));
+    scalar[0u][0u] = X(1u, precision);
+    SchurDecompositionData<ApproximateTag, PR> nonfinite_root{
+        Matrix<X>::identity(1u, precision),
+        Matrix<X>(1u, 1u, X(Raw::inf(precision))), {1u}};
+    const auto rejected_root = solver(scalar, nonfinite_root);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        rejected_root.status == Status::INCONCLUSIVE &&
+        !rejected_root.data.has_value());
+
+    auto nonfinite_pair = *original.data;
+    nonfinite_pair.quasi_triangular[0u][0u] = X(Raw::nan(precision));
+    reject(nonfinite_pair);
+
+    // A zero or badly scaled similarity factor cannot manufacture valid
+    // lifted eigenvectors from otherwise plausible Schur metadata.
+    auto zero_Q = *original.data;
+    zero_Q.orthogonal = Matrix<X>(2u, 2u, X(0u, precision));
+    reject(zero_Q);
+    auto nonorthogonal_Q = *original.data;
+    nonorthogonal_Q.orthogonal[0u][0u] = X(2u, precision);
+    reject(nonorthogonal_Q);
+    auto overflowing_Q = *original.data;
+    overflowing_Q.orthogonal[0u][0u] = X(Raw::inf(precision));
+    reject(overflowing_Q);
+
+    // Two distinct roots can still have an unusably ill-conditioned basis.
+    // Keep the gap above the simple-spectrum threshold but below the
+    // inverse-basis pivot threshold, so rejection occurs at that contract.
+    const X epsilon(Raw::eps(precision));
+    const X narrow_gap = X(384u, precision) * epsilon;
+    Matrix<X> near_jordan(2u, 2u, X(0u, precision));
+    near_jordan[0u][0u] = X(1u, precision);
+    near_jordan[0u][1u] = X(1u, precision);
+    near_jordan[1u][1u] = X(1u, precision) + narrow_gap;
+    SchurDecompositionData<ApproximateTag, PR> ill_conditioned{
+        Matrix<X>::identity(2u, precision), near_jordan, {1u, 1u}};
+    const auto rejected_basis = solver(near_jordan, ill_conditioned);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        rejected_basis.status == Status::INCONCLUSIVE &&
+        !rejected_basis.data.has_value());
 }
 
 //! \brief Verify automatic real/complex dispatch through one public API.
@@ -264,6 +330,7 @@ template<class PR>
 Void test_unified_eigen_decomposition(PR precision) {
     using AX = FloatApproximation<PR>;
     using VX = FloatBounds<PR>;
+    using Raw = typename AX::RawType;
     using Status = EigenDecompositionStatus;
     const AX zero(0u, precision);
     const EigenDecomposition<ApproximateTag, PR> solver(precision);
@@ -399,6 +466,17 @@ Void test_unified_eigen_decomposition(PR precision) {
         !unverified.data.has_value() &&
         unverified.real_data() == nullptr &&
         unverified.complex_data() == nullptr);
+
+    // If both real and Schur attempts reject a nonfinite input, the facade
+    // must preserve INCONCLUSIVE with and without optional diagnostics.
+    Matrix<AX> nonfinite(1u, 1u, AX(Raw::nan(precision)));
+    const auto rejected_plain = solver(nonfinite);
+    const auto rejected_instrumented = solver(nonfinite, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        rejected_plain.status == Status::INCONCLUSIVE &&
+        !rejected_plain.data.has_value() &&
+        rejected_instrumented.status == Status::INCONCLUSIVE &&
+        !rejected_instrumented.data.has_value());
 }
 
 

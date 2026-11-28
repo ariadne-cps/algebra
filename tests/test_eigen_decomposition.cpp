@@ -992,6 +992,117 @@ Void test_repeated_triangular_spectrum(PR precision) {
         validated(jordan).status == Status::INCONCLUSIVE);
 }
 
+//! \brief Exercise ordering and failure contracts of structural solvers.
+template<class PR>
+Void test_structural_ordering_and_failures(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
+
+    // Descending coordinate order exercises insertion before an existing
+    // eigenvalue. A 3x3 diagonal result is classified as TRIANGULAR, while
+    // the same n=2 branch is already covered as ANALYTIC elsewhere.
+    Matrix<AX> diagonal_a(3u, 3u, azero);
+    Matrix<VX> diagonal_v(3u, 3u, vzero);
+    const Int descending[3] = {3, 1, 2};
+    for (SizeType i = 0u; i != 3u; ++i) {
+        diagonal_a[i][i] = AX(descending[i], precision);
+        diagonal_v[i][i] = VX(descending[i], precision);
+    }
+    EigenDecompositionDiagnostics diagnostics;
+    const auto diagonal_point = approximate(diagonal_a, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagonal_point.status == Status::SUCCESS &&
+        diagnostics.strategy == EigenDecompositionStrategy::TRIANGULAR);
+    const auto diagonal_certified = validated(diagonal_v, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagonal_certified.status == Status::SUCCESS &&
+        diagnostics.strategy == EigenDecompositionStrategy::TRIANGULAR);
+
+    // Two independent 2x2 components are discovered in high-spectrum-first
+    // order. Global insertion must move the later low-spectrum eigenpairs.
+    Matrix<AX> blocks_a(4u, 4u, azero);
+    Matrix<VX> blocks_v(4u, 4u, vzero);
+    const Int blocks[4][4] = {
+        {6, 1, 0, 0}, {1, 6, 0, 0},
+        {0, 0, 2, 1}, {0, 0, 1, 2}
+    };
+    for (SizeType row = 0u; row != 4u; ++row) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            blocks_a[row][col] = AX(blocks[row][col], precision);
+            blocks_v[row][col] = VX(blocks[row][col], precision);
+        }
+    }
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate(blocks_a).status == Status::SUCCESS);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(blocks_v).status == Status::SUCCESS);
+
+    // A cyclic high-spectrum 2x2 block coupled to a lower scalar remains
+    // diagonalizable. Its block-triangular eigenpair ordering must insert
+    // the scalar before both already produced block roots.
+    const Int ordered[3][3] = {{6, 1, 1}, {1, 6, 0}, {0, 0, 1}};
+    Matrix<AX> ordered_a(3u, 3u, azero);
+    Matrix<VX> ordered_v(3u, 3u, vzero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ordered_a[row][col] = AX(ordered[row][col], precision);
+            ordered_v[row][col] = VX(ordered[row][col], precision);
+        }
+    }
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate(ordered_a, &diagnostics).status == Status::SUCCESS &&
+        diagnostics.strategy == EigenDecompositionStrategy::BLOCK_TRIANGULAR);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(ordered_v, &diagnostics).status == Status::SUCCESS &&
+        diagnostics.strategy == EigenDecompositionStrategy::BLOCK_TRIANGULAR);
+
+    // An independently varying scalar that overlaps the first block's root
+    // has no family-wide fixed ordering and must be rejected.
+    ordered_v[2u][2u] = VX(4, 6, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(ordered_v).status == Status::INCONCLUSIVE);
+
+    // A strongly connected defective 2x2 diagonal block cannot be rescued
+    // by coupling it one-way to an independent scalar block.
+    const Int defective[3][3] = {{1, 1, 1}, {-1, 3, 0}, {0, 0, 5}};
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            ordered_a[row][col] = AX(defective[row][col], precision);
+            ordered_v[row][col] = VX(defective[row][col], precision);
+        }
+    }
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate(ordered_a).status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(ordered_v).status == Status::INCONCLUSIVE);
+
+    // Connected upper and lower Jordan chains reach the triangular
+    // compatibility checks directly; the repeated row obstruction is real.
+    const Int jordan[3][3] = {{1, 1, 0}, {0, 1, 1}, {0, 0, 2}};
+    Matrix<AX> upper_a(3u, 3u, azero);
+    Matrix<VX> upper_v(3u, 3u, vzero);
+    Matrix<AX> lower_a(3u, 3u, azero);
+    Matrix<VX> lower_v(3u, 3u, vzero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            upper_a[row][col] = AX(jordan[row][col], precision);
+            upper_v[row][col] = VX(jordan[row][col], precision);
+            lower_a[row][col] = AX(jordan[col][row], precision);
+            lower_v[row][col] = VX(jordan[col][row], precision);
+        }
+    }
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate(upper_a).status == Status::INCONCLUSIVE &&
+        approximate(lower_a).status == Status::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(upper_v).status == Status::INCONCLUSIVE &&
+        validated(lower_v).status == Status::INCONCLUSIVE);
+}
+
 /** @brief Test dense nonsymmetric approximate simple real eigendecompositions. */
 template<class PR>
 Void test_nonsymmetric_approximate(PR precision) {
@@ -1119,6 +1230,21 @@ Void test_nonsymmetric_approximate(PR precision) {
         defective_answer.status == Status::INCONCLUSIVE);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         !defective_answer.data.has_value());
+
+    // A dense, cyclic but diagonalizable matrix with spectrum {1,1,2}
+    // reaches the Schur path; the real API rejects the unresolved cluster.
+    const Int repeated_dense_entries[3][3] = {
+        {2, 1, -1}, {1, 2, -1}, {1, 1, 0}};
+    Matrix<X> repeated_dense(3u, 3u, zero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            repeated_dense[row][col] = X(repeated_dense_entries[row][col], precision);
+        }
+    }
+    const auto unresolved_cluster = solver(repeated_dense);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        unresolved_cluster.status == Status::INCONCLUSIVE &&
+        !unresolved_cluster.data.has_value());
 }
 
 //! \brief Certify dense nonsymmetric matrices using actual-midpoint QR seeds.
@@ -1414,6 +1540,17 @@ Void test_nonfinite_eigen_inputs(PR precision) {
         approximate(three_a).status == Status::INCONCLUSIVE);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         validated(three_v).status == Status::INCONCLUSIVE);
+
+    // The data helper has an explicitly fallible inverse operation. A
+    // singular stored basis returns no value in both arithmetic paradigms.
+    detail::EigenDecompositionData<ApproximateTag, PR> singular_a{
+        Vector<AX>(2u, azero), Matrix<AX>(2u, 2u, azero)};
+    detail::EigenDecompositionData<ValidatedTag, PR> singular_v{
+        Vector<VX>(2u, vzero), Matrix<VX>(2u, 2u, vzero)};
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !singular_a.inverse_eigenvector_matrix().has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !singular_v.inverse_eigenvector_matrix().has_value());
 }
 
 //! \brief Two coupled cyclic diagonal blocks with known real spectrum.
@@ -1568,6 +1705,27 @@ Void test_eigen_intermediate_overflow() {
         approximate(a).status == Status::SUCCESS);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         validated(v).status == Status::SUCCESS);
+
+    // The entries remain finite at 2^1023, while summing two row radii
+    // overflows. A fully connected pattern forces the dense Gershgorin gate.
+    for (SizeType exponent = 600u; exponent != 1023u; ++exponent) {
+        rigorous_large *= vtwo;
+    }
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        is_finite(rigorous_large.upper_raw()));
+    Matrix<VX> dense_overflow(3u, 3u, vzero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        dense_overflow[row][row] = VX(static_cast<unsigned>(row + 1u), dp);
+        for (SizeType col = 0u; col != 3u; ++col) {
+            if (row != col) {
+                dense_overflow[row][col] = rigorous_large;
+            }
+        }
+    }
+    const auto overflowed_radius = validated(dense_overflow);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        overflowed_radius.status == Status::INCONCLUSIVE &&
+        !overflowed_radius.data.has_value());
 }
 
 //! \brief Non-normal dense example requiring genuine validated dense certification.
@@ -1673,6 +1831,50 @@ Void test_eigen_diagnostics(PR precision) {
         }
     }
 
+    // Exercise disk sorting when input rows arrive in descending spectral
+    // order. Small nonzero couplings keep the graph connected.
+    Matrix<VX> descending(3u, 3u, zero);
+    descending[0u][0u] = VX(9u, precision);
+    descending[1u][1u] = VX(5u, precision);
+    descending[2u][2u] = VX(1u, precision);
+    const VX tiny = one / VX(64u, precision);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            if (row != col) {
+                descending[row][col] = tiny;
+            }
+        }
+    }
+    const auto descending_result = solver(descending, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        descending_result.status == Status::SUCCESS &&
+        descending_result.data.has_value() &&
+        diagnostics.strategy == EigenDecompositionStrategy::GERSHGORIN);
+    if (descending_result.data) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            descending_result.data->eigenvalues[0u].upper_raw() <
+            descending_result.data->eigenvalues[1u].lower_raw() &&
+            descending_result.data->eigenvalues[1u].upper_raw() <
+            descending_result.data->eigenvalues[2u].lower_raw());
+    }
+
+    // Overlapping uncertainty defeats both fixed-basis similarity and
+    // Krawczyk isolation while preserving a symmetric midpoint.
+    Matrix<VX> wide_symmetric(3u, 3u, zero);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        wide_symmetric[row][row] = VX(static_cast<unsigned>(row + 1u), precision);
+        for (SizeType col = row + 1u; col != 3u; ++col) {
+            const VX uncertain(-1, 1, precision);
+            wide_symmetric[row][col] = uncertain;
+            wide_symmetric[col][row] = uncertain;
+        }
+    }
+    const auto unresolved_symmetric = solver(wide_symmetric, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        unresolved_symmetric.status == Status::INCONCLUSIVE &&
+        !unresolved_symmetric.data.has_value() &&
+        diagnostics.strategy == EigenDecompositionStrategy::KRAWCZYK);
+
     Matrix<AX> symmetric(3u, 3u, AX(0u, precision));
     symmetric[0u][0u] = AX(2u, precision);
     symmetric[1u][1u] = AX(2u, precision);
@@ -1771,6 +1973,8 @@ int main(int argc, char** argv) {
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_real_spectrum(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_triangular_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_repeated_triangular_spectrum(MultiplePrecision(80u)));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_structural_ordering_and_failures(dp));
+        ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_structural_ordering_and_failures(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_permuted_triangular_spectrum(dp));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_permuted_triangular_spectrum(MultiplePrecision(80u)));
         ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(), test_block_diagonal_spectrum(dp));
