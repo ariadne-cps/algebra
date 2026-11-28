@@ -110,9 +110,10 @@ struct ComplexEigenDecompositionResult {
 //! public eigendecomposition API or duplicate the Schur QR solver.
 //!
 //! \par Method derived from the real Schur form
-//! First compute A*Q = Q*T with SchurDecomposition (Householder
-//! Hessenberg reduction and Francis/Wilkinson shifted QR). A real
-//! Schur diagonal block is either 1x1 with a real eigenvalue or 2x2
+//! Take A*Q = Q*T from SchurDecomposition (Householder Hessenberg
+//! reduction and Francis/Wilkinson shifted QR). The unified facade
+//! supplies the already computed Schur factors instead of rerunning QR.
+//! A real Schur diagonal block is either 1x1 with a real eigenvalue or 2x2
 //! with a pair of conjugate complex eigenvalues. The eigenvalues
 //! are extracted with Spectrum's 2x2 quadratic formula.
 //!
@@ -156,8 +157,38 @@ class ComplexEigenDecomposition {
     //! \brief Select the requested real coefficient precision.
     explicit ComplexEigenDecomposition(PR precision) : _precision(precision) {}
 
-    //! \brief Attempt complex diagonalization of the real square matrix A.
+    //! \brief Attempt complex diagonalization by first computing Schur.
+    //! \details Convenience entry point for direct internal testing.
+    //! The unified public facade uses the overload accepting the Schur
+    //! factors it already computed, avoiding duplicate QR reduction.
     Result operator()(const Matrix<X>& A) const {
+        using Status = ComplexEigenDecompositionStatus;
+        ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+        if (A.row_size() == 0u) {
+            return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+        }
+        if constexpr (!std::is_same_v<P, ApproximateTag>) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        } else {
+            const auto schur = SchurDecomposition<P, PR>(_precision)(A);
+            if (schur.status != SchurStatus::SUCCESS || !schur.data) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            return (*this)(A, *schur.data);
+        }
+    }
+
+    //! \brief Construct complex eigenvectors from supplied real Schur factors.
+    //! \param A Original real matrix; all residual checks use A, not T.
+    //! \param schur_data Factors Q,T from A*Q approximately equal to Q*T.
+    //! \details Reusing Schur data avoids repeating Householder/Hessenberg
+    //! reduction and Francis/Wilkinson QR in the complex fallback.
+    //! The provided factors must be for A; internal structural, residual,
+    //! and inverse-basis checks are retained. This is a numerical method,
+    //! not a validated interval certificate. See SchurDecomposition for
+    //! mathematical derivation and original algorithm references.
+    Result operator()(const Matrix<X>& A,
+                      const SchurDecompositionData<P, PR>& schur_data) const {
         using Status = ComplexEigenDecompositionStatus;
         ARIADNE_PRECONDITION(A.row_size() == A.column_size());
         const SizeType n = A.row_size();
@@ -197,12 +228,8 @@ class ComplexEigenDecomposition {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
 
-            const auto schur = SchurDecomposition<P, PR>(_precision)(A);
-            if (schur.status != SchurStatus::SUCCESS || !schur.data) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
-            const Matrix<X>& T = schur.data->quasi_triangular;
-            const Matrix<X>& Q = schur.data->orthogonal;
+            const Matrix<X>& T = schur_data.quasi_triangular;
+            const Matrix<X>& Q = schur_data.orthogonal;
             if (T.row_size() != n || T.column_size() != n ||
                 Q.row_size() != n || Q.column_size() != n) {
                 return {Status::INCONCLUSIVE, std::nullopt};
@@ -219,7 +246,7 @@ class ComplexEigenDecomposition {
             std::vector<Block> blocks;
             std::vector<SpectralRootEntry> roots;
             SizeType offset = 0u;
-            for (const SizeType width: schur.data->block_sizes) {
+            for (const SizeType width: schur_data.block_sizes) {
                 if ((width != 1u && width != 2u) ||
                     offset >= n || width > n - offset) {
                     return {Status::INCONCLUSIVE, std::nullopt};

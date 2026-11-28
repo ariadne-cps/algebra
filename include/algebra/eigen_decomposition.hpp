@@ -329,9 +329,12 @@ struct EigenDecompositionResult {
 //! original-matrix complex eigenpair residuals and inverse basis.
 //! Matrices with repeated real eigenvalues or an unresolved Schur
 //! decomposition do not trigger complex matrix allocation. For the
-//! uncommon nonreal case, Schur is currently recomputed during the
-//! fallback: this is an optimization opportunity but imposes no
-//! overhead on successful real decompositions.
+//! uncommon nonreal case, the Schur factors used to detect complex
+//! blocks are reused directly for complex back-substitution; QR is not
+//! repeated between detection and complex eigenvector extraction.
+//! A failed real nonsymmetric diagonalization may have previously
+//! computed its own Schur form; sharing that earlier computation is
+//! a separate future optimization, with no impact on real successes.
 //!
 //! \par Limitations and mathematical sources
 //! EigenDecomposition requires a complete, numerically acceptable
@@ -396,13 +399,13 @@ class EigenDecomposition {
                         }
                     }
                 }
-                if (has_nonreal_block) {
+                if (has_nonreal_block && schur.data) {
                     if (diagnostics) {
                         diagnostics->strategy =
                             EigenDecompositionStrategy::COMPLEX_SCHUR;
                     }
                     auto complex = detail::ComplexEigenDecomposition<P, PR>(
-                        _precision)(A);
+                        _precision)(A, *schur.data);
                     if (diagnostics) {
                         diagnostics->candidate_time +=
                             std::chrono::duration_cast<std::chrono::nanoseconds>(

@@ -40,10 +40,34 @@ Void check_complex_factorization(const Matrix<FloatApproximation<PR>>& A,
     using X = FloatApproximation<PR>;
     using CX = Complex<X>;
     const SizeType n = A.row_size();
-    const auto result = detail::ComplexEigenDecomposition<ApproximateTag, PR>(precision)(A);
+    const detail::ComplexEigenDecomposition<ApproximateTag, PR> solver(precision);
+    // Compare the direct method with the shared-Schur overload: both
+    // must construct a complete complex eigenbasis, and neither may
+    // bypass the original-input residual and inverse-basis checks.
+    const auto schur = SchurDecomposition<ApproximateTag, PR>(precision)(A);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        schur.status == SchurStatus::SUCCESS && schur.data.has_value());
+    const auto result = solver(A);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         result.status == detail::ComplexEigenDecompositionStatus::SUCCESS &&
         result.data.has_value());
+    if (schur.data) {
+        const auto reused = solver(A, *schur.data);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            reused.status == detail::ComplexEigenDecompositionStatus::SUCCESS &&
+            reused.data.has_value());
+        if (reused.data && result.data) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                reused.data->eigenvalues.size() == result.data->eigenvalues.size());
+            for (SizeType k = 0u; k != result.data->eigenvalues.size(); ++k) {
+                const auto& first = reused.data->eigenvalues[k];
+                const auto& second = result.data->eigenvalues[k];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs((first.real_part() - second.real_part()).get_d()) < 1e-8 &&
+                    std::abs((first.imaginary_part() - second.imaginary_part()).get_d()) < 1e-8);
+            }
+        }
+    }
     if (!result.data) {
         return;
     }
