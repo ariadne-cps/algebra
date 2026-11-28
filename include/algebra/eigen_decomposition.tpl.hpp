@@ -106,8 +106,21 @@ typename RealEigenDecomposition<P, PR>::ResultType
 RealEigenDecomposition<P, PR>::operator()(
         const Matrix<NumericType>& M,
         EigenDecompositionDiagnostics* diagnostics) const {
+    return this->operator()(M, diagnostics, nullptr);
+}
+
+template<class P, class PR>
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::operator()(
+        const Matrix<NumericType>& M,
+        EigenDecompositionDiagnostics* diagnostics,
+        std::optional<SchurDecompositionData<P, PR>>*
+            complex_candidate) const {
     using Status = EigenDecompositionStatus;
-    auto result = this->_attempt(M, diagnostics);
+    if (complex_candidate) {
+        complex_candidate->reset();
+    }
+    auto result = this->_attempt(M, diagnostics, complex_candidate);
     if (result.status != Status::SUCCESS) {
         return result;
     }
@@ -145,7 +158,9 @@ template<class P, class PR>
 typename RealEigenDecomposition<P, PR>::ResultType
 RealEigenDecomposition<P, PR>::_attempt(
         const Matrix<NumericType>& M,
-        EigenDecompositionDiagnostics* diagnostics) const {
+        EigenDecompositionDiagnostics* diagnostics,
+        std::optional<SchurDecompositionData<P, PR>>*
+            complex_candidate) const {
     if (diagnostics) {
         *diagnostics = {};
     }
@@ -754,7 +769,7 @@ RealEigenDecomposition<P, PR>::_attempt(
                 if (diagnostics) {
                     diagnostics->strategy = EigenDecompositionStrategy::SHIFTED_QR;
                 }
-                return this->_nonsymmetric(M);
+                return this->_nonsymmetric(M, complex_candidate);
             } else {
                 if (diagnostics) {
                     diagnostics->strategy = EigenDecompositionStrategy::GERSHGORIN;
@@ -1785,7 +1800,10 @@ RealEigenDecomposition<P, PR>::_krawczyk(
  */
 template<class P, class PR>
 typename RealEigenDecomposition<P, PR>::ResultType
-RealEigenDecomposition<P, PR>::_nonsymmetric(const Matrix<NumericType>& input) const {
+RealEigenDecomposition<P, PR>::_nonsymmetric(
+        const Matrix<NumericType>& input,
+        std::optional<SchurDecompositionData<P, PR>>*
+            complex_candidate) const {
     using Status = EigenDecompositionStatus;
     if constexpr (!std::is_same_v<P, ApproximateTag>) {
         return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
@@ -1819,7 +1837,7 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(const Matrix<NumericType>& input) c
 
         // The unique QR eigensolver now lives in SchurDecomposition.
         // Do not maintain a second full-matrix real QR iteration here.
-        const auto schur = SchurDecomposition<P, PR>(_precision)(input);
+        auto schur = SchurDecomposition<P, PR>(_precision)(input);
         if (schur.status != SchurStatus::SUCCESS || !schur.data) {
             return {Status::INCONCLUSIVE, std::nullopt};
         }
@@ -1827,8 +1845,12 @@ RealEigenDecomposition<P, PR>::_nonsymmetric(const Matrix<NumericType>& input) c
         SizeType block_order = 0u;
         for (const SizeType width: blocks) {
             if (width != 1u) {
-                // Nonreal conjugate blocks do not admit real eigenvectors.
-                // Repeated/ambiguous clusters remain inconclusive too.
+                // Reuse the nonreal Schur factors when the public
+                // facade must fall back to complex eigenvectors.
+                // Move only on failure; real successes are unaffected.
+                if (width == 2u && complex_candidate) {
+                    *complex_candidate = std::move(*schur.data);
+                }
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
             ++block_order;

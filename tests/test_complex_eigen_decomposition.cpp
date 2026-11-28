@@ -309,6 +309,77 @@ Void test_unified_eigen_decomposition(PR precision) {
         !unverified.data.has_value());
 }
 
+
+//! \brief Reuse real nonsymmetric Schur factors on complex fallback.
+template<class PR>
+Void test_cached_complex_schur_fallback(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using Status = EigenDecompositionStatus;
+    // A strongly connected nonsymmetric 3x3 with spectrum
+    // {9,-3i,+3i}; the real QR path reaches Schur's 2x2 block.
+    const Int entries[3][3] = {{4, 5, 0}, {3, 4, -4}, {-4, 0, 1}};
+    Matrix<AX> A(3u, 3u, AX(0u, precision));
+    for (SizeType i = 0u; i != 3u; ++i) {
+        for (SizeType j = 0u; j != 3u; ++j) {
+            A[i][j] = AX(entries[i][j], precision);
+        }
+    }
+    std::optional<SchurDecompositionData<ApproximateTag, PR>> cached;
+    const detail::RealEigenDecomposition<ApproximateTag, PR> real(precision);
+    const auto real_result = real(A, nullptr, &cached);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        real_result.status == Status::INCONCLUSIVE &&
+        !real_result.data.has_value() && cached.has_value());
+    if (cached) {
+        SizeType covered = 0u, pairs = 0u;
+        for (const auto width: cached->block_sizes) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                width > 0u && width <= 3u - covered);
+            covered += width;
+            if (width == 2u) { ++pairs; }
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            covered == 3u && pairs == 1u);
+        const auto extracted =
+            detail::ComplexEigenDecomposition<ApproximateTag, PR>(precision)(
+                A, *cached);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            extracted.status ==
+                detail::ComplexEigenDecompositionStatus::SUCCESS &&
+            extracted.data.has_value());
+    }
+
+    EigenDecompositionDiagnostics diagnostics;
+    const auto unified = EigenDecomposition<ApproximateTag, PR>(precision)(
+        A, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        unified.status == Status::SUCCESS &&
+        unified.real_data() == nullptr &&
+        unified.complex_data() != nullptr &&
+        diagnostics.strategy == EigenDecompositionStrategy::COMPLEX_SCHUR);
+
+    // The cache is cleared by the next invocation and is NOT
+    // populated by a real success (here a symmetric example).
+    const Int real_entries[3][3] = {
+        {6, 1, 0}, {1, 3, 1}, {0, 1, 0}
+    };
+    Matrix<AX> real_matrix(3u, 3u, AX(0u, precision));
+    for (SizeType i = 0u; i != 3u; ++i) {
+        for (SizeType j = 0u; j != 3u; ++j) {
+            real_matrix[i][j] = AX(real_entries[i][j], precision);
+        }
+    }
+    const auto real_success = real(real_matrix, nullptr, &cached);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        real_success.status == Status::SUCCESS &&
+        real_success.data.has_value() && !cached.has_value());
+    const auto unified_real =
+        EigenDecomposition<ApproximateTag, PR>(precision)(real_matrix);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        unified_real.status == Status::SUCCESS &&
+        unified_real.real_data() != nullptr &&
+        unified_real.complex_data() == nullptr);
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -324,6 +395,10 @@ int main(int argc, char** argv) {
                 test_unified_eigen_decomposition(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_unified_eigen_decomposition(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_cached_complex_schur_fallback(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_cached_complex_schur_fallback(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

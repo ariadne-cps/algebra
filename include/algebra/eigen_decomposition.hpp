@@ -192,12 +192,23 @@ class RealEigenDecomposition {
     ResultType operator()(const Matrix<NumericType>& M,
                           EigenDecompositionDiagnostics* diagnostics) const;
 
+    //! \brief Forward a nonreal Schur decomposition on real-path failure.
+    //! \details A detected nonreal 2x2 block permits moving Q,T to
+    //! the caller, avoiding duplicate Hessenberg/QR work. The
+    //! output-only cache remains empty on successful real paths.
+    ResultType operator()(const Matrix<NumericType>& M,
+                          EigenDecompositionDiagnostics* diagnostics,
+                          std::optional<SchurDecompositionData<P, PR>>*
+                              complex_candidate) const;
+
   private:
     //! \brief Execute decomposition strategies before final output checks.
     //! \details The public operator rejects nonfinite results produced by
     //! intermediate numerical overflow, regardless of chosen strategy.
     ResultType _attempt(const Matrix<NumericType>& M,
-                        EigenDecompositionDiagnostics* diagnostics) const;
+                        EigenDecompositionDiagnostics* diagnostics,
+                        std::optional<SchurDecompositionData<P, PR>>*
+                            complex_candidate) const;
 
     //! \brief Decide strict positivity using the requested paradigm.
     bool _positive(const NumericType& x) const;
@@ -238,7 +249,10 @@ class RealEigenDecomposition {
     //! mathematical sources of Householder, Hessenberg, Francis and
     //! Wilkinson. ValidatedTag retains separate Gershgorin/Krawczyk
     //! certificates and never treats a numerical Schur form as proof.
-    ResultType _nonsymmetric(const Matrix<NumericType>& A) const;
+    ResultType _nonsymmetric(
+        const Matrix<NumericType>& A,
+        std::optional<SchurDecompositionData<P, PR>>*
+            complex_candidate) const;
 
     //! \brief Certify a dense matrix using disjoint Gershgorin disks.
     //! \details Gershgorin's circle theorem (1931) localizes eigenvalues
@@ -329,12 +343,12 @@ struct EigenDecompositionResult {
 //! original-matrix complex eigenpair residuals and inverse basis.
 //! Matrices with repeated real eigenvalues or an unresolved Schur
 //! decomposition do not trigger complex matrix allocation. For the
-//! uncommon nonreal case, the Schur factors used to detect complex
-//! blocks are reused directly for complex back-substitution; QR is not
-//! repeated between detection and complex eigenvector extraction.
-//! A failed real nonsymmetric diagonalization may have previously
-//! computed its own Schur form; sharing that earlier computation is
-//! a separate future optimization, with no impact on real successes.
+//! uncommon nonreal case, the real nonsymmetric solver can move
+//! its already-computed Schur Q,T factors into the complex fallback
+//! after detecting a 2x2 conjugate block. Otherwise the facade
+//! computes Schur on demand and reuses it for back-substitution.
+//! Neither branch duplicates Schur QR for complex eigenvector
+//! extraction. Real successes never allocate complex matrices.
 //!
 //! \par Limitations and mathematical sources
 //! EigenDecomposition requires a complete, numerically acceptable
@@ -371,8 +385,12 @@ class EigenDecomposition {
     //! overhead. COMPLEX_SCHUR identifies a complex fallback attempt.
     ResultType operator()(const Matrix<NumericType>& A,
                           EigenDecompositionDiagnostics* diagnostics) const {
+        // An output-only cache, filled ONLY if real nonsymmetric
+        // Schur detects nonreal eigenvalues and cannot return a
+        // complete real basis. Successful real paths never copy Q,T.
+        std::optional<SchurDecompositionData<P, PR>> complex_candidate;
         auto real = detail::RealEigenDecomposition<P, PR>(_precision)(
-            A, diagnostics);
+            A, diagnostics, &complex_candidate);
         if (real.status == EigenDecompositionStatus::SUCCESS) {
             if (!real.data) {
                 return {EigenDecompositionStatus::INCONCLUSIVE, std::nullopt};
@@ -385,27 +403,31 @@ class EigenDecomposition {
                 using Clock = std::chrono::steady_clock;
                 const auto start = diagnostics
                     ? Clock::now() : Clock::time_point{};
-                // Real Schur detection is deliberately performed
-                // BEFORE complex allocations or inversion. Merely
-                // failing to find a real basis does not justify
-                // promoting all coefficients to complex arithmetic.
-                const auto schur = SchurDecomposition<P, PR>(_precision)(A);
+                if (!complex_candidate) {
+                    // Structural or analytic real paths might not
+                    // reach nonsymmetric QR, so detect complex blocks
+                    // once here if no cached factors are available.
+                    auto schur = SchurDecomposition<P, PR>(_precision)(A);
+                    if (schur.status == SchurStatus::SUCCESS && schur.data) {
+                        complex_candidate = std::move(*schur.data);
+                    }
+                }
                 bool has_nonreal_block = false;
-                if (schur.status == SchurStatus::SUCCESS && schur.data) {
-                    for (const SizeType width: schur.data->block_sizes) {
+                if (complex_candidate) {
+                    for (const SizeType width: complex_candidate->block_sizes) {
                         if (width == 2u) {
                             has_nonreal_block = true;
                             break;
                         }
                     }
                 }
-                if (has_nonreal_block && schur.data) {
+                if (has_nonreal_block && complex_candidate) {
                     if (diagnostics) {
                         diagnostics->strategy =
                             EigenDecompositionStrategy::COMPLEX_SCHUR;
                     }
                     auto complex = detail::ComplexEigenDecomposition<P, PR>(
-                        _precision)(A, *schur.data);
+                        _precision)(A, *complex_candidate);
                     if (diagnostics) {
                         diagnostics->candidate_time +=
                             std::chrono::duration_cast<std::chrono::nanoseconds>(
