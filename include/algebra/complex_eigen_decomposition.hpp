@@ -38,6 +38,7 @@
 #include "numeric/complex.hpp"
 
 namespace Ariadne {
+namespace detail {
 
 //! \brief Dense, explicitly initialized storage of complex entries.
 //! \details The generic Matrix<Complex<X>> currently requires scalar
@@ -100,12 +101,13 @@ struct ComplexEigenDecompositionResult {
     std::optional<ComplexEigenDecompositionData<P, PR>> data;
 };
 
-//! \brief Compute a complete complex eigenvector basis of a REAL matrix.
+//! \brief Internal complex eigenvector engine called only by the unified EigenDecomposition.
 //!
-//! \details This initial ApproximateTag implementation is for spectra
-//! whose complex eigenvalues are numerically simple and well separated.
-//! It is a distinct scalar-field result from the older real-only
-//! EigenDecomposition API; there is NO second QR implementation here.
+//! \details This internal ApproximateTag implementation is used only
+//! by the single public EigenDecomposition facade when nonreal Schur
+//! blocks require a complex basis. It is restricted to numerically
+//! simple, separated eigenvalues. It does not provide a competing
+//! public eigendecomposition API or duplicate the Schur QR solver.
 //!
 //! \par Method derived from the real Schur form
 //! First compute A*Q = Q*T with SchurDecomposition (Householder
@@ -482,6 +484,7 @@ class ComplexEigenDecomposition {
     PR _precision;
 };
 
+} // namespace detail
 } // namespace Ariadne
 
 #endif // ARIADNE_COMPLEX_EIGEN_DECOMPOSITION_HPP

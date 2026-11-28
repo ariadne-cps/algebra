@@ -31,7 +31,11 @@
 
 #include <chrono>
 #include <optional>
+#include <type_traits>
+#include <utility>
+#include <variant>
 
+#include "algebra/complex_eigen_decomposition.hpp"
 #include "algebra/diagonal_matrix.hpp"
 #include "algebra/matrix.hpp"
 #include "algebra/schur_decomposition.hpp"
@@ -55,7 +59,8 @@ enum class EigenDecompositionStrategy {
     BLOCK_DIAGONAL, //!< Eigenbasis assembled from independent blocks.
     BLOCK_TRIANGULAR, //!< Eigenvectors lifted from coupled triangular blocks.
     JACOBI,        //!< Approximate symmetric Jacobi rotations.
-    SHIFTED_QR,    //!< Approximate nonsymmetric real QR and Newton refinement.
+    SHIFTED_QR,    //!< Approximate nonsymmetric real Schur QR and Newton refinement.
+    COMPLEX_SCHUR, //!< Approximate complex eigenvectors from real Schur blocks.
     GERSHGORIN,    //!< Direct validated disk separation.
     SIMILARITY,    //!< Verified similarity plus disk separation.
     KRAWCZYK      //!< Verified eigenpair root inclusion.
@@ -72,6 +77,8 @@ struct EigenDecompositionDiagnostics {
     std::chrono::nanoseconds candidate_time{0};
     std::chrono::nanoseconds verification_time{0};
 };
+
+namespace detail {
 
 //! \brief Eigenvalues (in ascending order) and eigenvectors stored by columns.
 //! \details For validated coefficients, each entry encloses the corresponding
@@ -165,13 +172,13 @@ struct EigenDecompositionResult {
 //! result encloses eigenpairs of every member, with consistent ascending
 //! eigenvalue order. This is not yet a general-purpose eigensolver.
 template<class P, class PR>
-class EigenDecomposition {
+class RealEigenDecomposition {
   public:
     using NumericType = FloatType<P, PR>;
     using ResultType = EigenDecompositionResult<P, PR>;
 
     //! \brief Construct a decomposer using the requested numeric precision.
-    explicit EigenDecomposition(PR precision) : _precision(precision) {}
+    explicit RealEigenDecomposition(PR precision) : _precision(precision) {}
 
     //! \brief Attempt real diagonalization of the square matrix M.
     //! \details A non-square matrix violates the precondition. Orders
@@ -270,6 +277,155 @@ class EigenDecomposition {
     ResultType _krawczyk(const Matrix<NumericType>& A,
                           EigenDecompositionDiagnostics* diagnostics) const;
 
+    PR _precision;
+};
+
+//! \brief End of the specialized real eigenbasis implementation.
+//! \details Its proven real and interval methods remain internal.
+} // namespace detail
+
+//! \brief A full real or complex diagonalization of a real matrix.
+//! \details On SUCCESS, the data holds either a real eigenvector basis
+//! (and real eigenvalues) or a complex eigenvector basis. The caller
+//! does not choose the scalar field in advance. A real basis is always
+//! preferred when it can be obtained; it is never eagerly converted
+//! into a complex matrix. ValidatedTag presently returns only a real
+//! certificate, because complex interval eigenbasis certification is
+//! not implemented. On failure, data is absent.
+template<class P, class PR>
+struct EigenDecompositionResult {
+    using RealData = detail::EigenDecompositionData<P, PR>;
+    using ComplexData = detail::ComplexEigenDecompositionData<P, PR>;
+    using Data = std::variant<RealData, ComplexData>;
+
+    EigenDecompositionStatus status;
+    std::optional<Data> data;
+
+    //! \brief Real factors, or nullptr if the result is complex/absent.
+    const RealData* real_data() const {
+        return data ? std::get_if<RealData>(&*data) : nullptr;
+    }
+
+    //! \brief Complex factors, or nullptr if the result is real/absent.
+    const ComplexData* complex_data() const {
+        return data ? std::get_if<ComplexData>(&*data) : nullptr;
+    }
+};
+
+//! \brief Compute a full eigenbasis without requiring the spectral field.
+//!
+//! \details For a real input A, first attempt the specialized REAL
+//! eigenbasis algorithms: diagonal and block structure, symmetric Jacobi,
+//! Schur-backed nonsymmetric QR/Newton, and, for ValidatedTag, certified
+//! Gershgorin, similarity and Krawczyk. A real success is returned
+//! immediately, WITHOUT complex matrix allocations or complex arithmetic.
+//! The result representation is a std::variant of real and complex data.
+//!
+//! \par Complex fallback
+//! Only when approximate real diagonalization is inconclusive, a real
+//! Schur form is inspected to establish whether it contains a conjugate
+//! nonreal 2x2 block. If so, the internal complex eigenvector routine
+//! back-substitutes through the real Schur blocks and verifies the
+//! original-matrix complex eigenpair residuals and inverse basis.
+//! Matrices with repeated real eigenvalues or an unresolved Schur
+//! decomposition do not trigger complex matrix allocation. For the
+//! uncommon nonreal case, Schur is currently recomputed during the
+//! fallback: this is an optimization opportunity but imposes no
+//! overhead on successful real decompositions.
+//!
+//! \par Limitations and mathematical sources
+//! EigenDecomposition requires a complete, numerically acceptable
+//! eigenvector basis. A defective matrix can have a complete Spectrum
+//! and SchurDecomposition but no diagonalization. Inconclusive does
+//! not assert mathematical non-diagonalizability; clusters can defeat
+//! the sufficient numerical tests. Validated complex eigenbasis
+//! certification remains unavailable. See SchurDecomposition for
+//! the Householder/Hessenberg/Francis/Wilkinson derivations, and the
+//! internal real method for Jacobi, Gershgorin and Krawczyk.
+//!
+//! \par Performance contract
+//! A common REAL success does not call the complex solver, does not
+//! allocate ComplexMatrix, and does not perform complex arithmetic.
+//! Benchmark DP/MP real-spectrum performance before campaign closure.
+template<class P, class PR>
+class EigenDecomposition {
+  public:
+    using NumericType = FloatType<P, PR>;
+    using ResultType = EigenDecompositionResult<P, PR>;
+    using RealData = typename ResultType::RealData;
+    using ComplexData = typename ResultType::ComplexData;
+    using Data = typename ResultType::Data;
+
+    explicit EigenDecomposition(PR precision) : _precision(precision) {}
+
+    //! \brief Attempt diagonalization, preferring a real basis.
+    ResultType operator()(const Matrix<NumericType>& A) const {
+        return (*this)(A, nullptr);
+    }
+
+    //! \brief Collect optional real/complex solver diagnostics.
+    //! \details A successful real path incurs no complex-search timing
+    //! overhead. COMPLEX_SCHUR identifies a complex fallback attempt.
+    ResultType operator()(const Matrix<NumericType>& A,
+                          EigenDecompositionDiagnostics* diagnostics) const {
+        auto real = detail::RealEigenDecomposition<P, PR>(_precision)(
+            A, diagnostics);
+        if (real.status == EigenDecompositionStatus::SUCCESS) {
+            if (!real.data) {
+                return {EigenDecompositionStatus::INCONCLUSIVE, std::nullopt};
+            }
+            return {EigenDecompositionStatus::SUCCESS,
+                    Data(std::in_place_type<RealData>, std::move(*real.data))};
+        }
+        if constexpr (std::is_same_v<P, ApproximateTag>) {
+            if (real.status == EigenDecompositionStatus::INCONCLUSIVE) {
+                using Clock = std::chrono::steady_clock;
+                const auto start = diagnostics
+                    ? Clock::now() : Clock::time_point{};
+                // Real Schur detection is deliberately performed
+                // BEFORE complex allocations or inversion. Merely
+                // failing to find a real basis does not justify
+                // promoting all coefficients to complex arithmetic.
+                const auto schur = SchurDecomposition<P, PR>(_precision)(A);
+                bool has_nonreal_block = false;
+                if (schur.status == SchurStatus::SUCCESS && schur.data) {
+                    for (const SizeType width: schur.data->block_sizes) {
+                        if (width == 2u) {
+                            has_nonreal_block = true;
+                            break;
+                        }
+                    }
+                }
+                if (has_nonreal_block) {
+                    if (diagnostics) {
+                        diagnostics->strategy =
+                            EigenDecompositionStrategy::COMPLEX_SCHUR;
+                    }
+                    auto complex = detail::ComplexEigenDecomposition<P, PR>(
+                        _precision)(A);
+                    if (diagnostics) {
+                        diagnostics->candidate_time +=
+                            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                Clock::now() - start);
+                    }
+                    if (complex.status ==
+                        detail::ComplexEigenDecompositionStatus::SUCCESS &&
+                        complex.data) {
+                        return {EigenDecompositionStatus::SUCCESS,
+                                Data(std::in_place_type<ComplexData>,
+                                     std::move(*complex.data))};
+                    }
+                } else if (diagnostics) {
+                    diagnostics->candidate_time +=
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(
+                            Clock::now() - start);
+                }
+            }
+        }
+        return {real.status, std::nullopt};
+    }
+
+  private:
     PR _precision;
 };
 

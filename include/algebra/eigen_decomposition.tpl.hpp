@@ -38,6 +38,7 @@
 #include "algebra/validated_root_contractors.hpp"
 
 namespace Ariadne {
+namespace detail {
 
 //! \brief Account for one optional, non-overlapping algorithm stage.
 class EigenDecompositionSectionTimer {
@@ -62,7 +63,7 @@ class EigenDecompositionSectionTimer {
 };
 
 template<class P, class PR>
-bool EigenDecomposition<P, PR>::_positive(const NumericType& x) const {
+bool RealEigenDecomposition<P, PR>::_positive(const NumericType& x) const {
     if constexpr (std::is_same_v<P, ValidatedTag>) {
         return x.lower_raw() > NumericType(0u, _precision).lower_raw();
     } else {
@@ -71,7 +72,7 @@ bool EigenDecomposition<P, PR>::_positive(const NumericType& x) const {
 }
 
 template<class P, class PR>
-bool EigenDecomposition<P, PR>::_negative(const NumericType& x) const {
+bool RealEigenDecomposition<P, PR>::_negative(const NumericType& x) const {
     if constexpr (std::is_same_v<P, ValidatedTag>) {
         return x.upper_raw() < NumericType(0u, _precision).upper_raw();
     } else {
@@ -80,7 +81,7 @@ bool EigenDecomposition<P, PR>::_negative(const NumericType& x) const {
 }
 
 template<class P, class PR>
-bool EigenDecomposition<P, PR>::_zero(const NumericType& x) const {
+bool RealEigenDecomposition<P, PR>::_zero(const NumericType& x) const {
     if constexpr (std::is_same_v<P, ValidatedTag>) {
         const auto zero = NumericType(0u, _precision).lower_raw();
         return x.lower_raw() == zero && x.upper_raw() == zero;
@@ -90,19 +91,19 @@ bool EigenDecomposition<P, PR>::_zero(const NumericType& x) const {
 }
 
 template<class P, class PR>
-bool EigenDecomposition<P, PR>::_nonzero(const NumericType& x) const {
+bool RealEigenDecomposition<P, PR>::_nonzero(const NumericType& x) const {
     return this->_positive(x) || this->_negative(x);
 }
 
 template<class P, class PR>
-typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::operator()(const Matrix<NumericType>& M) const {
     return this->operator()(M, nullptr);
 }
 
 template<class P, class PR>
-typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::operator()(
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::operator()(
         const Matrix<NumericType>& M,
         EigenDecompositionDiagnostics* diagnostics) const {
     using Status = EigenDecompositionStatus;
@@ -141,8 +142,8 @@ EigenDecomposition<P, PR>::operator()(
 }
 
 template<class P, class PR>
-typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::_attempt(
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::_attempt(
         const Matrix<NumericType>& M,
         EigenDecompositionDiagnostics* diagnostics) const {
     if (diagnostics) {
@@ -970,8 +971,8 @@ EigenDecomposition<P, PR>::_attempt(
 
 /** @brief Diagonalize an approximately symmetric real matrix using Jacobi rotations. */
 template<class P, class PR>
-typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) const {
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) const {
     using Status = EigenDecompositionStatus;
     if constexpr (!std::is_same_v<P, ApproximateTag>) {
         return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
@@ -1150,8 +1151,8 @@ EigenDecomposition<P, PR>::_symmetric(const Matrix<NumericType>& input) const {
 
 /** @brief Certify dense interval eigenpairs using separated Gershgorin disks. */
 template<class P, class PR>
-typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::_gershgorin(const Matrix<NumericType>& input) const {
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::_gershgorin(const Matrix<NumericType>& input) const {
     using Status = EigenDecompositionStatus;
     if constexpr (!std::is_same_v<P, ValidatedTag>) {
         return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
@@ -1291,8 +1292,8 @@ EigenDecomposition<P, PR>::_gershgorin(const Matrix<NumericType>& input) const {
 
 /** @brief Certify a dense interval matrix by a validated similarity transform. */
 template<class P, class PR>
-typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::_preconditioned(
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::_preconditioned(
         const Matrix<NumericType>& A,
         EigenDecompositionDiagnostics* diagnostics) const {
     using Status = EigenDecompositionStatus;
@@ -1328,7 +1329,7 @@ EigenDecomposition<P, PR>::_preconditioned(
                 }
             }
         }
-        EigenDecomposition<ApproximateTag, PR> approximate(_precision);
+        RealEigenDecomposition<ApproximateTag, PR> approximate(_precision);
         const auto midpoint_candidate = approximate(midpoint);
         candidate_timer.stop();
 
@@ -1462,8 +1463,8 @@ EigenDecomposition<P, PR>::_preconditioned(
 
 /** @brief Verify normalized real eigenpairs by interval Krawczyk inclusion. */
 template<class P, class PR>
-typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::_krawczyk(
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::_krawczyk(
         const Matrix<NumericType>& A,
         EigenDecompositionDiagnostics* diagnostics) const {
     using Status = EigenDecompositionStatus;
@@ -1501,7 +1502,7 @@ EigenDecomposition<P, PR>::_krawczyk(
                 }
             }
         }
-        const EigenDecomposition<ApproximateTag, PR> approximate(_precision);
+        const RealEigenDecomposition<ApproximateTag, PR> approximate(_precision);
         const auto midpoint_candidates = approximate(midpoint);
         candidate_timer.stop();
 
@@ -1783,8 +1784,8 @@ EigenDecomposition<P, PR>::_krawczyk(
  *  (1961-1962) and Wilkinson (1965), with mathematical derivations.
  */
 template<class P, class PR>
-typename EigenDecomposition<P, PR>::ResultType
-EigenDecomposition<P, PR>::_nonsymmetric(const Matrix<NumericType>& input) const {
+typename RealEigenDecomposition<P, PR>::ResultType
+RealEigenDecomposition<P, PR>::_nonsymmetric(const Matrix<NumericType>& input) const {
     using Status = EigenDecompositionStatus;
     if constexpr (!std::is_same_v<P, ApproximateTag>) {
         return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
@@ -2024,6 +2025,7 @@ EigenDecomposition<P, PR>::_nonsymmetric(const Matrix<NumericType>& input) const
     }
 }
 
+} // namespace detail
 } // namespace Ariadne
 
 #endif // ARIADNE_EIGEN_DECOMPOSITION_TPL_HPP

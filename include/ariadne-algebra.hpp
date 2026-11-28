@@ -33,7 +33,6 @@
 // numeric/operators.hpp, and intervening sin overloads make GCC reject it.
 #include "algebra/spectrum.hpp"
 #include "algebra/schur_decomposition.hpp"
-#include "algebra/complex_eigen_decomposition.hpp"
 
 #include "algebra/algebra.hpp"
 #include "algebra/chebyshev_polynomial.hpp"

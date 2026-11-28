@@ -27,7 +27,7 @@
  */
 #include <cmath>
 
-#include "algebra/complex_eigen_decomposition.hpp"
+#include "algebra/eigen_decomposition.hpp"
 #include "algebra_testing_context.hpp"
 
 using namespace Ariadne;
@@ -40,9 +40,9 @@ Void check_complex_factorization(const Matrix<FloatApproximation<PR>>& A,
     using X = FloatApproximation<PR>;
     using CX = Complex<X>;
     const SizeType n = A.row_size();
-    const auto result = ComplexEigenDecomposition<ApproximateTag, PR>(precision)(A);
+    const auto result = detail::ComplexEigenDecomposition<ApproximateTag, PR>(precision)(A);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
-        result.status == ComplexEigenDecompositionStatus::SUCCESS &&
+        result.status == detail::ComplexEigenDecompositionStatus::SUCCESS &&
         result.data.has_value());
     if (!result.data) {
         return;
@@ -88,9 +88,9 @@ template<class PR>
 Void test_complex_diagonalization(PR precision) {
     using X = FloatApproximation<PR>;
     using VX = FloatBounds<PR>;
-    using Status = ComplexEigenDecompositionStatus;
+    using Status = detail::ComplexEigenDecompositionStatus;
     const X zero(0u, precision);
-    ComplexEigenDecomposition<ApproximateTag, PR> solver(precision);
+    detail::ComplexEigenDecomposition<ApproximateTag, PR> solver(precision);
 
     Matrix<X> scalar(1u, 1u, zero);
     scalar[0u][0u] = X(7u, precision);
@@ -186,7 +186,7 @@ Void test_complex_diagonalization(PR precision) {
     Matrix<VX> validated_rotation(2u, 2u, VX(0u, precision));
     validated_rotation[0u][1u] = VX(-1, precision);
     validated_rotation[1u][0u] = VX(1u, precision);
-    const ComplexEigenDecomposition<ValidatedTag, PR> validated(precision);
+    const detail::ComplexEigenDecomposition<ValidatedTag, PR> validated(precision);
     const auto uncertified = validated(validated_rotation);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         uncertified.status == Status::INCONCLUSIVE &&
@@ -195,6 +195,94 @@ Void test_complex_diagonalization(PR precision) {
     Matrix<X> empty(0u, 0u, zero);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
         solver(empty).status == Status::UNSUPPORTED_DIMENSION);
+}
+
+//! \brief Verify automatic real/complex dispatch through one public API.
+template<class PR>
+Void test_unified_eigen_decomposition(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    using Status = EigenDecompositionStatus;
+    const AX zero(0u, precision);
+    const EigenDecomposition<ApproximateTag, PR> solver(precision);
+
+    // A symmetric matrix with only real eigenvalues must use
+    // the real representation and must never allocate a
+    // ComplexMatrix on the successful fast path.
+    Matrix<AX> real_symmetric(2u, 2u, zero);
+    real_symmetric[0u][0u] = AX(2u, precision);
+    real_symmetric[1u][1u] = AX(3u, precision);
+    real_symmetric[0u][1u] = AX(1u, precision);
+    real_symmetric[1u][0u] = AX(1u, precision);
+    EigenDecompositionDiagnostics diagnostics;
+    const auto real_result = solver(real_symmetric, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        real_result.status == Status::SUCCESS &&
+        real_result.real_data() != nullptr &&
+        real_result.complex_data() == nullptr);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy != EigenDecompositionStrategy::COMPLEX_SCHUR);
+
+    // The same class is also used for matrices with nonreal
+    // eigenvalues. These require complex vectors and inverse.
+    Matrix<AX> rotation(2u, 2u, zero);
+    rotation[0u][1u] = AX(-1, precision);
+    rotation[1u][0u] = AX(1u, precision);
+    const auto complex_result = solver(rotation, &diagnostics);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        complex_result.status == Status::SUCCESS &&
+        complex_result.real_data() == nullptr &&
+        complex_result.complex_data() != nullptr);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        diagnostics.strategy == EigenDecompositionStrategy::COMPLEX_SCHUR);
+    if (complex_result.complex_data()) {
+        const auto& data = *complex_result.complex_data();
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            data.eigenvalues.size() == 2u);
+        for (SizeType i = 0u; i != 2u; ++i) {
+            for (SizeType j = 0u; j != 2u; ++j) {
+                Complex<AX> action(AX(0u, precision), AX(0u, precision));
+                for (SizeType k = 0u; k != 2u; ++k) {
+                    action += Complex<AX>(AX(rotation[i][k])) * data.eigenvectors[k][j];
+                }
+                const auto residual = action - data.eigenvalues[j] *
+                    data.eigenvectors[i][j];
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs(residual.real_part().get_d()) < 1e-8 &&
+                    std::abs(residual.imaginary_part().get_d()) < 1e-8);
+            }
+        }
+    }
+
+    // A defective Jordan block does not have a complex basis:
+    // neither result representation may claim success.
+    Matrix<AX> jordan(2u, 2u, zero);
+    jordan[0u][0u] = AX(2u, precision);
+    jordan[0u][1u] = AX(1u, precision);
+    jordan[1u][1u] = AX(2u, precision);
+    const auto defective = solver(jordan);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        defective.status == Status::INCONCLUSIVE &&
+        !defective.data.has_value());
+
+    // Preserve validated real-basis certificates as real data.
+    Matrix<VX> certified(2u, 2u, VX(0u, precision));
+    certified[0u][0u] = VX(1u, precision);
+    certified[1u][1u] = VX(3u, precision);
+    const EigenDecomposition<ValidatedTag, PR> validated(precision);
+    const auto valid_result = validated(certified);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        valid_result.status == Status::SUCCESS &&
+        valid_result.real_data() != nullptr &&
+        valid_result.complex_data() == nullptr);
+
+    Matrix<VX> validated_rotation(2u, 2u, VX(0u, precision));
+    validated_rotation[0u][1u] = VX(-1, precision);
+    validated_rotation[1u][0u] = VX(1u, precision);
+    const auto unverified = validated(validated_rotation);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        unverified.status == Status::INCONCLUSIVE &&
+        !unverified.data.has_value());
 }
 
 } // namespace
@@ -208,6 +296,10 @@ int main(int argc, char** argv) {
                 test_complex_diagonalization(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_complex_diagonalization(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_unified_eigen_decomposition(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_unified_eigen_decomposition(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

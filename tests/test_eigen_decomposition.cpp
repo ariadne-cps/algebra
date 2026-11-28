@@ -59,7 +59,7 @@ Void test_real_examples(PR pr) {
     a[1u][0u] = AX(1u, pr);
     a[1u][1u] = AX(2u, pr);
 
-    EigenDecomposition<ApproximateTag, PR> approximate(pr);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(pr);
     const auto approximation = approximate(a);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), approximation.status == Status::SUCCESS);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), approximation.data.has_value());
@@ -102,7 +102,7 @@ Void test_real_examples(PR pr) {
     v[1u][0u] = VX(1u, pr);
     v[1u][1u] = VX(2u, pr);
 
-    EigenDecomposition<ValidatedTag, PR> validated(pr);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(pr);
     const auto certificate = validated(v);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), certificate.status == Status::SUCCESS);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(), certificate.data.has_value());
@@ -523,7 +523,7 @@ Void test_real_examples(PR pr) {
 
 Void test_validated_uncertainty() {
     using X = FloatDPBounds;
-    EigenDecomposition<ValidatedTag, DoublePrecision> solver(dp);
+    detail::RealEigenDecomposition<ValidatedTag, DoublePrecision> solver(dp);
     Matrix<X> M(2u, 2u, X(0u, dp));
 
     // Irrational eigenvalues +/- sqrt(2), checked through exact squares.
@@ -576,8 +576,8 @@ Void test_repeated_real_spectrum(PR precision) {
     const AX approx_zero(0u, precision);
     const VX validated_zero(0u, precision);
     const VX validated_one(1u, precision);
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
-    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
 
     // A repeated 2x2 diagonal eigenvalue is not a defective matrix.
     Matrix<AX> diagonal_approx(2u, 2u, approx_zero);
@@ -712,8 +712,8 @@ Void test_permuted_triangular_spectrum(PR precision) {
         }
     }
 
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
-    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
     EigenDecompositionDiagnostics diagnostics;
     const auto point = approximate(a, &diagnostics);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
@@ -776,8 +776,8 @@ Void test_block_diagonal_spectrum(PR precision) {
     using VX = FloatBounds<PR>;
     const AX azero(0u, precision);
     const VX vzero(0u, precision);
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
-    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
 
     // The two coupled 2x2 blocks occupy indices {0,2} and {1,3},
     // not contiguous intervals. Their spectra {2,4} and {4,6}
@@ -903,8 +903,8 @@ Void test_repeated_triangular_spectrum(PR precision) {
     using VX = FloatBounds<PR>;
     const AX azero(0u, precision);
     const VX vzero(0u, precision);
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
-    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
 
     // Non-diagonal upper triangular A, with eigenvalues {1,1,2}.
     // The repeated eigenvalue 1 has two independent eigenvectors:
@@ -997,7 +997,7 @@ template<class PR>
 Void test_nonsymmetric_approximate(PR precision) {
     using X = FloatApproximation<PR>;
     const X zero(0u, precision);
-    EigenDecomposition<ApproximateTag, PR> solver(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> solver(precision);
 
     // Both QR matrices have directed off-diagonal cycles and known
     // simple integer spectra. The former acyclic 4x4 is tested separately.
@@ -1139,7 +1139,7 @@ Void test_validated_nonsymmetric_qr_seeds(PR precision) {
             A[row][col] = X(entries[row][col], precision);
         }
     }
-    const EigenDecomposition<ValidatedTag, PR> solver(precision);
+    const detail::RealEigenDecomposition<ValidatedTag, PR> solver(precision);
     const auto verify = [&](const Matrix<X>& matrix) {
         const auto result = solver(matrix);
         ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
@@ -1176,8 +1176,8 @@ Void test_block_triangular_spectrum(PR precision) {
     using VX = FloatBounds<PR>;
     const AX azero(0u, precision);
     const VX vzero(0u, precision);
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
-    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
 
     // Indices {0,2} form a strongly connected 2x2 block with
     // eigenvalues 1,3, and index {1} has eigenvalue 5. The entries
@@ -1271,8 +1271,8 @@ Void test_compatible_repeated_block_spectrum(PR precision) {
     using VX = FloatBounds<PR>;
     const AX azero(0u, precision);
     const VX vzero(0u, precision);
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
-    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
 
     // A has an irreducible 2x2 block on {0,2} with spectrum {1,3}
     // and a coupled singleton at {1} with eigenvalue 3. The coupling
@@ -1371,8 +1371,8 @@ Void test_nonfinite_eigen_inputs(PR precision) {
     using Raw = typename AX::RawType;
     const AX azero(0u, precision);
     const VX vzero(0u, precision);
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
-    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
     const AX ainf(Raw::inf(precision));
     const VX vinf(Raw::inf(precision));
     const AX anan(Raw::nan(precision));
@@ -1423,8 +1423,8 @@ Void test_two_coupled_cyclic_blocks(PR precision) {
     using VX = FloatBounds<PR>;
     const AX azero(0u, precision);
     const VX vzero(0u, precision);
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
-    EigenDecomposition<ValidatedTag, PR> validated(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> validated(precision);
 
     // The strongly connected blocks {0,2} and {1,3} have spectra
     // {1,3} and {5,7}; their one-way coupling prevents a block
@@ -1544,8 +1544,8 @@ Void test_eigen_intermediate_overflow() {
     v[0u][1u] = rigorous_large;
     v[1u][2u] = rigorous_large;
 
-    EigenDecomposition<ApproximateTag, DoublePrecision> approximate(dp);
-    EigenDecomposition<ValidatedTag, DoublePrecision> validated(dp);
+    detail::RealEigenDecomposition<ApproximateTag, DoublePrecision> approximate(dp);
+    detail::RealEigenDecomposition<ValidatedTag, DoublePrecision> validated(dp);
     EigenDecompositionDiagnostics diagnostics;
     const auto a_result = approximate(a, &diagnostics);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
@@ -1592,7 +1592,7 @@ Void test_dense_nonnormal_validated(PR precision) {
             A[i][j] = X(coefficients[i][j], precision);
         }
     }
-    EigenDecomposition<ValidatedTag, PR> solver(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> solver(precision);
 
     const auto check = [&](const Matrix<X>& matrix) {
         EigenDecompositionDiagnostics diagnostics;
@@ -1652,7 +1652,7 @@ Void test_eigen_diagnostics(PR precision) {
             dense[j][i] = off;
         }
     }
-    EigenDecomposition<ValidatedTag, PR> solver(precision);
+    detail::RealEigenDecomposition<ValidatedTag, PR> solver(precision);
     const auto baseline = solver(dense);
     EigenDecompositionDiagnostics diagnostics;
     const auto instrumented = solver(dense, &diagnostics);
@@ -1681,7 +1681,7 @@ Void test_eigen_diagnostics(PR precision) {
     symmetric[1u][0u] = AX(1u, precision);
     symmetric[1u][2u] = AX(1u, precision);
     symmetric[2u][1u] = AX(1u, precision);
-    EigenDecomposition<ApproximateTag, PR> approximate(precision);
+    detail::RealEigenDecomposition<ApproximateTag, PR> approximate(precision);
     const auto approx_baseline = approximate(symmetric);
     const auto approx_instrumented = approximate(symmetric, &diagnostics);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
@@ -1719,7 +1719,7 @@ Void test_jacobi_multiprecision() {
     A[0u][1u] = coupling;
     A[1u][0u] = coupling;
 
-    EigenDecomposition<ApproximateTag, MultiplePrecision> solver(pr);
+    detail::RealEigenDecomposition<ApproximateTag, MultiplePrecision> solver(pr);
     const auto computed = solver(A);
     ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                                      computed.status == Status::SUCCESS);

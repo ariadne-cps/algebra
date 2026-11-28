@@ -239,6 +239,7 @@ const char* strategy_name(EigenDecompositionStrategy strategy) {
         case EigenDecompositionStrategy::GERSHGORIN: return "gershgorin";
         case EigenDecompositionStrategy::SIMILARITY: return "similarity";
         case EigenDecompositionStrategy::KRAWCZYK: return "krawczyk";
+        case EigenDecompositionStrategy::COMPLEX_SCHUR: return "complex_schur";
         default: return "invalid";
     }
 }
