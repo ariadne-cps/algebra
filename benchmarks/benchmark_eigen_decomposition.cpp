@@ -118,7 +118,7 @@ List<ArgumentParser> arguments(Selection& selection) {
 }
 
 /** @brief Workloads select different currently implemented algorithmic paths. */
-enum class Workload { Dense2, Triangular, Separated, Rotated, Nonnormal4, NonnormalInterval4 };
+enum class Workload { Dense2, Triangular, Separated, Rotated, Nonnormal4, NonnormalInterval4, ComplexMixed3, ComplexPairs4 };
 
 /** @brief Stable workload labels for cross-commit comparisons. */
 const char* label(Workload w) {
@@ -129,6 +129,8 @@ const char* label(Workload w) {
         case Workload::Rotated: return "dense_rotated";
         case Workload::Nonnormal4: return "dense_nonnormal_4x4";
         case Workload::NonnormalInterval4: return "dense_nonnormal_interval_4x4";
+        case Workload::ComplexMixed3: return "dense_complex_mixed_3x3";
+        case Workload::ComplexPairs4: return "dense_complex_pairs_4x4";
         default: throw std::invalid_argument("unknown workload");
     }
 }
@@ -141,6 +143,33 @@ Matrix<X> matrix_for(Workload w, unsigned n, PR precision) {
     const X zero(0u, precision);
     const X one(1u, precision);
     Matrix<X> A(n, n, zero);
+    if(w == Workload::ComplexMixed3 || w == Workload::ComplexPairs4) {
+        // Exact, fully coupled inputs from the DP/MP complex
+        // eigendecomposition regressions. No random fast paths.
+        if(w == Workload::ComplexMixed3) {
+            if(n != 3u)
+                throw std::invalid_argument("complex mixed workload has order three");
+            // Characteristic polynomial: (lambda-9)(lambda^2+9).
+            const Int coefficients[3][3] = {
+                {4, 5, 0}, {3, 4, -4}, {-4, 0, 1}
+            };
+            for(unsigned i = 0u; i != 3u; ++i)
+                for(unsigned j = 0u; j != 3u; ++j)
+                    A[i][j] = X(coefficients[i][j], precision);
+        } else {
+            if(n != 4u)
+                throw std::invalid_argument("complex pair workload has order four");
+            // Characteristic polynomial: (lambda^2+1)(lambda^2+9).
+            const Int coefficients[4][4] = {
+                {0, 0, -1, 2}, {0, 0, -2, 1},
+                {1, 2, 0, 0}, {-2, -1, 0, 0}
+            };
+            for(unsigned i = 0u; i != 4u; ++i)
+                for(unsigned j = 0u; j != 4u; ++j)
+                    A[i][j] = X(coefficients[i][j], precision);
+        }
+        return A;
+    }
     if(w == Workload::Nonnormal4 || w == Workload::NonnormalInterval4) {
         if(n != 4u)
             throw std::invalid_argument("nonnormal workload has fixed order four");
@@ -269,6 +298,20 @@ void measure(const char* backend, unsigned bits, PR precision,
                                  backend + "/" + label(workload));
     }
 
+    // Semantic scalar-field check is outside timed measurements:
+    // successful real problems must stay REAL, while nonreal
+    // problems must return COMPLEX factors through the same API.
+    const bool expect_complex =
+        workload == Workload::ComplexMixed3 ||
+        workload == Workload::ComplexPairs4;
+    if(expected == Status::SUCCESS &&
+       (expect_complex
+            ? (pilot.complex_data() == nullptr || pilot.real_data() != nullptr)
+            : (pilot.real_data() == nullptr || pilot.complex_data() != nullptr))) {
+        throw std::runtime_error(std::string("wrong scalar representation for ") +
+                                 backend + "/" + label(workload));
+    }
+
     Status observed = expected;
     const std::string name = std::string(backend) + "/" + label(workload) +
                              "/n=" + std::to_string(size);
@@ -346,6 +389,14 @@ void measure_backend(const char* backend, unsigned bits, PR precision,
                selection, runner, results);
     if constexpr(std::is_same_v<P, ValidatedTag>) {
         measure<P>(backend, bits, precision, Workload::NonnormalInterval4, 4u,
+                   selection, runner, results);
+    }
+    if constexpr(std::is_same_v<P, ApproximateTag>) {
+        // Measure successful complex factors, not unsupported
+        // validated-complex INCONCLUSIVE as a fake speedup.
+        measure<P>(backend, bits, precision, Workload::ComplexMixed3, 3u,
+                   selection, runner, results);
+        measure<P>(backend, bits, precision, Workload::ComplexPairs4, 4u,
                    selection, runner, results);
     }
 }
@@ -466,7 +517,7 @@ int main(int argc, const char* argv[]) {
         const std::size_t configurations =
             (1u + 3u * selection.sizes.size()) *
                 (2u + 2u * selection.bits.size()) +
-            3u * (1u + selection.bits.size());
+            5u * (1u + selection.bits.size());
         const Bench::Runner runner(command_line, configurations);
         std::vector<Datum> results;
         results.reserve(configurations);
