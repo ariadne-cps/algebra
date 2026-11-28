@@ -609,7 +609,7 @@ struct SchurDecompositionData {
             }
             const X zero(0u, precision);
             const X one(1u, precision);
-            const X two(2u, precision);
+            const X two_value(2u, precision);
             const X four(4u, precision);
             if (!(radius.raw() > zero.raw())) {
                 return std::nullopt;
@@ -657,7 +657,7 @@ struct SchurDecompositionData {
                         !(discriminant.raw() < zero.raw())) {
                         return std::nullopt;
                     }
-                    const X real_part = (a + d) / two;
+                    const X real_part = (a + d) / two_value;
                     distance_squared = sqr(real_part - center) -
                         discriminant / four;
                 }
