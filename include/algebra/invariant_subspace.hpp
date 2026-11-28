@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "algebra/matrix.hpp"
+#include "algebra/validated_root_contractors.hpp"
 
 namespace Ariadne {
 
@@ -286,6 +287,202 @@ certified_invariant_graph(const Matrix<FloatBounds<PR>>& A,
     }
     return CertifiedInvariantGraphData<PR>{
         std::move(basis), std::move(restriction), graph};
+}
+
+//! \brief A uniformly certified family of invariant graph subspaces.
+//! \details For EVERY point matrix A from the input interval family,
+//! exactly one graph X(A) exists in graph_enclosure within the
+//! specified Krawczyk box, and A*[I;X(A)]=[I;X(A)]*B(A).
+//! Unlike CertifiedInvariantGraphData, the basis here may depend on A.
+//! The displayed interval matrices are correlated enclosures, NOT
+//! independent choices of U, B and A that satisfy literal interval
+//! matrix equality.
+template<class PR>
+struct CertifiedInvariantGraphEnclosureData {
+    using X = FloatBounds<PR>;
+    Matrix<X> graph_enclosure;       //!< Unique local graph X(A), n-k by k.
+    Matrix<X> basis_enclosure;       //!< [I;X(A)] in each family member.
+    Matrix<X> restriction_enclosure; //!< A11+A12*X(A), enclosed for all A.
+};
+
+//! \brief Prove local existence of an invariant graph for each interval A.
+//! \param A Original square interval family, with independent entries.
+//! \param graph_center Singleton (n-k)-by-k approximate graph matrix.
+//! \param graph_box Finite interval search box, containing every center
+//! entry in its STRICT interior; each graph entry is a separate unknown.
+//! \param preconditioner k(n-k)-by-k(n-k) interval enclosure of a
+//! fixed numerical approximate inverse of the graph Riccati Jacobian.
+//! \param precision Precision for verified interval arithmetic.
+//! \return Uniformly verified graph enclosures, or inconclusive.
+//!
+//! \details The unknown X is a real (n-k)-by-k matrix, vectorized in
+//! row-major order, and
+//! \f[ F_A(X)=A_{21}+A_{22}X-X(A_{11}+A_{12}X). \f]
+//! For a variable X_ab, the (i,j) Jacobian component is
+//! \f[ \frac{\partial F_{ij}}{\partial X_{ab}}=
+//!   \delta_{jb}(A_{22,ia}-(XA_{12})_{ia})
+//!   -\delta_{ia}(A_{11}+A_{12}X)_{bj}. \f]
+//! These formulas generate interval enclosures of F_A(X0), and of
+//! D_X F_A throughout the whole graph_box, for EVERY input A.
+//! The existing krawczyk_certifies_unique_root operation then checks
+//! (a) strict enclosure of the Krawczyk image inside the graph box
+//! and (b) strict infinity-norm contraction ||I-C*J|| < 1.
+//! By the parameter-uniform interval fixed-point argument, every
+//! represented A admits ONE real graph X(A) in the specified box,
+//! and that graph is unique IN THIS BOX. No spectral simplicity,
+//! eigenvector basis or non-defectiveness is assumed.
+//!
+//! The graph is NOT asserted to be the same for different A, and
+//! neither this proof nor the point-graph structural certificate
+//! establishes spectral-cluster separation or eigenvalue multiplicity.
+//! All failures are inconclusive (never a nonexistence proof).
+//! Input graph boxes are caller-provided: this routine CERTIFIES
+//! candidates but does not yet discover or optimize a midpoint graph.
+//! This preserves the conceptual separation of candidate generation
+//! and rigorous interval proof, as in the existing validated eigenpair
+//! Krawczyk pipeline.
+//!
+//! \par Mathematical provenance
+//! The matrix Riccati graph equation is standard in invariant
+//! subspace perturbation theory (G. W. Stewart and J.-G. Sun,
+//! Matrix Perturbation Theory, Academic Press, 1990).
+//! The validated fixed-point step builds on R. Krawczyk,
+//! "Newton-Algorithmen zur Bestimmung von Nullstellen mit
+//! Fehlerschranken", Computing 4, 187-201 (1969).
+//! The shared contraction-and-inclusion theorem is documented
+//! on krawczyk_certifies_unique_root.
+template<class PR>
+std::optional<CertifiedInvariantGraphEnclosureData<PR>>
+certified_invariant_graph_near(
+        const Matrix<FloatBounds<PR>>& A,
+        const Matrix<FloatBounds<PR>>& graph_center,
+        const Matrix<FloatBounds<PR>>& graph_box,
+        const Matrix<FloatBounds<PR>>& preconditioner,
+        PR precision) {
+    using X = FloatBounds<PR>;
+    ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+    const SizeType n = A.row_size();
+    const SizeType k = graph_center.column_size();
+    if (n < 2u || k == 0u || k >= n) {
+        return std::nullopt;
+    }
+    const SizeType m = n - k;
+    const SizeType count = m * k;
+    if (graph_center.row_size() != m ||
+        graph_box.row_size() != m ||
+        graph_box.column_size() != k ||
+        preconditioner.row_size() != count ||
+        preconditioner.column_size() != count) {
+        return std::nullopt;
+    }
+    const X zero(0u, precision);
+    const X one(1u, precision);
+    const auto finite = [](const X& x) {
+        return is_finite(x.lower_raw()) &&
+            is_finite(x.upper_raw()) &&
+            x.lower_raw() <= x.upper_raw();
+    };
+    for (SizeType i = 0u; i != n; ++i) {
+        for (SizeType j = 0u; j != n; ++j) {
+            if (!finite(A[i][j])) { return std::nullopt; }
+        }
+    }
+    for (SizeType i = 0u; i != count; ++i) {
+        for (SizeType j = 0u; j != count; ++j) {
+            if (!finite(preconditioner[i][j])) { return std::nullopt; }
+        }
+    }
+
+    Vector<X> center(count, zero);
+    Vector<X> box(count, zero);
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            const SizeType index = i * k + j;
+            const X& at = graph_center[i][j];
+            const X& domain = graph_box[i][j];
+            if (!finite(at) || !finite(domain) ||
+                at.lower_raw() != at.upper_raw() ||
+                !(domain.lower_raw() < at.lower_raw() &&
+                  at.upper_raw() < domain.upper_raw())) {
+                return std::nullopt;
+            }
+            center[index] = at;
+            box[index] = domain;
+        }
+    }
+
+    // B0=A11+A12*X0 and Bbox=A11+A12*Xbox. Both are computed
+    // from the ORIGINAL interval family (no midpoint substitution).
+    Matrix<X> base_center(k, k, zero);
+    Matrix<X> base_box(k, k, zero);
+    for (SizeType i = 0u; i != k; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            X c(A[i][j]);
+            X b(A[i][j]);
+            for (SizeType a = 0u; a != m; ++a) {
+                c += A[i][k + a] * graph_center[a][j];
+                b += A[i][k + a] * graph_box[a][j];
+            }
+            if (!finite(c) || !finite(b)) { return std::nullopt; }
+            base_center[i][j] = c;
+            base_box[i][j] = b;
+        }
+    }
+
+    Vector<X> residual(count, zero);
+    Matrix<X> jacobian(count, count, zero);
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            const SizeType row = i * k + j;
+            X value(A[k + i][j]);
+            for (SizeType a = 0u; a != m; ++a) {
+                value += A[k + i][k + a] * graph_center[a][j];
+            }
+            for (SizeType b = 0u; b != k; ++b) {
+                value -= graph_center[i][b] * base_center[b][j];
+            }
+            if (!finite(value)) { return std::nullopt; }
+            residual[row] = value;
+
+            // dF_ij / dX_ab =
+            // delta_jb*(A22_ia - (X*A12)_ia) - delta_ia*B_bj.
+            for (SizeType a = 0u; a != m; ++a) {
+                for (SizeType b = 0u; b != k; ++b) {
+                    X derivative(zero);
+                    if (j == b) {
+                        derivative += A[k + i][k + a];
+                        for (SizeType c = 0u; c != k; ++c) {
+                            derivative -= graph_box[i][c] * A[c][k + a];
+                        }
+                    }
+                    if (i == a) {
+                        derivative -= base_box[b][j];
+                    }
+                    if (!finite(derivative)) { return std::nullopt; }
+                    jacobian[row][a * k + b] = derivative;
+                }
+            }
+        }
+    }
+
+    // THIS is the proof gate. A small midpoint residual alone
+    // is never sufficient to create a validated result.
+    if (!krawczyk_certifies_unique_root(
+            center, residual, jacobian, box, preconditioner)) {
+        return std::nullopt;
+    }
+
+    Matrix<X> basis(n, k, zero);
+    for (SizeType i = 0u; i != k; ++i) {
+        basis[i][i] = one;
+    }
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            basis[k + i][j] = graph_box[i][j];
+        }
+    }
+    return CertifiedInvariantGraphEnclosureData<PR>{
+        graph_box, std::move(basis), std::move(base_box)};
 }
 
 } // namespace Ariadne

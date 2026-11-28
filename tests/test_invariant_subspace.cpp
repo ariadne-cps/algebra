@@ -316,6 +316,166 @@ Void test_invariant_graph_certificates(PR precision) {
         !certified_invariant_graph(empty, graph, precision));
 }
 
+//! \brief Check a Krawczyk-certified graph family, not merely midpoint.
+template<class PR>
+Void test_certified_invariant_graph_near(PR precision) {
+    using X = FloatBounds<PR>;
+    const X zero(0u, precision);
+    const X one(1u, precision);
+    const X two_value(2u, precision);
+    const X three_value(3u, precision);
+    const X four_value(4u, precision);
+    const X seventh(7u, precision);
+    const X radius = X(-1, 1, precision) / X(16u, precision);
+    const X small = X(-1, 1, precision) / X(1024u, precision);
+
+    // A noncoordinate invariant line for a point matrix, with
+    // the nonlinear Riccati equation F(x)=x-x^2, isolated at x=1.
+    Matrix<X> A(2u, 2u, zero);
+    A[0u][0u] = two_value;
+    A[0u][1u] = one;
+    A[1u][1u] = three_value;
+    Matrix<X> center(1u, 1u, one);
+    Matrix<X> box(1u, 1u, one + radius);
+    Matrix<X> inverse_jacobian(1u, 1u, X(-1, precision));
+    const auto exact = certified_invariant_graph_near(
+        A, center, box, inverse_jacobian, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        exact.has_value());
+    if (exact) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            exact->basis_enclosure.row_size() == 2u &&
+            exact->basis_enclosure.column_size() == 1u &&
+            exact->graph_enclosure.row_size() == 1u &&
+            exact->graph_enclosure.column_size() == 1u &&
+            exact->graph_enclosure[0u][0u].lower_raw() <
+                one.lower_raw() &&
+            one.upper_raw() <
+                exact->graph_enclosure[0u][0u].upper_raw() &&
+            exact->restriction_enclosure.row_size() == 1u &&
+            exact->restriction_enclosure.column_size() == 1u);
+    }
+
+    // A whole input family changes A21 independently. The graph
+    // is NOT constant across the family, yet Krawczyk proves an
+    // individually existing and locally unique x(A) in the box.
+    A[1u][0u] = small;
+    const auto family = certified_invariant_graph_near(
+        A, center, box, inverse_jacobian, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        family.has_value());
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph(A, center, precision));
+
+    // A false numerical seed must never be accepted without
+    // strictly interior Krawczyk inclusion; no result on a box
+    // that misses the original nearby root.
+    Matrix<X> wrong_center(1u, 1u, X(4u, precision));
+    Matrix<X> wrong_box(1u, 1u, X(4u, precision) + radius);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_near(
+            A, wrong_center, wrong_box, inverse_jacobian, precision));
+    Matrix<X> uncertain_center(1u, 1u, one + radius);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_near(
+            A, uncertain_center, box, inverse_jacobian, precision));
+    Matrix<X> flat_box(1u, 1u, one);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_near(
+            A, center, flat_box, inverse_jacobian, precision));
+
+    // Two coupled unknown graph coefficients. The graph is
+    // X=[1,1], A11=diag(2,3), A12=[1,0]^T,
+    // A21=[-4,-3], A22=7. The Jacobian is nonsingular
+    // but not diagonal: its offdiagonal coupling is essential.
+    Matrix<X> coupled(3u, 3u, zero);
+    coupled[0u][0u] = two_value;
+    coupled[1u][1u] = three_value;
+    coupled[0u][2u] = one;
+    coupled[2u][0u] = X(-4, precision);
+    coupled[2u][1u] = X(-3, precision);
+    coupled[2u][2u] = seventh;
+    Matrix<X> pair_center(1u, 2u, one);
+    Matrix<X> pair_box(1u, 2u, one + radius);
+    Matrix<X> pair_preconditioner(2u, 2u, zero);
+    pair_preconditioner[0u][0u] = one / four_value;
+    pair_preconditioner[1u][1u] = one / four_value;
+    const auto two_variables = certified_invariant_graph_near(
+        coupled, pair_center, pair_box, pair_preconditioner,
+        precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        two_variables.has_value());
+    if (two_variables) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            two_variables->basis_enclosure.row_size() == 3u &&
+            two_variables->basis_enclosure.column_size() == 2u &&
+            two_variables->restriction_enclosure.row_size() == 2u &&
+            two_variables->restriction_enclosure.column_size() == 2u);
+    }
+    coupled[2u][0u] += small;
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        certified_invariant_graph_near(
+            coupled, pair_center, pair_box, pair_preconditioner,
+            precision).has_value());
+
+    // Four unknown graph entries (m=k=2), with a genuinely
+    // coupled 4-by-4 Jacobian. This tests row-major indexing
+    // rather than only the scalar or one-row graph cases.
+    // At X=ones(2,2), B=[[3,1],[0,4]] and F_A(X)=0.
+    Matrix<X> four_unknowns(4u, 4u, zero);
+    four_unknowns[0u][0u] = two_value;
+    four_unknowns[1u][1u] = four_value;
+    four_unknowns[0u][2u] = one;
+    four_unknowns[2u][0u] = X(-6, precision);
+    four_unknowns[2u][1u] = X(-4, precision);
+    four_unknowns[3u][0u] = X(-8, precision);
+    four_unknowns[3u][1u] = X(-6, precision);
+    four_unknowns[2u][2u] = X(9u, precision);
+    four_unknowns[3u][3u] = X(11u, precision);
+    Matrix<X> square_center(2u, 2u, one);
+    Matrix<X> square_box(2u, 2u, one + radius);
+    Matrix<X> square_preconditioner(4u, 4u, zero);
+    for (SizeType i = 0u; i != 4u; ++i) {
+        square_preconditioner[i][i] = one / X(8u, precision);
+    }
+    const auto four_variables = certified_invariant_graph_near(
+        four_unknowns, square_center, square_box,
+        square_preconditioner, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        four_variables.has_value());
+    if (four_variables) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            four_variables->graph_enclosure.row_size() == 2u &&
+            four_variables->graph_enclosure.column_size() == 2u &&
+            four_variables->basis_enclosure.row_size() == 4u &&
+            four_variables->basis_enclosure.column_size() == 2u &&
+            four_variables->restriction_enclosure.row_size() == 2u &&
+            four_variables->restriction_enclosure.column_size() == 2u);
+    }
+    four_unknowns[2u][0u] += small;
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        certified_invariant_graph_near(
+            four_unknowns, square_center, square_box,
+            square_preconditioner, precision).has_value());
+
+    // C=0 makes the Krawczyk defect I, which has norm exactly
+    // one. A center with zero residual MUST NOT be accepted
+    // without the independent strict contraction predicate.
+    const Matrix<X> zero_preconditioner(4u, 4u, zero);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_near(
+            four_unknowns, square_center, square_box,
+            zero_preconditioner, precision));
+
+    // Wrong dimensions: the preconditioner is in graph-variable
+    // space, not in the n-by-n original matrix space.
+    Matrix<X> wrong_preconditioner(3u, 3u, zero);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_near(
+            coupled, pair_center, pair_box, wrong_preconditioner,
+            precision));
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -331,6 +491,10 @@ int main(int argc, char** argv) {
                 test_invariant_graph_certificates(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_invariant_graph_certificates(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_certified_invariant_graph_near(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_certified_invariant_graph_near(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }
