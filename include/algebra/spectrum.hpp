@@ -1,0 +1,408 @@
+/***************************************************************************
+ *            algebra/spectrum.hpp
+ *
+ *  Copyright  2026  Luca Geretti
+ *
+ ****************************************************************************/
+
+/*
+ *  This file is part of Ariadne Algebra.
+ *
+ *  Ariadne Algebra is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Ariadne Algebra is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with Ariadne Algebra. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/** @file algebra/spectrum.hpp
+ *  @brief Complete real-matrix spectra in complex coordinates where established.
+ */
+#ifndef ARIADNE_SPECTRUM_HPP
+#define ARIADNE_SPECTRUM_HPP
+
+#include <optional>
+#include <type_traits>
+#include <vector>
+#include <utility>
+
+#include "algebra/matrix.hpp"
+#include "algebra/schur_decomposition.hpp"
+#include "numeric/complex.hpp"
+
+namespace Ariadne {
+
+//! \brief Whether a complete spectrum was obtained.
+enum class SpectralStatus {
+    SUCCESS, //!< All eigenvalues, counted with algebraic multiplicity.
+    INCONCLUSIVE, //!< No complete spectrum established, not a nonexistence proof.
+    UNSUPPORTED_DIMENSION //!< Zero-order matrix.
+};
+
+//! \brief A complete complex spectrum of a real matrix, including repetitions.
+//! \details No eigenvector basis is implied. Ordering is implementation-
+//! dependent; triangular inputs retain coordinate order. In ValidatedTag,
+//! for each matrix in the input interval family, a labeling of its entire
+//! spectrum exists within the corresponding complex rectangular enclosures.
+template<class P, class PR>
+struct SpectrumData {
+    using RealType = FloatType<P, PR>;
+    std::vector<Complex<RealType>> eigenvalues;
+};
+
+//! \brief Status plus optional spectral data (only on success).
+template<class P, class PR>
+struct SpectrumResult {
+    SpectralStatus status;
+    std::optional<SpectrumData<P, PR>> data;
+};
+
+//! \brief Calculate all eigenvalues without requiring diagonalizability.
+//! \details The zero/nonzero incidence graph of a real matrix defines
+//! strongly connected components (SCCs). Transitive closure uses
+//! Warshall's Boolean-matrix method; sorting the SCC condensation DAG
+//! yields a simultaneous row/column permutation into block upper
+//! triangular form (the reducible, or Frobenius, form). Therefore
+//! \f[ \det(\lambda I-A)=\prod_j \det(\lambda I-A_{jj}) \f]
+//! and the eigenvalue multiset is the union of the diagonal-block
+//! spectra, regardless of potentially nonzero off-block couplings.
+//! Each diagonal SCC is solved independently: a scalar by inspection,
+//! 2x2 by the real quadratic formula, and larger blocks by the
+//! approximate real Schur reduction of SchurDecomposition. This avoids
+//! subjecting already reducible blocks to unnecessary dense QR.
+//! A coefficient is structurally zero only when *provably exactly zero*
+//! in the requested paradigm; an interval containing zero is not
+//! treated as absent. ValidatedTag uses outward complex enclosures
+//! for scalar and 2x2 blocks, but cannot certify the current dense
+//! Schur backend and returns INCONCLUSIVE if a larger SCC is present.
+//! Inconclusive never proves that the spectrum or an eigenbasis is absent.
+//!
+//! \par Mathematical and algorithmic sources
+//! - S. Warshall, "A Theorem on Boolean Matrices", Journal of the ACM
+//!   9(1), 11-12 (1962), https://doi.org/10.1145/321105.321107.
+//! - D. Kressner, Numerical Methods for General and Structured
+//!   Eigenvalue Problems, Springer (2005), Section 3.3.1:
+//!   irreducible forms and SCC topological ordering.
+//!   https://doi.org/10.1007/3-540-28502-4.
+//! - See SchurDecomposition for Householder/Hessenberg and the
+//!   Francis/Wilkinson QR algorithms and their original references.
+template<class P, class PR>
+class Spectrum {
+  public:
+    using X = FloatType<P, PR>;
+    using ResultType = SpectrumResult<P, PR>;
+    explicit Spectrum(PR precision) : _precision(precision) {}
+
+    ResultType operator()(const Matrix<X>& A) const {
+        using Status = SpectralStatus;
+        ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+        const SizeType n = A.row_size();
+        if (n == 0u) {
+            return {Status::UNSUPPORTED_DIMENSION, std::nullopt};
+        }
+        const X zero(0u, _precision);
+        const X two_value(2u, _precision);
+        for (SizeType i = 0u; i != n; ++i) {
+            for (SizeType j = 0u; j != n; ++j) {
+                if (!this->_finite(A[i][j])) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+        }
+        SpectrumData<P, PR> result;
+        if (n == 1u) {
+            result.eigenvalues.emplace_back(A[0u][0u], zero);
+        } else if (n == 2u) {
+            const X& a = A[0u][0u];
+            const X& b = A[0u][1u];
+            const X& c = A[1u][0u];
+            const X& d = A[1u][1u];
+            // sqr() avoids spurious negative interval products.
+            const X discriminant = sqr(a - d) + X(4u, _precision) * b * c;
+            const X trace = a + d;
+            if (!this->_finite(discriminant) || !this->_finite(trace)) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            if (this->_negative(discriminant)) {
+                const X real_part = trace / two_value;
+                const X imaginary_part = sqrt(-discriminant) / two_value;
+                result.eigenvalues.emplace_back(real_part, -imaginary_part);
+                result.eigenvalues.emplace_back(real_part, imaginary_part);
+            } else if (this->_positive(discriminant)) {
+                const X root = sqrt(discriminant);
+                const X determinant = a * d - b * c;
+                X lower(zero), upper(zero);
+                if (this->_positive(trace)) {
+                    upper = (trace + root) / two_value;
+                    if (!this->_nonzero(upper)) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    lower = determinant / upper;
+                } else if (this->_negative(trace)) {
+                    lower = (trace - root) / two_value;
+                    if (!this->_nonzero(lower)) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    upper = determinant / lower;
+                } else {
+                    lower = (trace - root) / two_value;
+                    upper = (trace + root) / two_value;
+                }
+                result.eigenvalues.emplace_back(lower, zero);
+                result.eigenvalues.emplace_back(upper, zero);
+            } else if (this->_zero(discriminant)) {
+                const X repeated = trace / two_value;
+                result.eigenvalues.emplace_back(repeated, zero);
+                result.eigenvalues.emplace_back(repeated, zero);
+            } else {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+        } else {
+            bool upper = true, lower = true;
+            for (SizeType i = 0u; i != n; ++i) {
+                for (SizeType j = 0u; j != n; ++j) {
+                    if (i > j && !this->_zero(A[i][j])) { upper = false; }
+                    if (i < j && !this->_zero(A[i][j])) { lower = false; }
+                }
+            }
+            if (upper || lower) {
+                for (SizeType i = 0u; i != n; ++i) {
+                    result.eigenvalues.emplace_back(A[i][i], zero);
+                }
+            } else {
+                // A_ij is a structural edge i -> j unless it is
+                // provably exactly zero. A row/column permutation
+                // topologically orders the strongly connected components,
+                // producing an upper block-triangular matrix. The
+                // characteristic polynomial is the product of the
+                // characteristic polynomials of its diagonal blocks.
+                std::vector<std::vector<bool>> reachable(
+                    n, std::vector<bool>(n, false));
+                for (SizeType i = 0u; i != n; ++i) {
+                    for (SizeType j = 0u; j != n; ++j) {
+                        reachable[i][j] = i == j || !this->_zero(A[i][j]);
+                    }
+                }
+                for (SizeType through = 0u; through != n; ++through) {
+                    for (SizeType i = 0u; i != n; ++i) {
+                        for (SizeType j = 0u; j != n; ++j) {
+                            if (reachable[i][through] && reachable[through][j]) {
+                                reachable[i][j] = true;
+                            }
+                        }
+                    }
+                }
+
+                std::vector<SizeType> component_of(n, n);
+                std::vector<std::vector<SizeType>> components;
+                for (SizeType i = 0u; i != n; ++i) {
+                    if (component_of[i] != n) {
+                        continue;
+                    }
+                    const SizeType id = components.size();
+                    std::vector<SizeType> component;
+                    for (SizeType j = 0u; j != n; ++j) {
+                        if (component_of[j] == n &&
+                            reachable[i][j] && reachable[j][i]) {
+                            component_of[j] = id;
+                            component.push_back(j);
+                        }
+                    }
+                    // A component larger than two is still retained:
+                    // solve its principal block by Schur AFTER graph
+                    // condensation, not the entire reducible input.
+                    components.push_back(std::move(component));
+                }
+
+                const SizeType count = components.size();
+                std::vector<std::vector<bool>> edges(
+                    count, std::vector<bool>(count, false));
+                std::vector<SizeType> indegree(count, 0u);
+                for (SizeType i = 0u; i != n; ++i) {
+                    for (SizeType j = 0u; j != n; ++j) {
+                        const SizeType from = component_of[i];
+                        const SizeType to = component_of[j];
+                        if (from != to && !this->_zero(A[i][j]) &&
+                            !edges[from][to]) {
+                            edges[from][to] = true;
+                            ++indegree[to];
+                        }
+                    }
+                }
+                std::vector<bool> placed(count, false);
+                for (SizeType k = 0u; k != count; ++k) {
+                    SizeType next = count;
+                    for (SizeType id = 0u; id != count; ++id) {
+                        if (!placed[id] && indegree[id] == 0u) {
+                            next = id;
+                            break;
+                        }
+                    }
+                    if (next == count) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    placed[next] = true;
+                    for (SizeType id = 0u; id != count; ++id) {
+                        if (edges[next][id]) {
+                            --indegree[id];
+                        }
+                    }
+                    const auto& indices = components[next];
+                    if (indices.size() == 1u) {
+                        result.eigenvalues.emplace_back(
+                            A[indices[0u]][indices[0u]], zero);
+                    } else {
+                        const SizeType block_order = indices.size();
+                        Matrix<X> block(block_order, block_order, zero);
+                        for (SizeType i = 0u; i != block_order; ++i) {
+                            for (SizeType j = 0u; j != block_order; ++j) {
+                                block[i][j] = A[indices[i]][indices[j]];
+                            }
+                        }
+                        // Small blocks use the exact structural/2x2
+                        // path. Higher irreducible blocks use Schur
+                        // independently, not on the full input matrix.
+                        // ValidatedTag deliberately refuses to certify
+                        // an approximate Schur result.
+                        const auto solved = block_order == 2u
+                            ? (*this)(block) : this->_schur_spectrum(block);
+                        if (solved.status != Status::SUCCESS || !solved.data ||
+                            solved.data->eigenvalues.size() != block_order) {
+                            return {Status::INCONCLUSIVE, std::nullopt};
+                        }
+                        for (const auto& lambda: solved.data->eigenvalues) {
+                            result.eigenvalues.push_back(lambda);
+                        }
+                    }
+                }
+            }
+        }
+        if (result.eigenvalues.size() != n) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+        for (const auto& lambda: result.eigenvalues) {
+            if (!this->_finite(lambda.real_part()) ||
+                !this->_finite(lambda.imaginary_part())) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+        }
+        return {Status::SUCCESS, std::move(result)};
+    }
+
+  private:
+    //! \brief Extract the eigenvalue multiset from a real Schur form.
+    //! \details By the real Schur theorem, orthogonal similarity preserves
+    //! characteristic polynomials and an upper block-triangular matrix
+    //! has the product of its diagonal blocks' characteristic polynomials.
+    //! Thus the complete spectrum is the union, with algebraic
+    //! multiplicity, of 1x1 real roots and 2x2 conjugate pairs.
+    //! SchurDecomposition supplies approximate Q,T (Householder reduction
+    //! followed by shifted QR; see its Doxygen mathematical background).
+    //! This method is only for ApproximateTag: neither Q nor its
+    //! eigenvalues are interval-certified by a floating QR residual.
+    //! ValidatedTag therefore remains INCONCLUSIVE for this path.
+    ResultType _schur_spectrum(const Matrix<X>& A) const {
+        using Status = SpectralStatus;
+        if constexpr (!std::is_same_v<P, ApproximateTag>) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        } else {
+            const auto schur = SchurDecomposition<P, PR>(_precision)(A);
+            if (schur.status != SchurStatus::SUCCESS || !schur.data) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            const auto& triangular = schur.data->quasi_triangular;
+            const SizeType n = A.row_size();
+            if (triangular.row_size() != n || triangular.column_size() != n) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            const X zero(0u, _precision);
+            SpectrumData<P, PR> result;
+            SizeType offset = 0u;
+            for (const auto size: schur.data->block_sizes) {
+                // Check a block fits before reading even its first entry.
+                if (size == 0u || offset >= n || size > n - offset) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                if (size == 1u) {
+                    result.eigenvalues.emplace_back(triangular[offset][offset], zero);
+                } else if (size == 2u) {
+                    Matrix<X> block(2u, 2u, zero);
+                    for (SizeType row = 0u; row != 2u; ++row) {
+                        for (SizeType col = 0u; col != 2u; ++col) {
+                            block[row][col] =
+                                triangular[offset + row][offset + col];
+                        }
+                    }
+                    const auto roots = (*this)(block);
+                    if (roots.status != Status::SUCCESS || !roots.data) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    for (const auto& root: roots.data->eigenvalues) {
+                        result.eigenvalues.push_back(root);
+                    }
+                } else {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+                offset += size;
+            }
+            if (offset != n || result.eigenvalues.size() != n) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            for (const auto& root: result.eigenvalues) {
+                if (!this->_finite(root.real_part()) ||
+                    !this->_finite(root.imaginary_part())) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
+            }
+            return {Status::SUCCESS, std::move(result)};
+        }
+    }
+
+    bool _finite(const X& x) const {
+        if constexpr (std::is_same_v<P, ValidatedTag>) {
+            return is_finite(x.lower_raw()) && is_finite(x.upper_raw());
+        } else {
+            return is_finite(x.raw());
+        }
+    }
+    bool _positive(const X& x) const {
+        const X z(0u, _precision);
+        if constexpr (std::is_same_v<P, ValidatedTag>) {
+            return x.lower_raw() > z.lower_raw();
+        } else {
+            return x.raw() > z.raw();
+        }
+    }
+    bool _negative(const X& x) const {
+        const X z(0u, _precision);
+        if constexpr (std::is_same_v<P, ValidatedTag>) {
+            return x.upper_raw() < z.upper_raw();
+        } else {
+            return x.raw() < z.raw();
+        }
+    }
+    bool _zero(const X& x) const {
+        const X z(0u, _precision);
+        if constexpr (std::is_same_v<P, ValidatedTag>) {
+            return x.lower_raw() == z.lower_raw() &&
+                   x.upper_raw() == z.upper_raw();
+        } else {
+            return x.raw() == z.raw();
+        }
+    }
+    bool _nonzero(const X& x) const {
+        return this->_positive(x) || this->_negative(x);
+    }
+    PR _precision;
+};
+
+} // namespace Ariadne
+
+#endif // ARIADNE_SPECTRUM_HPP
