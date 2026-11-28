@@ -34,6 +34,7 @@
 
 #include "algebra/diagonal_matrix.hpp"
 #include "algebra/matrix.hpp"
+#include "algebra/schur_decomposition.hpp"
 #include "foundation/paradigm.hpp"
 #include "numeric/float.decl.hpp"
 
@@ -212,22 +213,24 @@ class EigenDecomposition {
     ResultType _symmetric(const Matrix<NumericType>& A) const;
 
     //! \brief Approximate real diagonalization of a dense nonsymmetric matrix.
-    //! \details Applies QR iteration with a real shift chosen from the
-    //! trailing 2x2 block, using Householder reflections (1958) to
-    //! factor the shifted matrix without Gram-Schmidt instability.
-    //! A shifted QR step is an approximate orthogonal similarity
-    //! \f$T-\mu I=QR,\quad T_{\mathrm{new}}=RQ+\mu I\f$.
-    //! The resulting real triangular approximation seeds Newton
-    //! refinement of the original eigenpair equations
-    //! \f$(A-\lambda I)v=0\f$ under a fixed unit-pivot normalization.
-    //! Unlike SchurDecomposition, this older diagonalization path does
-    //! NOT first reduce the input to Hessenberg form and cannot
-    //! provide a complex or repeated spectrum in general.
-    //! See Householder, JACM 5(4) (1958), Francis, Computer Journal
-    //! 4 (1961-1962), and Wilkinson, The Algebraic Eigenvalue Problem
-    //! (1965), Chapter 8. No result here is a validation certificate.
-    //! Non-real, multiple, unresolved or ill-conditioned cases return
-    //! INCONCLUSIVE instead of claiming a complete real basis.
+    //! \details Reuses SchurDecomposition as the numerical eigenvalue
+    //! backend: Householder Hessenberg reduction, implicit Francis real
+    //! double shifts and real Wilkinson shifts produce Q,T with
+    //! \f$A Q \approx Q T\f$. Only a purely 1x1 real Schur block
+    //! partition is admissible for this real diagonalization path.
+    //! Back-substitution on T produces eigenvector seeds mapped through
+    //! Q; Newton refinement then solves the ORIGINAL eigenpair equations
+    //! \f$(A-\lambda I)v=0\f$ with a fixed unit-pivot normalization.
+    //! An independent invertibility and residual check is required
+    //! before SUCCESS. A complex Schur 2x2 block means the matrix
+    //! cannot have a complete real eigenbasis; this path returns
+    //! INCONCLUSIVE (the public status does not assert impossibility).
+    //! Repeated or poorly separated real eigenvalues may also be
+    //! inconclusive despite diagonalizability. This is only numerical
+    //! ApproximateTag; see SchurDecomposition for the historical and
+    //! mathematical sources of Householder, Hessenberg, Francis and
+    //! Wilkinson. ValidatedTag retains separate Gershgorin/Krawczyk
+    //! certificates and never treats a numerical Schur form as proof.
     ResultType _nonsymmetric(const Matrix<NumericType>& A) const;
 
     //! \brief Certify a dense matrix using disjoint Gershgorin disks.

@@ -1770,17 +1770,17 @@ EigenDecomposition<P, PR>::_krawczyk(
 }
 
 /** @brief Compute a real nonsymmetric eigendecomposition when numerically resolvable.
- *  @details The algorithm performs real-shift Householder QR iterations
- *  on the full current active matrix, without a prior Hessenberg
- *  reduction (unlike SchurDecomposition). It uses trailing-row deflation
- *  to find approximate real roots and back-substitutes approximate
- *  vectors, then applies Newton iteration to (A-lambda I)v=0 with
- *  v[pivot]=1 on the ORIGINAL matrix. It rejects unresolved or non-real
- *  eigenvalues, small spectral gaps and invalid bases.
- *  The factorization uses Householder's orthogonal reflections (1958);
- *  shifted QR and deflation are in Francis (1961-1962) and Wilkinson
- *  (1965), The Algebraic Eigenvalue Problem, Chapter 8.
- *  This is a numerical approximation, NOT a validation certificate.
+ *  @details First delegate Hessenberg reduction and the Francis/Wilkinson
+ *  QR iteration to SchurDecomposition; reject nonreal Schur 2x2 blocks
+ *  because this API requires a complete REAL eigenvector basis.
+ *  For an all-scalar real Schur partition, back-substitute triangular
+ *  eigenvectors, lift them by the orthogonal Schur factor and apply
+ *  Newton refinement to (A-lambda I)v=0 with v[pivot]=1 on the ORIGINAL
+ *  matrix. Require separated eigenvalues, small original residuals,
+ *  and an invertible eigenvector matrix before SUCCESS. No duplicated
+ *  QR iteration or implicit validated certificate exists here.
+ *  See SchurDecomposition Doxygen for Householder (1958), Francis
+ *  (1961-1962) and Wilkinson (1965), with mathematical derivations.
  */
 template<class P, class PR>
 typename EigenDecomposition<P, PR>::ResultType
@@ -1794,7 +1794,6 @@ EigenDecomposition<P, PR>::_nonsymmetric(const Matrix<NumericType>& input) const
         const SizeType n = input.row_size();
         const X zero(0u, _precision);
         const X one(1u, _precision);
-        const X two_value(2u, _precision);
         const X epsilon(Raw::eps(_precision));
 
         X scale(zero);
@@ -1813,162 +1812,36 @@ EigenDecomposition<P, PR>::_nonsymmetric(const Matrix<NumericType>& input) const
             return {Status::INCONCLUSIVE, std::nullopt};
         }
 
-        const X tolerance = X(128u, _precision) * epsilon * scale;
         const X separation = X(256u, _precision) * epsilon * scale;
         const X residual_budget = X(8192u, _precision) * epsilon * scale *
                                   X(static_cast<unsigned>(n), _precision);
-        Matrix<X> triangular(input);
-        Matrix<X> orthogonal = Matrix<X>::identity(n, _precision);
-        SizeType active = n;
-        const SizeType iteration_limit = 256u * n * n;
 
-        // The orthogonal similarity A=O*T*O^T is approximate. The
-        // later Newton solve is performed on the ORIGINAL input.
-        for (SizeType iteration = 0u; active > 1u &&
-                iteration != iteration_limit; ++iteration) {
-            bool last_row_small = true;
-            for (SizeType j = 0u; j + 1u < active; ++j) {
-                const X magnitude = abs(triangular[active - 1u][j]);
-                if (!is_finite(magnitude.raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
-                if (magnitude.raw() > tolerance.raw()) {
-                    last_row_small = false;
-                }
-            }
-            if (last_row_small) {
-                for (SizeType j = 0u; j + 1u < active; ++j) {
-                    triangular[active - 1u][j] = zero;
-                }
-                --active;
-                continue;
-            }
-
-            // A real Wilkinson shift near the bottom-right diagonal.
-            // Complex or repeated final real 2x2 blocks cannot yield
-            // the requested complete SIMPLE REAL decomposition.
-            const X& a = triangular[active - 2u][active - 2u];
-            const X& b = triangular[active - 2u][active - 1u];
-            const X& c = triangular[active - 1u][active - 2u];
-            const X& d = triangular[active - 1u][active - 1u];
-            const X discriminant = sqr(a - d) + X(4u, _precision) * b * c;
-            if (!is_finite(discriminant.raw())) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
-            X shift(d);
-            if (discriminant.raw() > zero.raw()) {
-                const X root = sqrt(discriminant);
-                const X low = (a + d - root) / two_value;
-                const X high = (a + d + root) / two_value;
-                shift = abs(low - d).raw() < abs(high - d).raw() ? low : high;
-            } else if (active == 2u) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
-
-            // Numerically stable Householder QR of T_active - shift*I.
-            // The QR factorization exists even when the shift is exactly
-            // an eigenvalue, unlike normalizing Gram-Schmidt columns.
-            Matrix<X> R(active, active, zero);
-            Matrix<X> Q = Matrix<X>::identity(active, _precision);
-            for (SizeType i = 0u; i != active; ++i) {
-                for (SizeType j = 0u; j != active; ++j) {
-                    R[i][j] = triangular[i][j] - (i == j ? shift : zero);
-                }
-            }
-            for (SizeType k = 0u; k + 1u < active; ++k) {
-                X norm_squared(zero);
-                for (SizeType i = k; i != active; ++i) {
-                    norm_squared += sqr(R[i][k]);
-                }
-                if (!is_finite(norm_squared.raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
-                if (norm_squared.raw() == zero.raw()) {
-                    continue;
-                }
-                const X magnitude = sqrt(norm_squared);
-                const X alpha = R[k][k].raw() < zero.raw() ? magnitude : -magnitude;
-                std::vector<X> reflector(active - k, zero);
-                reflector[0u] = R[k][k] - alpha;
-                X reflector_squared(sqr(reflector[0u]));
-                for (SizeType i = k + 1u; i != active; ++i) {
-                    reflector[i - k] = R[i][k];
-                    reflector_squared += sqr(reflector[i - k]);
-                }
-                if (!is_finite(reflector_squared.raw()) ||
-                    !(reflector_squared.raw() > zero.raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
-                const X beta = two_value / reflector_squared;
-                if (!is_finite(beta.raw())) {
-                    return {Status::INCONCLUSIVE, std::nullopt};
-                }
-
-                // R <- H_k R, Q <- Q H_k, where H_k is symmetric.
-                for (SizeType col = k; col != active; ++col) {
-                    X dot(zero);
-                    for (SizeType row = k; row != active; ++row) {
-                        dot += reflector[row - k] * R[row][col];
-                    }
-                    const X multiple = beta * dot;
-                    for (SizeType row = k; row != active; ++row) {
-                        R[row][col] -= multiple * reflector[row - k];
-                    }
-                }
-                for (SizeType row = 0u; row != active; ++row) {
-                    X dot(zero);
-                    for (SizeType col = k; col != active; ++col) {
-                        dot += Q[row][col] * reflector[col - k];
-                    }
-                    const X multiple = beta * dot;
-                    for (SizeType col = k; col != active; ++col) {
-                        Q[row][col] -= multiple * reflector[col - k];
-                    }
-                }
-            }
-
-            Matrix<X> next = R * Q;
-            for (SizeType i = 0u; i != active; ++i) {
-                next[i][i] += shift;
-            }
-            Matrix<X> updated_columns(n, active, zero);
-            for (SizeType i = 0u; i != n; ++i) {
-                for (SizeType j = 0u; j != active; ++j) {
-                    for (SizeType k = 0u; k != active; ++k) {
-                        updated_columns[i][j] += orthogonal[i][k] * Q[k][j];
-                    }
-                }
-            }
-            // A QR step acts on the entire leading block by similarity.
-            // Transform the active-to-deflated upper-right block too:
-            // T(0:active,active:n) <- Q^T*T(0:active,active:n).
-            // Omitting this update makes Schur eigenvectors inconsistent
-            // after the first deflation, even when diagonal values converge.
-            for (SizeType col = active; col != n; ++col) {
-                std::vector<X> transformed(active, zero);
-                for (SizeType row = 0u; row != active; ++row) {
-                    for (SizeType k = 0u; k != active; ++k) {
-                        transformed[row] += Q[k][row] * triangular[k][col];
-                    }
-                }
-                for (SizeType row = 0u; row != active; ++row) {
-                    triangular[row][col] = transformed[row];
-                }
-            }
-            for (SizeType i = 0u; i != active; ++i) {
-                for (SizeType j = 0u; j != active; ++j) {
-                    triangular[i][j] = next[i][j];
-                }
-            }
-            for (SizeType i = 0u; i != n; ++i) {
-                for (SizeType j = 0u; j != active; ++j) {
-                    orthogonal[i][j] = updated_columns[i][j];
-                }
-            }
-        }
-        if (active > 1u) {
+        // The unique QR eigensolver now lives in SchurDecomposition.
+        // Do not maintain a second full-matrix real QR iteration here.
+        const auto schur = SchurDecomposition<P, PR>(_precision)(input);
+        if (schur.status != SchurStatus::SUCCESS || !schur.data) {
             return {Status::INCONCLUSIVE, std::nullopt};
         }
+        const auto& blocks = schur.data->block_sizes;
+        SizeType block_order = 0u;
+        for (const SizeType width: blocks) {
+            if (width != 1u) {
+                // Nonreal conjugate blocks do not admit real eigenvectors.
+                // Repeated/ambiguous clusters remain inconclusive too.
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
+            ++block_order;
+        }
+        if (block_order != n) {
+            return {Status::INCONCLUSIVE, std::nullopt};
+        }
+        const Matrix<X>& triangular = schur.data->quasi_triangular;
+        const Matrix<X>& orthogonal = schur.data->orthogonal;
+
+        // Schur provides a real triangular seed. Back-substitution,
+        // original-matrix Newton correction, real eigenpair residual
+        // checks and verified numerical basis invertibility are retained
+        // below, with unchanged tolerances and failure semantics.
 
         Vector<X> eigenvalues(n, zero);
         Matrix<X> eigenvectors(n, n, zero);
