@@ -11,6 +11,90 @@
 Ariadne Algebra is the standalone C++20 algebra layer used by Ariadne. It provides linear-algebra containers, sparse expansions, power series, power-basis and Chebyshev polynomial representations, differential-algebra types, graded algebras and related operations over the validated numeric types supplied by the lower Ariadne stack.
 Although independently maintained and usable, this repository is also part of the [Ariadne repository structure](https://github.com/ariadne-cps/ariadne/blob/main/doc/structure.md).
 
+## Spectral analysis and invariant subspaces
+
+Ariadne Algebra provides spectral algorithms for real matrices in double and
+multiple precision, with both approximate computation and rigorous interval
+validation. The APIs separate three mathematical questions: finding the
+eigenvalue multiset, computing a Schur representation, and constructing a
+complete eigenvector basis. Invariant-subspace operations additionally support
+matrices that are not diagonalizable.
+
+| API | Purpose |
+| --- | --- |
+| `Spectrum<P, PR>` | Computes the complete eigenvalue multiset, including real and complex eigenvalues and algebraic multiplicities, without requiring eigenvectors. |
+| `SchurDecomposition<P, PR>` | Computes a real orthogonal Schur factorization, `A Q ≈ Q T`, with real 1×1 and conjugate-pair 2×2 diagonal blocks. |
+| `EigenDecomposition<P, PR>` | Computes a complete real or complex eigenvector basis when diagonalization can be established, automatically choosing the appropriate representation. |
+| `SchurDecompositionData<P, PR>` | Extracts real invariant subspaces, reorders Schur blocks, and selects complete spectral groups by block indices or real-axis-centered disks. |
+| `certified_coordinate_invariant_subspace` | Certifies coordinate invariant subspaces for entire interval-matrix families using exact block-zero structure. |
+| `certified_invariant_graph` | Certifies a fixed, possibly non-coordinate invariant graph over an interval family. |
+| `certified_invariant_graph_near` | Uses interval Krawczyk inclusion and contraction to certify a locally unique invariant graph for each matrix in an interval family. |
+
+### Eigenvalues and diagonalization
+
+`Spectrum` returns the eigenvalue multiset independently of
+diagonalizability. It exploits the matrix's structural decomposition into
+strongly connected components, handles scalar and 2×2 blocks directly, and
+uses the real Schur algorithm for dense approximate spectra. Its validated
+path provides outward complex enclosures for supported structural blocks.
+
+`EigenDecomposition` presents **one public interface** for real input
+matrices with real or nonreal eigenvalues. It preserves specialized real
+paths—including symmetric Jacobi, triangular structure, and real
+Gershgorin/Krawczyk certification—and invokes complex eigenvector
+construction only when a nonreal spectrum requires it. On success,
+`EigenDecompositionResult<P, PR>` holds a tagged real or complex result;
+`real_data()` and `complex_data()` access the corresponding factors.
+The real path retains real matrices and arithmetic without automatically
+promoting them to complex matrices.
+
+These operations report `SUCCESS`, `INCONCLUSIVE`, or
+`UNSUPPORTED_DIMENSION` through their respective status types.
+`INCONCLUSIVE` means that the requested numerical result or rigorous
+certificate was not established; it is not a claim of mathematical
+nonexistence.
+
+### Real Schur form and spectral subspaces
+
+The real Schur implementation combines Householder Hessenberg reduction
+with shifted QR iterations, including Francis implicit double shifts for
+conjugate pairs. Its orthogonal factor and real quasi-upper-triangular
+matrix provide a basis for working with invariant subspaces independently
+of whether an eigenvector basis exists.
+
+`SchurDecompositionData` supplies
+`leading_invariant_subspace`, `reorder_blocks`,
+`selected_invariant_subspace`, and
+`invariant_subspace_in_real_disk`. These operations retain complete
+1×1 or 2×2 Schur blocks and produce a real basis `U` with restriction
+`B` satisfying `A U ≈ U B`. The real-axis-centered disk selection
+keeps conjugate eigenvalue pairs together. Orthogonal block reordering
+uses small real Sylvester equations and verifies the resulting factors.
+
+### Validated invariant subspaces
+
+For `FloatBounds<PR>` interval-matrix families, the invariant-subspace
+facilities provide mathematical certificates rather than relying on small
+floating-point residuals:
+
+- **Coordinate subspaces:** prove `A[Sᶜ,S] = 0` uniformly over the
+  interval family and return the corresponding exact coordinate basis
+  and interval restriction.
+- **Fixed invariant graphs:** verify the matrix Riccati identity for
+  a supplied singleton graph `X`, with basis `[I;X]`, uniformly over
+  the input family.
+- **Locally unique invariant graphs:** verify strict interval
+  Krawczyk inclusion and contraction for a supplied graph center,
+  candidate box, and preconditioner. The resulting enclosure contains
+  a locally unique graph for each matrix represented by the input
+  family.
+
+The verified graph operations reuse Ariadne Algebra's own
+`validated_root_contractors.hpp` primitives and preserve the module
+boundary with equation-solving. Their certificates explicitly distinguish
+a fixed common subspace from a family of matrix-dependent invariant
+subspaces.
+
 ## Dependencies
 
 Algebra depends directly on [ariadne-cps/interval](https://github.com/ariadne-cps/interval), included as a Git submodule. Interval supplies Numeric, Foundation and Utility transitively.
@@ -30,7 +114,7 @@ A C++20 compiler and CMake are required.
 
 ## Eigenvalue and eigenvector benchmark
 
-The `eigen` branch provides an optional benchmark of complete
+An optional benchmark measures complete
 `EigenDecomposition<P,PR>` calls, **including eigenvectors**, and in the
 validated paradigm the certification attempt. Shared timing, warm-ups and
 reporting use the auxiliary `ariadne-cps/benchmarking` gitlink at `ss/bmk`.
