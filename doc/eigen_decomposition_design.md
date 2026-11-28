@@ -45,6 +45,39 @@ The intended Algebra responsibilities are independent and layered:
    implementation primitives but the current public shapes are temporary.
    Do not preserve them merely for backwards compatibility.
 
+**One public eigendecomposition API and the real fast path (decision 2026-11-28).**
+There must be exactly one user-facing `EigenDecomposition<P,PR>` for a
+real input matrix: the caller must not have to know in advance whether
+the eigenvalues are real or complex. The interim
+`ComplexEigenDecomposition` implementation is not a second permanent
+public solver. A complete real basis is a successful special case of
+the unified operation. The intended success payload is a tagged
+real/complex representation (e.g. `std::variant<RealEigenData,
+ComplexEigenData>`), **not** eager promotion of every real eigenbasis to
+complex coefficients.
+
+- Preserve specialized real paths (symmetric Jacobi; triangular/block
+  structure; existing validated Gershgorin/Krawczyk/similarity pathways)
+  where they are applicable. The generic real Schur backend runs only
+  real-arithmetic Householder/Hessenberg/Francis/Wilkinson iterations.
+- When Schur yields only real scalar blocks, construct/refine/check
+  eigenvectors and their inverse in the **real** number system. Avoid
+  allocating dense complex matrices or performing complex arithmetic
+  on this overwhelmingly common path.
+- Only use complex back-substitution, complex vectors and complex
+  inversion when nonreal conjugate 2x2 Schur blocks require them.
+  Defective/unresolved clusters remain INCONCLUSIVE; an approximate
+  factorization must never be passed off as a validated certificate.
+- Measure the performance impact before declaring completion. In
+  DP and MP, compare wall time, allocations, and iteration counts
+  against the last proven real implementation for symmetric,
+  triangular, non-normal but real-spectrum, and mixed-spectrum
+  examples. Do not assume the new Schur path is cost-free: the
+  change in real QR algorithms can itself affect speed. Execute
+  benchmarks locally only; CI may compile but must not run them.
+- Remove/replace transitional public names and storage types during
+  final unification: there are no downstream compatibility clients.
+
 **Status semantics:** SUCCESS gives the complete requested result (with
 the requested proof strength), INCONCLUSIVE means not established and never
 asserts nonexistence, and UNSUPPORTED_DIMENSION handles order zero. Future
@@ -642,3 +675,10 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - Introduced a minimal explicitly initialized `ComplexMatrix<X>` storage type with actual `Complex<X>&` indexed elements, replacing only the unsupported `Matrix<Complex<X>>` values in complex eigendecomposition results, the Schur eigenvector array, and pivoted Gauss-Jordan inversion. It preserves row/column-size inspection and `[][]` access required by the existing regression tests. No changes to numeric's generic `Matrix` or `Complex` are made, and no numerical thresholds, tests, or Schur solver algorithms are altered. This is a narrowly scoped compile-integration repair; the new CI result remains to be checked.
 - **Final API decision:** the separate public `ComplexEigenDecomposition` class is a *temporary implementation boundary*, NOT a permanent choice that a user must make by guessing the matrix spectrum. The target public `EigenDecomposition` must automatically handle both real and complex eigenvalues for a real input matrix, with complex-valued eigenvalues/eigenvectors and a complete basis when diagonalizable. Users ask separately for `Spectrum` (all eigenvalues regardless of diagonalizability) or `SchurDecomposition` (real orthogonal quasi-triangular factorization). Existing real-only approximate/validated diagonalization code should be reused *internally*, not retained as a competing public class. There are no compatibility clients; no backwards-compatibility wrapper is required. A validated result must not claim that approximate complex Schur proves a complete interval eigenbasis.
 - **Verification:** compile errors and source type requirements inspected; no C++ build of this change confirmed yet. Prior failing checks are not categorized as numerical failures. Once CI is green, unify the public API and add tests proving that the caller does not need to know the spectral field in advance. Keep check-format deferred to the premerge stage; benchmarks compile-only in CI.
+
+### 2026-11-28 — repair GCC Root name shadow and capture the real fast-path contract (this commit)
+
+- The latest `3f4ae85` job results show successful Clang, AppleClang and MSVC Debug tests, while GCC 13 Debug/Coverage fail in `test_complex_eigen_decomposition.cpp` compilation with `-Werror=shadow`. The local type `struct Root` in `ComplexEigenDecomposition::operator()` shadows `Ariadne::Root` from `numeric/operators.hpp:506`.
+- Renamed that local record type to `SpectralRootEntry` and changed its vector declaration and range-for type. Verified the three original uses are renamed and no independent uses of the old type remain. Neither the eigenpair algorithm, convergence checks nor test expectations have changed, and no compiler warning is disabled.
+- Promoted the **single public EigenDecomposition API and real fast-path** choice into the authoritative design section. A final unified result must allow real and complex representations without mandatory promotion or allocation of complex eigenvector matrices. Reuse all existing real specializations and verified real interval paths. Complex eigenvectors/inverse are computed only when needed. Before closing the campaign, benchmark DP/MP latency, allocations and iterations for the existing real-spectrum workload; Schur's different real QR can itself cause a regression even without complex arithmetic. Benchmarks remain compile-only in CI.
+- **Verification:** GCC error and source type references inspected; new commit build/test and numerical performance comparisons remain pending. The fix is not described as CI-passing before the new checks complete. The temporary ComplexEigenDecomposition class remains for now solely while the common engine is being stabilized. Pre-merge formatting remains deferred.

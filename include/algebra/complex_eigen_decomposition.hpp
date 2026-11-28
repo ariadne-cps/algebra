@@ -210,12 +210,12 @@ class ComplexEigenDecomposition {
                 SizeType start;
                 SizeType width;
             };
-            struct Root {
+            struct SpectralRootEntry {
                 SizeType block;
                 CX eigenvalue;
             };
             std::vector<Block> blocks;
-            std::vector<Root> roots;
+            std::vector<SpectralRootEntry> roots;
             SizeType offset = 0u;
             for (const SizeType width: schur.data->block_sizes) {
                 if ((width != 1u && width != 2u) ||
@@ -391,7 +391,7 @@ class ComplexEigenDecomposition {
 
             std::vector<CX> eigenvalues;
             eigenvalues.reserve(n);
-            for (const Root& root: roots) {
+            for (const SpectralRootEntry& root: roots) {
                 eigenvalues.push_back(root.eigenvalue);
             }
             return {Status::SUCCESS, ComplexEigenDecompositionData<P, PR>{
