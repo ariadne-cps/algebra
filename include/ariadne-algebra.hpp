@@ -32,6 +32,7 @@
 // TranscendentalType in numeric/complex.hpp is also declared in
 // numeric/operators.hpp, and intervening sin overloads make GCC reject it.
 #include "algebra/spectrum.hpp"
+#include "algebra/schur_decomposition.hpp"
 
 #include "algebra/algebra.hpp"
 #include "algebra/chebyshev_polynomial.hpp"

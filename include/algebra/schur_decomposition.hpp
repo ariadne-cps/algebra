@@ -25,9 +25,9 @@
 /** @file algebra/schur_decomposition.hpp
  *  @brief Real Schur reduction using Householder reflections and shifted QR.
  *
- *  @details Mathematical background and historical references are documented
- *  on SchurDecomposition. The present double shift is explicit: it must not
- *  be confused with Francis's implicit double-shift algorithm.
+ *  @details Mathematical background and original references are documented
+ *  on SchurDecomposition. Complex-conjugate shifts now use Francis's
+ *  implicit real double-shift bulge chase.
  */
 #ifndef ARIADNE_SCHUR_DECOMPOSITION_HPP
 #define ARIADNE_SCHUR_DECOMPOSITION_HPP
@@ -98,11 +98,25 @@ struct SchurDecompositionResult {
 //! are a conjugate pair and one instead forms the REAL quadratic
 //! polynomial
 //! \f[ p(H)=H^2-\operatorname{tr}(B)H+\det(B)I, \f]
-//! where B is the trailing 2x2 block. Factoring p(H)=U*R and applying
-//! H <- U^T*H*U is an explicit real double-shift QR step. This is
-//! based on the QR iteration of Francis (1961-1962), NOT its implicit
-//! bulge-chasing implementation. Forming H^2 explicitly is slower
-//! and less robust than implicit Francis QR, which remains future work.
+//! where B is the trailing 2x2 block. The implicit Q theorem of
+//! Francis (1961-1962) allows its QR similarity to be constructed
+//! from the first column of p(H), without forming p(H) explicitly.
+//! For upper Hessenberg H, its first three possibly nonzero entries are
+//! \f[
+//! \begin{split}
+//! x &= h_{00}^2+h_{01}h_{10}-s h_{00}+t,\\
+//! y &= h_{10}(h_{00}+h_{11}-s),\\
+//! z &= h_{10}h_{21},\\
+//! s &= \operatorname{tr}(B),\quad t=\det(B).
+//! \end{split}
+//! \f]
+//! A Householder reflector maps (x,y,z) to the first coordinate,
+//! introducing a small out-of-band bulge. Subsequent reflectors on
+//! at most three consecutive rows chase the bulge down the active
+//! Hessenberg subdiagonal. Applying the full orthogonal similarities
+//! and accumulating them in Q implements the implicit real Francis
+//! double shift, without explicitly squaring H. Aggressive deflation
+//! and multishifts remain future work.
 //!
 //! \par Step 3: deflation and acceptance criteria
 //! A sufficiently small subdiagonal entry is set to zero using a
@@ -328,26 +342,12 @@ class SchurDecomposition {
                     continue;
                 }
 
-                Matrix<X> polynomial(active, active, zero);
                 if (pair) {
-                    /** \brief Explicit REAL quadratic QR double shift.
-                     *  \details p(H)=H^2-tr(B)*H+det(B)*I for the final
-                     *  2x2 block B. Its two shifts are complex conjugates,
-                     *  so p has real coefficients. This construction
-                     *  follows the Francis QR framework, but it is NOT
-                     *  the implicit Francis bulge-chasing algorithm.
-                     */
-                    const X trace = a + d;
-                    const X det = a * d - b * c;
-                    for (SizeType i = 0u; i != active; ++i) {
-                        for (SizeType j = 0u; j != active; ++j) {
-                            X product(zero);
-                            for (SizeType k = 0u; k != active; ++k) {
-                                product += T[i][k] * T[k][j];
-                            }
-                            polynomial[i][j] = product - trace * T[i][j] +
-                                (i == j ? det : zero);
-                        }
+                    // Francis implicit real double shift: only the
+                    // first column of p(T) is required to start bulge
+                    // chasing, rather than explicitly forming T^2.
+                    if (!this->_francis_double_shift(T, Q, active)) {
+                        return {SchurStatus::INCONCLUSIVE, std::nullopt};
                     }
                 } else {
                     // Wilkinson-type single shift: choose the nearer
@@ -358,26 +358,28 @@ class SchurDecomposition {
                     const X high = (a + d + root) / two_value;
                     const X shift = abs(low - d).raw() < abs(high - d).raw()
                         ? low : high;
+                    Matrix<X> shifted(active, active, zero);
                     for (SizeType i = 0u; i != active; ++i) {
                         for (SizeType j = 0u; j != active; ++j) {
-                            polynomial[i][j] = T[i][j] -
+                            shifted[i][j] = T[i][j] -
                                 (i == j ? shift : zero);
                         }
                     }
-                }
-                const auto small_Q = this->_qr(polynomial);
-                if (!small_Q) {
-                    return {SchurStatus::INCONCLUSIVE, std::nullopt};
-                }
-                Matrix<X> step = Matrix<X>::identity(n, _precision);
-                for (SizeType i = 0u; i != active; ++i) {
-                    for (SizeType j = 0u; j != active; ++j) {
-                        step[i][j] = (*small_Q)[i][j];
+                    const auto small_Q = this->_qr(shifted);
+                    if (!small_Q) {
+                        return {SchurStatus::INCONCLUSIVE, std::nullopt};
                     }
+                    Matrix<X> step = Matrix<X>::identity(n, _precision);
+                    for (SizeType i = 0u; i != active; ++i) {
+                        for (SizeType j = 0u; j != active; ++j) {
+                            step[i][j] = (*small_Q)[i][j];
+                        }
+                    }
+                    // Full similarity includes previously deflated
+                    // trailing Schur blocks and their couplings.
+                    T = transpose(step) * (T * step);
+                    Q = Q * step;
                 }
-                // Full similarity includes couplings to deflated blocks.
-                T = transpose(step) * (T * step);
-                Q = Q * step;
                 if (!this->_finite_matrix(T) || !this->_finite_matrix(Q)) {
                     return {SchurStatus::INCONCLUSIVE, std::nullopt};
                 }
@@ -475,11 +477,115 @@ class SchurDecomposition {
         return true;
     }
 
+    //! \brief Perform a real Francis implicit double-shift QR step.
+    //! \param T Full Hessenberg/Schur iterate, updated by similarity.
+    //! \param Q Accumulated orthogonal transformation, updated in place.
+    //! \param active Order of the leading unreduced Hessenberg block.
+    //! \return False if a reflector or intermediate result is nonfinite.
+    //! \details Write p(H)=H^2-tr(B)H+det(B)I for the trailing 2x2
+    //! block B. The implicit Q theorem allows the QR similarity of
+    //! p(H) to be obtained from just its first column: exactly three
+    //! potentially nonzero entries for upper Hessenberg H. A first
+    //! Householder reflector initiates a bulge, then reflectors of
+    //! length two or three chase the fill below the subdiagonal.
+    //! Every reflector acts on the full matrix T and accumulates into
+    //! Q so couplings to deflated trailing blocks remain consistent.
+    //! No full quadratic shift matrix is constructed.
+    //! See Francis (1961-1962), The QR Transformation, Parts 1 and 2;
+    //! Wilkinson (1965), The Algebraic Eigenvalue Problem, Chapter 8.
+    bool _francis_double_shift(Matrix<X>& T, Matrix<X>& Q,
+                               SizeType active) const {
+        const SizeType n = T.row_size();
+        if (active < 3u || active > n || T.column_size() != n ||
+            Q.row_size() != n || Q.column_size() != n) {
+            return false;
+        }
+        const X zero(0u, _precision);
+        const X two_value(2u, _precision);
+        const X& a = T[active - 2u][active - 2u];
+        const X& b = T[active - 2u][active - 1u];
+        const X& c = T[active - 1u][active - 2u];
+        const X& d = T[active - 1u][active - 1u];
+        const X trace = a + d;
+        const X determinant = a * d - b * c;
+
+        // First column of the real quadratic-shift polynomial.
+        std::vector<X> first(3u, zero);
+        first[0u] = T[0u][0u] * (T[0u][0u] - trace) +
+            T[0u][1u] * T[1u][0u] + determinant;
+        first[1u] = T[1u][0u] * (T[0u][0u] + T[1u][1u] - trace);
+        first[2u] = T[1u][0u] * T[2u][1u];
+        for (const auto& value: first) {
+            if (!this->_finite(value)) {
+                return false;
+            }
+        }
+
+        for (SizeType k = 0u; k + 1u < active; ++k) {
+            const SizeType width = k + 2u < active ? 3u : 2u;
+            std::vector<X> v(width, zero);
+            for (SizeType i = 0u; i != width; ++i) {
+                v[i] = k == 0u ? first[i] : T[k + i][k - 1u];
+            }
+            X norm_squared(zero);
+            for (const auto& value: v) {
+                norm_squared += sqr(value);
+            }
+            if (!this->_finite(norm_squared)) {
+                return false;
+            }
+            if (norm_squared.raw() == zero.raw()) {
+                // No reflector needed for a zero bulge; the final
+                // Hessenberg, residual and orthogonality checks apply.
+                continue;
+            }
+            const X magnitude = sqrt(norm_squared);
+            const X alpha = v[0u].raw() < zero.raw() ? magnitude : -magnitude;
+            v[0u] -= alpha;
+            X squared(sqr(v[0u]));
+            for (SizeType i = 1u; i != width; ++i) {
+                squared += sqr(v[i]);
+            }
+            if (!this->_finite(squared) || !(squared.raw() > zero.raw())) {
+                return false;
+            }
+            const X beta = two_value / squared;
+
+            // Left Householder factor on T.
+            for (SizeType col = 0u; col != n; ++col) {
+                X dot(zero);
+                for (SizeType i = 0u; i != width; ++i) {
+                    dot += v[i] * T[k + i][col];
+                }
+                for (SizeType i = 0u; i != width; ++i) {
+                    T[k + i][col] -= beta * dot * v[i];
+                }
+            }
+            // Right factor on T and accumulation of Q.
+            for (SizeType row = 0u; row != n; ++row) {
+                X dot(zero);
+                for (SizeType i = 0u; i != width; ++i) {
+                    dot += T[row][k + i] * v[i];
+                }
+                for (SizeType i = 0u; i != width; ++i) {
+                    T[row][k + i] -= beta * dot * v[i];
+                }
+                X qdot(zero);
+                for (SizeType i = 0u; i != width; ++i) {
+                    qdot += Q[row][k + i] * v[i];
+                }
+                for (SizeType i = 0u; i != width; ++i) {
+                    Q[row][k + i] -= beta * qdot * v[i];
+                }
+            }
+        }
+        return this->_finite_matrix(T) && this->_finite_matrix(Q);
+    }
+
     //! \brief Orthogonal factor of a full Householder QR factorization.
     //! \details Repeated reflections of the form
-    //! \f$U=I-2vv^{\mathsf T}/(v^{\mathsf T}v)\f$ reduce an arbitrary
-    //! shifted matrix (or real quadratic shift polynomial) to
-    //! triangular form R. The accumulated Q satisfies input=Q*R
+    //! \f$U=I-2vv^{\mathsf T}/(v^{\mathsf T}v)\f$ reduce the real
+    //! single-shift matrix to triangular form R. The accumulated Q satisfies input=Q*R
     //! approximately. A rank-deficient column with zero norm is
     //! skipped, not normalized. The reflector sign reduces cancellation.
     //! This is Householder QR, not classical Gram-Schmidt; see

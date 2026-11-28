@@ -146,6 +146,81 @@ Void test_schur(PR precision) {
         roots.status == SpectralStatus::SUCCESS && roots.data.has_value());
 }
 
+//! \brief Two coupled complex conjugate pairs for implicit Francis QR.
+template<class PR>
+Void test_francis_two_pairs(PR precision) {
+    using AX = FloatApproximation<PR>;
+    const AX zero_value(0u, precision);
+    // U*diag([[0,-1],[1,0]], [[0,-3],[3,0]])*U with
+    // U=I-(1/2)*ones(4,4), an exactly orthogonal matrix.
+    // The strongly connected integer input has characteristic
+    // polynomial (lambda^2+1)(lambda^2+9).
+    const Int coefficients[4][4] = {
+        {0, 0, -1, 2},
+        {0, 0, -2, 1},
+        {1, 2, 0, 0},
+        {-2, -1, 0, 0}
+    };
+    Matrix<AX> A(4u, 4u, zero_value);
+    for (SizeType row = 0u; row != 4u; ++row) {
+        for (SizeType col = 0u; col != 4u; ++col) {
+            A[row][col] = AX(coefficients[row][col], precision);
+        }
+    }
+
+    const auto schur = SchurDecomposition<ApproximateTag, PR>(precision)(A);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        schur.status == SchurStatus::SUCCESS && schur.data.has_value());
+    if (schur.data) {
+        const auto& data = *schur.data;
+        SizeType covered = 0u, conjugate_pairs = 0u;
+        for (const auto width: data.block_sizes) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                width > 0u && width <= 4u - covered);
+            covered += width;
+            if (width == 2u) { ++conjugate_pairs; }
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            covered == 4u && conjugate_pairs == 2u);
+        const Matrix<AX> aq = A * data.orthogonal;
+        const Matrix<AX> qt = data.orthogonal * data.quasi_triangular;
+        const Matrix<AX> orth = transpose(data.orthogonal) * data.orthogonal;
+        for (SizeType row = 0u; row != 4u; ++row) {
+            for (SizeType col = 0u; col != 4u; ++col) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    std::abs((aq[row][col] - qt[row][col]).get_d()) < 1e-8 &&
+                    std::abs(orth[row][col].get_d() -
+                        (row == col ? 1.0 : 0.0)) < 1e-8);
+            }
+        }
+    }
+
+    const auto roots = Spectrum<ApproximateTag, PR>(precision)(A);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        roots.status == SpectralStatus::SUCCESS && roots.data.has_value());
+    if (roots.data) {
+        const double expected[4] = {-3.0, -1.0, 1.0, 3.0};
+        SizeType hits[4] = {0u, 0u, 0u, 0u};
+        for (const auto& lambda: roots.data->eigenvalues) {
+            const double re = lambda.real_part().get_d();
+            const double im = lambda.imaginary_part().get_d();
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(re) < 1e-8);
+            for (SizeType i = 0u; i != 4u; ++i) {
+                if (std::abs(im - expected[i]) < 1e-8) {
+                    ++hits[i];
+                }
+            }
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            roots.data->eigenvalues.size() == 4u);
+        for (SizeType i = 0u; i != 4u; ++i) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                hits[i] == 1u);
+        }
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -157,6 +232,10 @@ int main(int argc, char** argv) {
                 test_schur(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_schur(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_francis_two_pairs(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_francis_two_pairs(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }
