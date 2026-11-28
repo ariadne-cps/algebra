@@ -42,6 +42,7 @@
 #include "algebra/determinant.hpp"
 #include "algebra/differential.hpp"
 #include "algebra/eigen_decomposition.hpp"
+#include "algebra/invariant_subspace.hpp"
 #include "algebra/expansion.hpp"
 #include "algebra/fixed_differential.hpp"
 #include "algebra/fixed_univariate_differential.hpp"

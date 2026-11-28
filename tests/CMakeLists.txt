@@ -5,6 +5,7 @@ set(UNIT_TESTS
     test_eigen_decomposition
     test_complex_eigen_decomposition
     test_schur_decomposition
+    test_invariant_subspace
     test_spectrum
     test_determinant
     test_validated_root_contractors
