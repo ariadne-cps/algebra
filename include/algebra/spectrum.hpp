@@ -64,13 +64,35 @@ struct SpectrumResult {
     std::optional<SpectrumData<P, PR>> data;
 };
 
-//! \brief Calculate eigenvalues without requiring diagonalizability.
-//! \details Handles scalar, 2x2 and structurally block-upper-triangular
-//! matrices whose strongly connected diagonal blocks have order at most two.
-//! ApproximateTag also uses a numerical real Schur reduction for dense
-//! higher-order strongly connected blocks; validated dense complex
-//! spectra require a separate certification.
-//! ValidatedTag requires a discriminant with verified sign or exact zero.
+//! \brief Calculate all eigenvalues without requiring diagonalizability.
+//! \details The zero/nonzero incidence graph of a real matrix defines
+//! strongly connected components (SCCs). Transitive closure uses
+//! Warshall's Boolean-matrix method; sorting the SCC condensation DAG
+//! yields a simultaneous row/column permutation into block upper
+//! triangular form (the reducible, or Frobenius, form). Therefore
+//! \f[ \det(\lambda I-A)=\prod_j \det(\lambda I-A_{jj}) \f]
+//! and the eigenvalue multiset is the union of the diagonal-block
+//! spectra, regardless of potentially nonzero off-block couplings.
+//! Each diagonal SCC is solved independently: a scalar by inspection,
+//! 2x2 by the real quadratic formula, and larger blocks by the
+//! approximate real Schur reduction of SchurDecomposition. This avoids
+//! subjecting already reducible blocks to unnecessary dense QR.
+//! A coefficient is structurally zero only when *provably exactly zero*
+//! in the requested paradigm; an interval containing zero is not
+//! treated as absent. ValidatedTag uses outward complex enclosures
+//! for scalar and 2x2 blocks, but cannot certify the current dense
+//! Schur backend and returns INCONCLUSIVE if a larger SCC is present.
+//! Inconclusive never proves that the spectrum or an eigenbasis is absent.
+//!
+//! \par Mathematical and algorithmic sources
+//! - S. Warshall, "A Theorem on Boolean Matrices", Journal of the ACM
+//!   9(1), 11-12 (1962), https://doi.org/10.1145/321105.321107.
+//! - D. Kressner, Numerical Methods for General and Structured
+//!   Eigenvalue Problems, Springer (2005), Section 3.3.1:
+//!   irreducible forms and SCC topological ordering.
+//!   https://doi.org/10.1007/3-540-28502-4.
+//! - See SchurDecomposition for Householder/Hessenberg and the
+//!   Francis/Wilkinson QR algorithms and their original references.
 template<class P, class PR>
 class Spectrum {
   public:
@@ -193,9 +215,9 @@ class Spectrum {
                             component.push_back(j);
                         }
                     }
-                    if (component.size() > 2u) {
-                        return this->_schur_spectrum(A);
-                    }
+                    // A component larger than two is still retained:
+                    // solve its principal block by Schur AFTER graph
+                    // condensation, not the entire reducible input.
                     components.push_back(std::move(component));
                 }
 
@@ -237,16 +259,22 @@ class Spectrum {
                         result.eigenvalues.emplace_back(
                             A[indices[0u]][indices[0u]], zero);
                     } else {
-                        Matrix<X> block(2u, 2u, zero);
-                        for (SizeType i = 0u; i != 2u; ++i) {
-                            for (SizeType j = 0u; j != 2u; ++j) {
+                        const SizeType block_order = indices.size();
+                        Matrix<X> block(block_order, block_order, zero);
+                        for (SizeType i = 0u; i != block_order; ++i) {
+                            for (SizeType j = 0u; j != block_order; ++j) {
                                 block[i][j] = A[indices[i]][indices[j]];
                             }
                         }
-                        // Reuse exactly the small-order approximate or
-                        // outward-rounded validated spectral contract.
-                        const auto solved = (*this)(block);
-                        if (solved.status != Status::SUCCESS || !solved.data) {
+                        // Small blocks use the exact structural/2x2
+                        // path. Higher irreducible blocks use Schur
+                        // independently, not on the full input matrix.
+                        // ValidatedTag deliberately refuses to certify
+                        // an approximate Schur result.
+                        const auto solved = block_order == 2u
+                            ? (*this)(block) : this->_schur_spectrum(block);
+                        if (solved.status != Status::SUCCESS || !solved.data ||
+                            solved.data->eigenvalues.size() != block_order) {
                             return {Status::INCONCLUSIVE, std::nullopt};
                         }
                         for (const auto& lambda: solved.data->eigenvalues) {
@@ -255,6 +283,9 @@ class Spectrum {
                     }
                 }
             }
+        }
+        if (result.eigenvalues.size() != n) {
+            return {Status::INCONCLUSIVE, std::nullopt};
         }
         for (const auto& lambda: result.eigenvalues) {
             if (!this->_finite(lambda.real_part()) ||

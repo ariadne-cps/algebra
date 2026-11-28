@@ -306,6 +306,87 @@ Void test_structural_complex_spectrum(PR precision) {
         validated(v).status == SpectralStatus::INCONCLUSIVE);
 }
 
+//! \brief Mixed SCCs: an irreducible 3x3, a 2x2, and a scalar.
+template<class PR>
+Void test_mixed_schur_components(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    Matrix<AX> a(6u, 6u, AX(0u, precision));
+    Matrix<VX> v(6u, 6u, VX(0u, precision));
+
+    // Interleave coordinates so the matrix is not triangular in its
+    // stored order. SCC {0,2,5} has characteristic polynomial
+    // (lambda-9)(lambda^2+9); SCC {1,4} is a rotation with
+    // eigenvalues {-i,+i}; SCC {3} has eigenvalue 7.
+    // Directed cross-block edges {0,2,5}->{1,4}->{3} do not
+    // alter the determinant of lambda*I-A.
+    const Int coefficients[6][6] = {
+        { 4,  2,  5,  0,  0,  0},
+        { 0,  0,  0,  3, -1,  0},
+        { 3,  0,  4, -2,  0, -4},
+        { 0,  0,  0,  7,  0,  0},
+        { 0,  1,  0,  0,  0,  0},
+        {-4,  0,  0,  0, -1,  1}
+    };
+    for (SizeType i = 0u; i != 6u; ++i) {
+        for (SizeType j = 0u; j != 6u; ++j) {
+            a[i][j] = AX(coefficients[i][j], precision);
+            v[i][j] = VX(coefficients[i][j], precision);
+        }
+    }
+
+    const auto approximate = Spectrum<ApproximateTag, PR>(precision)(a);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate.status == SpectralStatus::SUCCESS &&
+        approximate.data.has_value());
+    if (approximate.data) {
+        const auto& eigenvalues = approximate.data->eigenvalues;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            eigenvalues.size() == 6u);
+        const double expected_real[2] = {7.0, 9.0};
+        const double expected_imag[4] = {-3.0, -1.0, 1.0, 3.0};
+        SizeType real_hits[2] = {0u, 0u};
+        SizeType imaginary_hits[4] = {0u, 0u, 0u, 0u};
+        for (const auto& eigenvalue: eigenvalues) {
+            const double re = eigenvalue.real_part().get_d();
+            const double im = eigenvalue.imaginary_part().get_d();
+            for (SizeType k = 0u; k != 2u; ++k) {
+                if (std::abs(re - expected_real[k]) < 1e-8 &&
+                    std::abs(im) < 1e-8) {
+                    ++real_hits[k];
+                }
+            }
+            for (SizeType k = 0u; k != 4u; ++k) {
+                if (std::abs(re) < 1e-8 &&
+                    std::abs(im - expected_imag[k]) < 1e-8) {
+                    ++imaginary_hits[k];
+                }
+            }
+        }
+        for (SizeType k = 0u; k != 2u; ++k) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                real_hits[k] == 1u);
+        }
+        for (SizeType k = 0u; k != 4u; ++k) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                imaginary_hits[k] == 1u);
+        }
+    }
+
+    // A numerical Schur factor for the 3x3 block is not a rigorous
+    // enclosure for the corresponding interval matrix family.
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        Spectrum<ValidatedTag, PR>(precision)(v).status ==
+            SpectralStatus::INCONCLUSIVE);
+
+    // An uncertain cross-block coefficient may include zero but
+    // must never create a reverse directed edge in SCC analysis.
+    v[0u][1u] += VX(-1, 1, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        Spectrum<ValidatedTag, PR>(precision)(v).status ==
+            SpectralStatus::INCONCLUSIVE);
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -321,6 +402,10 @@ int main(int argc, char** argv) {
                 test_structural_complex_spectrum(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_structural_complex_spectrum(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_mixed_schur_components(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_mixed_schur_components(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }
