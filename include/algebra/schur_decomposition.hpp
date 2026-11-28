@@ -44,11 +44,27 @@ namespace Ariadne {
 //! \brief Status of a Schur computation; INCONCLUSIVE is not nonexistence.
 enum class SchurStatus { SUCCESS, INCONCLUSIVE, UNSUPPORTED_DIMENSION };
 
+//! \brief A leading real invariant subspace from Schur factors.
+//! \details Its n-by-k orthonormal basis U and k-by-k restriction B
+//! satisfy A*U approximately equal to U*B. This does not require
+//! eigenvectors or diagonalizability, and is NOT a validated certificate.
+//! The basis spans only a leading Schur block prefix, not an arbitrary
+//! selected eigenvalue cluster.
+//! \see SchurDecompositionData::leading_invariant_subspace
+template<class P, class PR>
+struct SchurInvariantSubspaceData {
+    using X = FloatType<P, PR>;
+    Matrix<X> basis;       //!< n-by-k orthonormal columns.
+    Matrix<X> restriction; //!< k-by-k representation of A on that subspace.
+};
+
 //! \brief Real Schur factors approximating A*Q = Q*T.
 //! \details Q is approximately orthogonal; T is real upper quasi-triangular.
 //! Its diagonal 1x1 blocks hold real eigenvalues, while 2x2 blocks hold
 //! complex-conjugate eigenvalue pairs (negative 2x2 discriminant).
 //! A real Schur form exists even if A is defective and has no eigenbasis.
+//! Complete leading Schur blocks generate real invariant subspaces even
+//! for repeated eigenvalues and nonreal complex-conjugate pairs.
 //! The factors are floating-point approximations, NOT interval certificates.
 //! \see SchurDecomposition for the underlying reductions and references.
 template<class P, class PR>
@@ -57,6 +73,94 @@ struct SchurDecompositionData {
     Matrix<X> orthogonal;
     Matrix<X> quasi_triangular;
     std::vector<SizeType> block_sizes;
+
+    //! \brief Extract a leading invariant subspace of the real Schur form.
+    //! \param block_count Number of complete, initial diagonal Schur
+    //! blocks to include (between one and block_sizes.size()).
+    //! \param precision Numeric precision used for the new real matrices.
+    //! \return The orthonormal basis U and its restriction B, or no
+    //! result if the requested prefix is invalid or cuts a 2x2 block.
+    //!
+    //! \details Suppose Q=[Q1,Q2] and the real Schur matrix is
+    //! \f[ T=\begin{pmatrix}B&C\\0&D\end{pmatrix}. \f]
+    //! Since A*Q approximately equals Q*T, its first k columns give
+    //! \f[ A Q_1 \approx Q_1 B,\quad Q_1^{\mathsf T}Q_1\approx I. \f]
+    //! Hence span(Q1) is an approximate A-invariant REAL subspace.
+    //! Unlike an eigenbasis, the restriction B need not be diagonal:
+    //! this construction also works for a defective Jordan block
+    //! and for real 2x2 conjugate-pair blocks.
+    //!
+    //! A real Schur 2x2 block must never be split. Only prefixes of
+    //! the CURRENT Schur ordering can be extracted; selecting an
+    //! arbitrary cluster requires an additional Schur-reordering
+    //! algorithm that is not yet implemented. The method checks the
+    //! complete block partition and that the lower-left T coupling
+    //! at the requested boundary is identically zero. It does not
+    //! rerun QR or allocate complex matrices.
+    //!
+    //! This method is available only for ApproximateTag. The
+    //! ValidatedTag Schur backend is not implemented and cannot
+    //! certify invariant subspaces merely from floating factors.
+    //! See J. H. Wilkinson, The Algebraic Eigenvalue Problem (1965),
+    //! Chapters 6 and 8, and SchurDecomposition for the underlying
+    //! Schur/Householder/Francis derivations.
+    std::optional<SchurInvariantSubspaceData<P, PR>>
+    leading_invariant_subspace(SizeType block_count, PR precision) const {
+        if constexpr (!std::is_same_v<P, ApproximateTag>) {
+            return std::nullopt;
+        } else {
+            const SizeType n = orthogonal.row_size();
+            if (n == 0u || orthogonal.column_size() != n ||
+                quasi_triangular.row_size() != n ||
+                quasi_triangular.column_size() != n ||
+                block_count == 0u || block_count > block_sizes.size()) {
+                return std::nullopt;
+            }
+            SizeType covered = 0u;
+            SizeType dimension = 0u;
+            for (SizeType i = 0u; i != block_sizes.size(); ++i) {
+                const SizeType width = block_sizes[i];
+                if ((width != 1u && width != 2u) ||
+                    width > n - covered) {
+                    return std::nullopt;
+                }
+                covered += width;
+                if (i + 1u == block_count) {
+                    dimension = covered;
+                }
+            }
+            if (covered != n || dimension == 0u) {
+                return std::nullopt;
+            }
+            const X zero(0u, precision);
+            // A block Schur prefix has no coupling from its
+            // complement into the leading invariant subspace.
+            // The Schur solver explicitly zeros deflated entries.
+            for (SizeType row = dimension; row != n; ++row) {
+                for (SizeType col = 0u; col != dimension; ++col) {
+                    const X& entry = quasi_triangular[row][col];
+                    if (!is_finite(entry.raw()) ||
+                        entry.raw() != zero.raw()) {
+                        return std::nullopt;
+                    }
+                }
+            }
+            Matrix<X> basis(n, dimension, zero);
+            Matrix<X> restriction(dimension, dimension, zero);
+            for (SizeType row = 0u; row != n; ++row) {
+                for (SizeType col = 0u; col != dimension; ++col) {
+                    basis[row][col] = orthogonal[row][col];
+                }
+            }
+            for (SizeType row = 0u; row != dimension; ++row) {
+                for (SizeType col = 0u; col != dimension; ++col) {
+                    restriction[row][col] = quasi_triangular[row][col];
+                }
+            }
+            return SchurInvariantSubspaceData<P, PR>{
+                std::move(basis), std::move(restriction)};
+        }
+    }
 };
 
 //! \brief Status and optional factors on SUCCESS.
@@ -140,9 +244,10 @@ struct SchurDecompositionResult {
 //! - J. H. Wilkinson, The Algebraic Eigenvalue Problem, Clarendon
 //!   Press, Oxford (1965), Chapters 6 and 8 (Hessenberg and QR).
 //!
-//! \see Spectrum for extracting the eigenvalue multiset without an
-//! eigenvector basis; EigenDecomposition for the stronger requirement
-//! of a complete real diagonalization.
+//! \see Spectrum for the complete eigenvalue multiset, including
+//! defective matrices. SchurDecompositionData::leading_invariant_subspace
+//! extracts leading real invariant subspaces without diagonalization;
+//! EigenDecomposition additionally requires a full real or complex basis.
 template<class P, class PR>
 class SchurDecomposition {
   public:

@@ -221,6 +221,148 @@ Void test_francis_two_pairs(PR precision) {
     }
 }
 
+//! \brief Verify the invariant-subspace identity without diagonalizability.
+//! \details A U = U B and U^T U = I follow from a complete leading
+//! block partition in the real Schur theorem (Wilkinson, 1965).
+template<class PR>
+Void check_schur_invariant_prefix(
+        const Matrix<FloatApproximation<PR>>& A,
+        const SchurDecompositionData<ApproximateTag, PR>& factors,
+        SizeType block_count, PR precision) {
+    const auto subspace = factors.leading_invariant_subspace(
+        block_count, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        subspace.has_value());
+    if (!subspace) { return; }
+    const SizeType n = A.row_size();
+    const SizeType k = subspace->basis.column_size();
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        k > 0u && k <= n &&
+        subspace->basis.row_size() == n &&
+        subspace->restriction.row_size() == k &&
+        subspace->restriction.column_size() == k);
+    const Matrix<FloatApproximation<PR>> action = A * subspace->basis;
+    const Matrix<FloatApproximation<PR>> represented =
+        subspace->basis * subspace->restriction;
+    const Matrix<FloatApproximation<PR>> gram =
+        transpose(subspace->basis) * subspace->basis;
+    const Matrix<FloatApproximation<PR>> compressed =
+        transpose(subspace->basis) * action;
+    for (SizeType row = 0u; row != n; ++row) {
+        for (SizeType col = 0u; col != k; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs((action[row][col] - represented[row][col]).get_d()) <
+                    1e-8);
+        }
+    }
+    for (SizeType row = 0u; row != k; ++row) {
+        for (SizeType col = 0u; col != k; ++col) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(gram[row][col].get_d() -
+                    (row == col ? 1.0 : 0.0)) < 1e-8 &&
+                std::abs((compressed[row][col] -
+                    subspace->restriction[row][col]).get_d()) < 1e-8);
+        }
+    }
+}
+
+//! \brief Defective, nonreal and malformed Schur prefix cases.
+template<class PR>
+Void test_leading_invariant_subspaces(PR precision) {
+    using AX = FloatApproximation<PR>;
+    const AX zero_value(0u, precision);
+    SchurDecomposition<ApproximateTag, PR> solver(precision);
+
+    // A defective 3x3 Jordan block has just ONE independent
+    // eigenvector, yet three nested invariant Schur prefixes.
+    Matrix<AX> jordan(3u, 3u, zero_value);
+    for (SizeType i = 0u; i != 3u; ++i) {
+        jordan[i][i] = AX(2u, precision);
+    }
+    jordan[0u][1u] = AX(1u, precision);
+    jordan[1u][2u] = AX(1u, precision);
+    const auto defective = solver(jordan);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        defective.status == SchurStatus::SUCCESS &&
+        defective.data.has_value());
+    if (defective.data) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            defective.data->block_sizes.size() == 3u);
+        for (SizeType blocks = 1u; blocks <= 3u; ++blocks) {
+            check_schur_invariant_prefix(jordan, *defective.data,
+                                         blocks, precision);
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            !defective.data->leading_invariant_subspace(0u, precision) &&
+            !defective.data->leading_invariant_subspace(4u, precision));
+
+        // The partition is checked independently, not trusted blindly.
+        auto malformed = *defective.data;
+        malformed.block_sizes = {1u};
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            !malformed.leading_invariant_subspace(1u, precision));
+        malformed.block_sizes = {1u, 0u, 2u};
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            !malformed.leading_invariant_subspace(1u, precision));
+    }
+
+    // A 2x2 rotation has NO invariant real line. It is one
+    // indivisible real Schur block with conjugate eigenvalues.
+    Matrix<AX> rotation(2u, 2u, zero_value);
+    rotation[0u][1u] = AX(-1, precision);
+    rotation[1u][0u] = AX(1u, precision);
+    const auto nonreal = solver(rotation);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        nonreal.status == SchurStatus::SUCCESS &&
+        nonreal.data.has_value());
+    if (nonreal.data) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            nonreal.data->block_sizes.size() == 1u &&
+            nonreal.data->block_sizes[0u] == 2u);
+        check_schur_invariant_prefix(rotation, *nonreal.data, 1u, precision);
+        auto invalid = *nonreal.data;
+        invalid.block_sizes = {1u, 1u};
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            !invalid.leading_invariant_subspace(1u, precision));
+    }
+
+    // Fully coupled 3x3, orthogonally reduced by Schur. A first
+    // block may have width 1 or 2; either is invariant, but an
+    // incomplete pair is NOT. Also verify the whole space.
+    const Int coefficients[3][3] = {
+        {4, 5, 0}, {3, 4, -4}, {-4, 0, 1}
+    };
+    Matrix<AX> mixed(3u, 3u, zero_value);
+    for (SizeType row = 0u; row != 3u; ++row) {
+        for (SizeType col = 0u; col != 3u; ++col) {
+            mixed[row][col] = AX(coefficients[row][col], precision);
+        }
+    }
+    const auto mixed_schur = solver(mixed);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        mixed_schur.status == SchurStatus::SUCCESS &&
+        mixed_schur.data.has_value());
+    if (mixed_schur.data) {
+        const auto& factors = *mixed_schur.data;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            factors.block_sizes.size() == 2u);
+        check_schur_invariant_prefix(mixed, factors, 1u, precision);
+        check_schur_invariant_prefix(mixed, factors, 2u, precision);
+
+        SizeType pair_start = 0u;
+        for (const auto width: factors.block_sizes) {
+            if (width == 2u) { break; }
+            pair_start += width;
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            pair_start < 3u);
+        auto split = factors;
+        split.block_sizes = {1u, 1u, 1u};
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            !split.leading_invariant_subspace(pair_start + 1u, precision));
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -236,6 +378,10 @@ int main(int argc, char** argv) {
                 test_francis_two_pairs(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_francis_two_pairs(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_leading_invariant_subspaces(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_leading_invariant_subspaces(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }
