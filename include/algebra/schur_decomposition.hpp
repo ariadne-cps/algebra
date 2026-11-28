@@ -330,13 +330,32 @@ class SchurDecomposition {
             if (active != 0u) {
                 return {SchurStatus::INCONCLUSIVE, std::nullopt};
             }
+            // A Schur partition must exhaust the matrix with disjoint
+            // 1x1/2x2 blocks, without probing beyond its final row.
+            if (T.row_size() != n || T.column_size() != n) {
+                return {SchurStatus::INCONCLUSIVE, std::nullopt};
+            }
             std::vector<SizeType> blocks;
-            for (SizeType i = 0u; i < n;) {
-                if (i + 1u < n &&
-                    abs(T[i + 1u][i]).raw() > tolerance.raw()) {
-                    if (i + 2u < n &&
-                        abs(T[i + 2u][i + 1u]).raw() > tolerance.raw()) {
-                        return {SchurStatus::INCONCLUSIVE, std::nullopt};
+            SizeType covered = 0u;
+            while (covered < n) {
+                const SizeType remaining = n - covered;
+                if (remaining == 1u) {
+                    blocks.push_back(1u);
+                    ++covered;
+                    break;
+                }
+                const SizeType i = covered;
+                const X first_subdiagonal = abs(T[i + 1u][i]);
+                if (!this->_finite(first_subdiagonal)) {
+                    return {SchurStatus::INCONCLUSIVE, std::nullopt};
+                }
+                if (first_subdiagonal.raw() > tolerance.raw()) {
+                    if (remaining > 2u) {
+                        const X second_subdiagonal = abs(T[i + 2u][i + 1u]);
+                        if (!this->_finite(second_subdiagonal) ||
+                            second_subdiagonal.raw() > tolerance.raw()) {
+                            return {SchurStatus::INCONCLUSIVE, std::nullopt};
+                        }
                     }
                     const X disc = sqr(T[i][i] - T[i + 1u][i + 1u]) +
                         X(4u, _precision) * T[i][i + 1u] * T[i + 1u][i];
@@ -344,12 +363,15 @@ class SchurDecomposition {
                         return {SchurStatus::INCONCLUSIVE, std::nullopt};
                     }
                     blocks.push_back(2u);
-                    i += 2u;
+                    covered += 2u;
                 } else {
-                    if (i + 1u < n) { T[i + 1u][i] = zero; }
+                    T[i + 1u][i] = zero;
                     blocks.push_back(1u);
-                    ++i;
+                    ++covered;
                 }
+            }
+            if (covered != n) {
+                return {SchurStatus::INCONCLUSIVE, std::nullopt};
             }
 
             const Matrix<X> A_Q = A * Q;

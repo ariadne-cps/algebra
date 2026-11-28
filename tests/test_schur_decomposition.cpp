@@ -66,6 +66,9 @@ Void test_schur(PR precision) {
         const auto& data = *result.data;
         SizeType dimensions = 0u, complex_blocks = 0u;
         for (const auto width: data.block_sizes) {
+            // Every Schur block must fit in the original matrix.
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                width > 0u && width <= 3u - dimensions);
             ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
                 width == 1u || width == 2u);
             dimensions += width;

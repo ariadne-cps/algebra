@@ -287,10 +287,18 @@ class Spectrum {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
             const auto& triangular = schur.data->quasi_triangular;
+            const SizeType n = A.row_size();
+            if (triangular.row_size() != n || triangular.column_size() != n) {
+                return {Status::INCONCLUSIVE, std::nullopt};
+            }
             const X zero(0u, _precision);
             SpectrumData<P, PR> result;
             SizeType offset = 0u;
             for (const auto size: schur.data->block_sizes) {
+                // Check a block fits before reading even its first entry.
+                if (size == 0u || offset >= n || size > n - offset) {
+                    return {Status::INCONCLUSIVE, std::nullopt};
+                }
                 if (size == 1u) {
                     result.eigenvalues.emplace_back(triangular[offset][offset], zero);
                 } else if (size == 2u) {
@@ -313,7 +321,7 @@ class Spectrum {
                 }
                 offset += size;
             }
-            if (offset != A.row_size()) {
+            if (offset != n || result.eigenvalues.size() != n) {
                 return {Status::INCONCLUSIVE, std::nullopt};
             }
             for (const auto& root: result.eigenvalues) {
