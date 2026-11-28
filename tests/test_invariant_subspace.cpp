@@ -476,6 +476,101 @@ Void test_certified_invariant_graph_near(PR precision) {
             precision));
 }
 
+//! \brief From numerical Schur graphs to rigorous family certification.
+//! \details These tests keep approximate candidates separate from the
+//! Krawczyk interval proof (Stewart-Sun, Bai-Demmel, Krawczyk).
+template<class PR>
+Void test_schur_graph_candidates(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const AX aone(1u, precision);
+    const VX vzero(0u, precision);
+    const VX vone(1u, precision);
+
+    // Select the NONLEADING 1x1 Schur block with eigenvalue 3.
+    // Its eigenvector for [[2,1],[0,3]] is (1,1), yielding
+    // a noncoordinate graph X=[1] over the first coordinate.
+    Matrix<AX> A(2u, 2u, azero);
+    A[0u][0u] = AX(2u, precision);
+    A[0u][1u] = aone;
+    A[1u][1u] = AX(3u, precision);
+    const auto candidate = approximate_invariant_graph_from_schur(
+        A, {1u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        candidate.has_value());
+    if (candidate) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            candidate->row_size() == 1u &&
+            candidate->column_size() == 1u &&
+            std::abs(((*candidate)[0u][0u] - aone).get_d()) < 1e-8);
+    }
+
+    // The same center is generated from the midpoint of a
+    // genuinely uncertain matrix family. A21 varies freely
+    // around 0, so its invariant graph MUST vary with A.
+    // The certificate must be obtained on the ORIGINAL
+    // interval family rather than the midpoint matrix.
+    Matrix<VX> family(2u, 2u, vzero);
+    family[0u][0u] = VX(2u, precision);
+    family[0u][1u] = vone;
+    family[1u][1u] = VX(3u, precision);
+    family[1u][0u] =
+        VX(-1, 1, precision) / VX(1024u, precision);
+    Matrix<VX> box(1u, 1u, vone +
+        VX(-1, 1, precision) / VX(16u, precision));
+    const Matrix<VX> preconditioner(1u, 1u, VX(-1, precision));
+    const auto certified = certified_invariant_graph_from_schur(
+        family, {1u}, box, preconditioner, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        certified.has_value());
+    if (certified) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            certified->graph_enclosure.row_size() == 1u &&
+            certified->graph_enclosure.column_size() == 1u &&
+            certified->graph_enclosure[0u][0u].lower_raw() <
+                vone.lower_raw() &&
+            vone.upper_raw() <
+                certified->graph_enclosure[0u][0u].upper_raw());
+    }
+
+    // A candidate alone cannot certify an uncertain family.
+    // A box that excludes the true graph for some input A
+    // must fail the strict inclusion test.
+    const Matrix<VX> narrow_box(
+        1u, 1u, vone + VX(-1, 1, precision) / VX(8192u, precision));
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_from_schur(
+            family, {1u}, narrow_box, preconditioner, precision));
+
+    // Invalid permutations, missing spectral blocks and a
+    // singular graph chart are numerical INCONCLUSIVE outcomes.
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !approximate_invariant_graph_from_schur(
+            A, {0u, 1u}, precision) &&
+        !approximate_invariant_graph_from_schur(
+            A, {2u}, precision));
+
+    // The repeated-eigenvalue Jordan case cannot swap its
+    // coincident 1x1 Schur blocks via a singular Sylvester
+    // equation, so it cannot produce this candidate.
+    Matrix<AX> jordan(A);
+    jordan[1u][1u] = AX(2u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !approximate_invariant_graph_from_schur(
+            jordan, {1u}, precision));
+
+    // A pure complex pair occupies one indivisible real
+    // 2x2 Schur block. There is no proper real invariant
+    // graph subspace to return from such a selection.
+    Matrix<AX> rotation(2u, 2u, azero);
+    rotation[0u][1u] = AX(-1, precision);
+    rotation[1u][0u] = aone;
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !approximate_invariant_graph_from_schur(
+            rotation, {0u}, precision));
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -495,6 +590,10 @@ int main(int argc, char** argv) {
                 test_certified_invariant_graph_near(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_certified_invariant_graph_near(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_schur_graph_candidates(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_schur_graph_candidates(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

@@ -28,11 +28,13 @@
 #ifndef ARIADNE_INVARIANT_SUBSPACE_HPP
 #define ARIADNE_INVARIANT_SUBSPACE_HPP
 
+#include <exception>
 #include <optional>
 #include <utility>
 #include <vector>
 
 #include "algebra/matrix.hpp"
+#include "algebra/schur_decomposition.hpp"
 #include "algebra/validated_root_contractors.hpp"
 
 namespace Ariadne {
@@ -483,6 +485,216 @@ certified_invariant_graph_near(
     }
     return CertifiedInvariantGraphEnclosureData<PR>{
         graph_box, std::move(basis), std::move(base_box)};
+}
+
+//! \brief Approximate a Schur-selected invariant subspace as a graph.
+//! \param A Real point matrix used for the real Schur decomposition.
+//! \param selected_blocks Complete diagonal Schur blocks, indexed in
+//! their original real Schur ordering.
+//! \param precision Working double or multiple precision.
+//! \return Approximate (n-k)-by-k graph X, or no value if selection
+//! is unstable, the leading chart is singular, or the residual fails.
+//!
+//! \details The real Schur solver produces an orthonormal basis
+//! Q1 (n-by-k) of the selected invariant subspace after orthogonal
+//! block reordering. Partition Q1=[R;S] into its top k and bottom
+//! n-k rows. If R is nonsingular then the SAME subspace is the graph
+//! of X=S*R^{-1}, because Q1*R^{-1}=[I;X]. The numerical inverse
+//! and original-matrix Riccati residual are both checked before
+//! returning the candidate; a nearly vertical chart is INCONCLUSIVE.
+//!
+//! This is candidate generation ONLY, in real approximate arithmetic,
+//! even if the selected Schur block represents a conjugate pair.
+//! It is not a validated invariant-subspace enclosure. A validated
+//! proof can be attempted with certified_invariant_graph_near,
+//! using a caller-supplied box and preconditioner. Schur block swaps
+//! follow Bai-Demmel (LAWN 54 / LAPACK DTREXC); see also Stewart and
+//! Sun, Matrix Perturbation Theory (1990), on invariant graph charts.
+template<class PR>
+std::optional<Matrix<FloatApproximation<PR>>>
+approximate_invariant_graph_from_schur(
+        const Matrix<FloatApproximation<PR>>& A,
+        const std::vector<SizeType>& selected_blocks,
+        PR precision) {
+    using AX = FloatApproximation<PR>;
+    using Raw = typename AX::RawType;
+    ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+    const SizeType n = A.row_size();
+    if (n < 2u || selected_blocks.empty()) { return std::nullopt; }
+    const AX zero(0u, precision);
+    const AX one(1u, precision);
+    const auto finite = [](const AX& x) { return is_finite(x.raw()); };
+    AX scale(one);
+    for (SizeType i = 0u; i != n; ++i) {
+        for (SizeType j = 0u; j != n; ++j) {
+            if (!finite(A[i][j])) { return std::nullopt; }
+            if (abs(A[i][j]).raw() > scale.raw()) {
+                scale = abs(A[i][j]);
+            }
+        }
+    }
+    const auto schur = SchurDecomposition<ApproximateTag, PR>(precision)(A);
+    if (schur.status != SchurStatus::SUCCESS || !schur.data) {
+        return std::nullopt;
+    }
+    const auto subspace = schur.data->selected_invariant_subspace(
+        selected_blocks, precision);
+    if (!subspace) { return std::nullopt; }
+    const SizeType k = subspace->basis.column_size();
+    if (k == 0u || k >= n || subspace->basis.row_size() != n) {
+        return std::nullopt;
+    }
+    const SizeType m = n - k;
+    Matrix<AX> leading(k, k, zero);
+    Matrix<AX> trailing(m, k, zero);
+    for (SizeType i = 0u; i != k; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            leading[i][j] = subspace->basis[i][j];
+        }
+    }
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            trailing[i][j] = subspace->basis[k + i][j];
+        }
+    }
+
+    Matrix<AX> inverse_chart(k, k, zero);
+    try {
+        inverse_chart = inverse(leading);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+    const Matrix<AX> identity_check = leading * inverse_chart;
+    const AX eps(Raw::eps(precision));
+    const AX chart_limit =
+        AX(4096u, precision) * eps *
+        AX(static_cast<unsigned>(n * n), precision);
+    for (SizeType i = 0u; i != k; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            if (!finite(inverse_chart[i][j]) ||
+                !finite(identity_check[i][j]) ||
+                abs(identity_check[i][j] -
+                    (i == j ? one : zero)).raw() > chart_limit.raw()) {
+                return std::nullopt;
+            }
+        }
+    }
+    Matrix<AX> graph = trailing * inverse_chart;
+    AX graph_scale(one);
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            if (!finite(graph[i][j])) { return std::nullopt; }
+            if (abs(graph[i][j]).raw() > graph_scale.raw()) {
+                graph_scale = abs(graph[i][j]);
+            }
+        }
+    }
+    // Reject a numerically vertical chart even if the matrix
+    // inverse happened not to raise an exception.
+    const AX chart_scale_limit = one / (AX(128u, precision) * eps);
+    if (!finite(chart_scale_limit) ||
+        graph_scale.raw() > chart_scale_limit.raw()) {
+        return std::nullopt;
+    }
+
+    Matrix<AX> restriction(k, k, zero);
+    for (SizeType i = 0u; i != k; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            AX value(A[i][j]);
+            for (SizeType a = 0u; a != m; ++a) {
+                value += A[i][k + a] * graph[a][j];
+            }
+            if (!finite(value)) { return std::nullopt; }
+            restriction[i][j] = value;
+        }
+    }
+    const AX residual_limit =
+        AX(8192u, precision) * eps * scale * graph_scale *
+        AX(static_cast<unsigned>(n * n), precision);
+    if (!finite(residual_limit)) { return std::nullopt; }
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            AX residual(A[k + i][j]);
+            for (SizeType a = 0u; a != m; ++a) {
+                residual += A[k + i][k + a] * graph[a][j];
+            }
+            for (SizeType b = 0u; b != k; ++b) {
+                residual -= graph[i][b] * restriction[b][j];
+            }
+            if (!finite(residual) ||
+                abs(residual).raw() > residual_limit.raw()) {
+                return std::nullopt;
+            }
+        }
+    }
+    return graph;
+}
+
+//! \brief Generate a real Schur graph candidate and certify its enclosure.
+//! \param A ORIGINAL interval matrix family.
+//! \param selected_blocks Whole blocks of the midpoint real Schur form.
+//! \param graph_box Supplied interval box for the selected invariant
+//! graph; it must strictly contain the generated singleton center.
+//! \param preconditioner Supplied interval preconditioner for the
+//! row-major graph Riccati Jacobian.
+//! \param precision Precision for approximate and verified arithmetic.
+//!
+//! \details Convert the interval matrix midpoint to a real approximate
+//! matrix, compute and reorder real Schur, form the graph chart X0,
+//! then call certified_invariant_graph_near on the ORIGINAL interval
+//! matrix A. A small approximate residual is NEVER a certificate:
+//! SUCCESS requires the same strict Krawczyk inclusion and contraction
+//! for every represented A as the underlying validated verifier.
+//! The box and preconditioner remain caller-supplied; this function
+//! does not run an iterative equation solver or depend on the
+//! equation-solving repository. Failure is inconclusive.
+//! Mathematical sources: real Schur reordering (Bai-Demmel, 1993),
+//! invariant graph/Riccati equations (Stewart-Sun, 1990), and
+//! Krawczyk's validated inclusion theorem (1969).
+template<class PR>
+std::optional<CertifiedInvariantGraphEnclosureData<PR>>
+certified_invariant_graph_from_schur(
+        const Matrix<FloatBounds<PR>>& A,
+        const std::vector<SizeType>& selected_blocks,
+        const Matrix<FloatBounds<PR>>& graph_box,
+        const Matrix<FloatBounds<PR>>& preconditioner,
+        PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+    const SizeType n = A.row_size();
+    if (n < 2u || selected_blocks.empty()) { return std::nullopt; }
+    const AX zero(0u, precision);
+    Matrix<AX> midpoint(n, n, zero);
+    for (SizeType i = 0u; i != n; ++i) {
+        for (SizeType j = 0u; j != n; ++j) {
+            if (!is_finite(A[i][j].lower_raw()) ||
+                !is_finite(A[i][j].upper_raw()) ||
+                A[i][j].lower_raw() > A[i][j].upper_raw()) {
+                return std::nullopt;
+            }
+            midpoint[i][j] = AX(A[i][j]);
+            if (!is_finite(midpoint[i][j].raw())) {
+                return std::nullopt;
+            }
+        }
+    }
+    const auto candidate = approximate_invariant_graph_from_schur(
+        midpoint, selected_blocks, precision);
+    if (!candidate || graph_box.row_size() != candidate->row_size() ||
+        graph_box.column_size() != candidate->column_size()) {
+        return std::nullopt;
+    }
+    const VX verified_zero(0u, precision);
+    Matrix<VX> center(candidate->row_size(), candidate->column_size(),
+                      verified_zero);
+    for (SizeType i = 0u; i != center.row_size(); ++i) {
+        for (SizeType j = 0u; j != center.column_size(); ++j) {
+            center[i][j] = VX((*candidate)[i][j].raw());
+        }
+    }
+    return certified_invariant_graph_near(
+        A, center, graph_box, preconditioner, precision);
 }
 
 } // namespace Ariadne
