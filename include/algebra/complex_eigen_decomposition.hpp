@@ -39,6 +39,39 @@
 
 namespace Ariadne {
 
+//! \brief Dense, explicitly initialized storage of complex entries.
+//! \details The generic Matrix<Complex<X>> currently requires scalar
+//! characteristics metadata not provided by numeric/complex.hpp.
+//! Its mutable element proxies also introduce ambiguous complex
+//! operators. Here each indexed element is an actual Complex<X>&,
+//! so arithmetic and assignment retain their intended scalar type.
+//! This storage type is not a second QR or eigendecomposition backend.
+//! It may be replaced once Matrix supports complex coefficients.
+template<class X>
+class ComplexMatrix {
+  public:
+    using ValueType = Complex<X>;
+    using Row = std::vector<ValueType>;
+
+    //! \brief Initialize every entry in an m-by-n matrix.
+    ComplexMatrix(SizeType m, SizeType n, const ValueType& value)
+        : _rows(m, Row(n, value)), _columns(n) {}
+
+    //! \brief Number of rows.
+    SizeType row_size() const { return _rows.size(); }
+    //! \brief Number of columns.
+    SizeType column_size() const { return _columns; }
+
+    //! \brief Mutable row access with ordinary Complex<X> references.
+    Row& operator[](SizeType i) { return _rows.at(i); }
+    //! \brief Read-only row access.
+    const Row& operator[](SizeType i) const { return _rows.at(i); }
+
+  private:
+    std::vector<Row> _rows;
+    SizeType _columns;
+};
+
 //! \brief Outcome of complex diagonalization; failure is not nonexistence.
 enum class ComplexEigenDecompositionStatus {
     SUCCESS,              //!< Complete complex eigenbasis, numerically checked.
@@ -56,8 +89,8 @@ struct ComplexEigenDecompositionData {
     using X = FloatType<P, PR>;
     using CX = Complex<X>;
     std::vector<CX> eigenvalues;
-    Matrix<CX> eigenvectors;
-    Matrix<CX> inverse_eigenvectors;
+    ComplexMatrix<X> eigenvectors;
+    ComplexMatrix<X> inverse_eigenvectors;
 };
 
 //! \brief Status and optional diagonalization factors.
@@ -233,7 +266,7 @@ class ComplexEigenDecomposition {
                 }
             }
 
-            Matrix<CX> V(n, n, complex_zero);
+            ComplexMatrix<X> V(n, n, complex_zero);
             for (SizeType col = 0u; col != n; ++col) {
                 const CX& lambda = roots[col].eigenvalue;
                 const SizeType id = roots[col].block;
@@ -390,15 +423,15 @@ class ComplexEigenDecomposition {
     //! on real ordered comparisons for complex numbers. A pivot
     //! below the precision-relative threshold is inconclusive.
     //! The caller also verifies both inverse residuals.
-    std::optional<Matrix<CX>> _inverse(const Matrix<CX>& V,
+    std::optional<ComplexMatrix<X>> _inverse(const ComplexMatrix<X>& V,
                                        const X& pivot_limit) const {
         const SizeType n = V.row_size();
         const X zero(0u, _precision);
         const X one(1u, _precision);
         const CX complex_zero(zero, zero);
         const CX complex_one(one, zero);
-        Matrix<CX> work(V);
-        Matrix<CX> inverse(n, n, complex_zero);
+        ComplexMatrix<X> work(V);
+        ComplexMatrix<X> inverse(n, n, complex_zero);
         for (SizeType i = 0u; i != n; ++i) {
             inverse[i][i] = complex_one;
         }
