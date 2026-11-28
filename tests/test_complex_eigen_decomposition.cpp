@@ -221,8 +221,7 @@ Void test_complex_diagonalization(PR precision) {
         solver(empty).status == Status::UNSUPPORTED_DIMENSION);
 }
 
-//! \brief Verify automatic real/complex dispatch through one public API.
-//! Reject malformed Schur data without manufacturing a complex eigenbasis.
+//! \brief Reject malformed Schur metadata without manufacturing an eigenbasis.
 template<class PR>
 Void test_invalid_complex_schur_factors(PR precision) {
     using X = FloatApproximation<PR>;
@@ -260,6 +259,7 @@ Void test_invalid_complex_schur_factors(PR precision) {
     reject(overfull);
 }
 
+//! \brief Verify automatic real/complex dispatch through one public API.
 template<class PR>
 Void test_unified_eigen_decomposition(PR precision) {
     using AX = FloatApproximation<PR>;
