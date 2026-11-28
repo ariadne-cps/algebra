@@ -571,6 +571,122 @@ Void test_schur_graph_candidates(PR precision) {
             rotation, {0u}, precision));
 }
 
+//! \brief Fully automatic Schur candidate and Krawczyk box for a cluster.
+//! \details The numerical Schur candidate MUST pass the interval
+//! inclusion/contractivity proof on each original input family.
+template<class PR>
+Void test_automatic_schur_graph_certificate(PR precision) {
+    using VX = FloatBounds<PR>;
+    const VX zero(0u, precision);
+    const VX one(1u, precision);
+    const VX small = VX(-1, 1, precision) / VX(1024u, precision);
+
+    // A=[2 1;0 3] has a non-coordinate eigenline span((1,1)).
+    // The second original Schur block is moved to the front.
+    Matrix<VX> A(2u, 2u, zero);
+    A[0u][0u] = VX(2u, precision);
+    A[0u][1u] = one;
+    A[1u][1u] = VX(3u, precision);
+    const auto exact = certified_invariant_graph_from_schur(
+        A, {1u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        exact.has_value());
+    if (exact) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            exact->graph_enclosure.row_size() == 1u &&
+            exact->graph_enclosure.column_size() == 1u &&
+            exact->graph_enclosure[0u][0u].lower_raw() <
+                one.lower_raw() &&
+            exact->graph_enclosure[0u][0u].upper_raw() >
+                one.upper_raw());
+    }
+
+    // An actual interval family with varying A21 has different
+    // exact invariant graph X(A) for different point matrices.
+    // An approximate midpoint eigenvector is NOT a certificate:
+    // the automatic routine must prove existence for the family.
+    A[1u][0u] = small;
+    const auto family = certified_invariant_graph_from_schur(
+        A, {1u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        family.has_value());
+    if (family) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            family->graph_enclosure[0u][0u].lower_raw() <
+                one.lower_raw() &&
+            family->graph_enclosure[0u][0u].upper_raw() >
+                one.upper_raw() &&
+            family->basis_enclosure.row_size() == 2u);
+    }
+    const auto lower_root = certified_invariant_graph_from_schur(
+        A, {0u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        lower_root.has_value());
+    if (lower_root) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            lower_root->graph_enclosure[0u][0u].lower_raw() < zero.lower_raw() &&
+            lower_root->graph_enclosure[0u][0u].upper_raw() > zero.upper_raw());
+    }
+
+    // Repeat with two graph coordinates (m=2, k=1), testing the
+    // row-major Riccati Jacobian and numerical inverse.
+    Matrix<VX> three_by_three(3u, 3u, zero);
+    three_by_three[0u][0u] = VX(2u, precision);
+    three_by_three[0u][1u] = one;
+    three_by_three[1u][1u] = VX(3u, precision);
+    three_by_three[2u][2u] = VX(5u, precision);
+    const auto higher = certified_invariant_graph_from_schur(
+        three_by_three, {1u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        higher.has_value());
+    if (higher) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            higher->graph_enclosure.row_size() == 2u &&
+            higher->graph_enclosure.column_size() == 1u &&
+            higher->basis_enclosure.row_size() == 3u &&
+            higher->restriction_enclosure.row_size() == 1u);
+    }
+    three_by_three[1u][0u] = small;
+    const auto higher_family = certified_invariant_graph_from_schur(
+        three_by_three, {1u}, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        higher_family.has_value());
+
+    // The interval family now contains point matrices for
+    // which a real invariant line with eigenvalue near 3
+    // does not exist. The proof must REFUSE the family.
+    A[1u][0u] = VX(-1, 1, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_from_schur(A, {1u}, precision));
+
+    // Zero-order, absent blocks, and a full Schur selection
+    // cannot yield a proper real graph chart.
+    const Matrix<VX> empty(0u, 0u, zero);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_from_schur(empty, {0u}, precision) &&
+        !certified_invariant_graph_from_schur(A, {}, precision) &&
+        !certified_invariant_graph_from_schur(A, {0u, 1u}, precision));
+
+    // A defective Jordan block is not a simple isolated graph
+    // chart for its repeated second scalar Schur block.
+    Matrix<VX> jordan(2u, 2u, zero);
+    jordan[0u][0u] = VX(2u, precision);
+    jordan[0u][1u] = one;
+    jordan[1u][1u] = VX(2u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_from_schur(
+            jordan, {1u}, precision));
+
+    // The conjugate pair of a real rotation is a single
+    // indivisible 2x2 Schur block, not a real invariant line.
+    Matrix<VX> rotation(2u, 2u, zero);
+    rotation[0u][1u] = VX(-1, precision);
+    rotation[1u][0u] = one;
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph_from_schur(
+            rotation, {0u}, precision));
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -594,6 +710,10 @@ int main(int argc, char** argv) {
                 test_schur_graph_candidates(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_schur_graph_candidates(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_automatic_schur_graph_certificate(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_automatic_schur_graph_certificate(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

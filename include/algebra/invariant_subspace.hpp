@@ -697,6 +697,214 @@ certified_invariant_graph_from_schur(
         A, center, graph_box, preconditioner, precision);
 }
 
+//! \brief Discover and certify a local real invariant graph using Schur.
+//! \param A Original n-by-n interval family.
+//! \param selected_blocks Complete blocks in the midpoint real Schur form.
+//! \param precision Arithmetic precision for candidate and certificate.
+//! \return A locally unique graph enclosure for EACH represented A,
+//! or no result when numerical generation or rigorous proof fails.
+//!
+//! \details First obtain a REAL approximate graph X0 from Schur (with
+//! selected 1x1 and conjugate 2x2 blocks kept intact). Construct the
+//! midpoint Jacobian of the Riccati equation
+//! \f[ F_A(X)=A_{21}+A_{22}X-X(A_{11}+A_{12}X), \f]
+//! in row-major graph coordinates, and invert it numerically to form
+//! a fixed interval preconditioner. An initial interval graph box is
+//! centered at the singleton X0. Its radius is scaled by an enclosure
+//! of the predicted Newton correction C*F_A(X0), with an additional
+//! precision-dependent floor; a few successively larger trial boxes
+//! are allowed. The approximate inverse and heuristic radii are ONLY
+//! candidate data: each attempted box is accepted exclusively by
+//! certified_invariant_graph_near, which verifies strict Krawczyk
+//! inclusion and contraction using the ORIGINAL interval family.
+//!
+//! No general equation solver is invoked, and no dependency on
+//! equation-solving is introduced. No spectral separation certificate
+//! or diagonalization is inferred from the proof of a local invariant
+//! graph. Failure is inconclusive. The method is called explicitly,
+//! leaving the ordinary real eigendecomposition fast path unchanged.
+//!
+//! \par Mathematical sources
+//! The Schur reordering uses the Bai-Demmel adjacent-block method
+//! (LAPACK Working Note 54). Graph Riccati invariance and perturbation
+//! theory: Stewart and Sun, Matrix Perturbation Theory (1990).
+//! Rigorous local existence: Krawczyk, Computing 4 (1969), 187-201.
+template<class PR>
+std::optional<CertifiedInvariantGraphEnclosureData<PR>>
+certified_invariant_graph_from_schur(
+        const Matrix<FloatBounds<PR>>& A,
+        const std::vector<SizeType>& selected_blocks, PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    using Raw = typename AX::RawType;
+    ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+    const SizeType n = A.row_size();
+    if (n < 2u || selected_blocks.empty()) { return std::nullopt; }
+
+    const AX approximate_zero(0u, precision);
+    const VX zero(0u, precision);
+    const VX one(1u, precision);
+    const auto finite = [](const VX& x) {
+        return is_finite(x.lower_raw()) &&
+            is_finite(x.upper_raw()) &&
+            x.lower_raw() <= x.upper_raw();
+    };
+    Matrix<AX> midpoint(n, n, approximate_zero);
+    for (SizeType i = 0u; i != n; ++i) {
+        for (SizeType j = 0u; j != n; ++j) {
+            if (!finite(A[i][j])) { return std::nullopt; }
+            midpoint[i][j] = AX(A[i][j]);
+            if (!is_finite(midpoint[i][j].raw())) {
+                return std::nullopt;
+            }
+        }
+    }
+    const auto candidate = approximate_invariant_graph_from_schur(
+        midpoint, selected_blocks, precision);
+    if (!candidate) { return std::nullopt; }
+    const SizeType k = candidate->column_size();
+    const SizeType m = candidate->row_size();
+    if (k == 0u || m == 0u || k + m != n) {
+        return std::nullopt;
+    }
+    const SizeType unknowns = m * k;
+
+    // The numerical Jacobian is used ONLY for an approximate
+    // inverse, never as an interval enclosure of the family.
+    Matrix<AX> base(k, k, approximate_zero);
+    for (SizeType i = 0u; i != k; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            AX value(midpoint[i][j]);
+            for (SizeType a = 0u; a != m; ++a) {
+                value += midpoint[i][k + a] * (*candidate)[a][j];
+            }
+            if (!is_finite(value.raw())) { return std::nullopt; }
+            base[i][j] = value;
+        }
+    }
+    Matrix<AX> jacobian(unknowns, unknowns, approximate_zero);
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            for (SizeType a = 0u; a != m; ++a) {
+                for (SizeType b = 0u; b != k; ++b) {
+                    AX value(approximate_zero);
+                    if (j == b) {
+                        value += midpoint[k + i][k + a];
+                        for (SizeType c = 0u; c != k; ++c) {
+                            value -= (*candidate)[i][c] *
+                                midpoint[c][k + a];
+                        }
+                    }
+                    if (i == a) { value -= base[b][j]; }
+                    if (!is_finite(value.raw())) {
+                        return std::nullopt;
+                    }
+                    jacobian[i * k + j][a * k + b] = value;
+                }
+            }
+        }
+    }
+
+    Matrix<AX> numerical_inverse(unknowns, unknowns, approximate_zero);
+    try {
+        numerical_inverse = inverse(jacobian);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+
+    Matrix<VX> preconditioner(unknowns, unknowns, zero);
+    Matrix<VX> center(m, k, zero);
+    for (SizeType i = 0u; i != unknowns; ++i) {
+        for (SizeType j = 0u; j != unknowns; ++j) {
+            if (!is_finite(numerical_inverse[i][j].raw())) {
+                return std::nullopt;
+            }
+            preconditioner[i][j] = VX(numerical_inverse[i][j].raw());
+        }
+    }
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            if (!is_finite((*candidate)[i][j].raw())) {
+                return std::nullopt;
+            }
+            center[i][j] = VX((*candidate)[i][j].raw());
+        }
+    }
+
+    // F_A(X0) and C*F_A(X0) use the ORIGINAL interval family.
+    // Even if the midpoint residual is zero, an uncertain A can
+    // require a nonzero box containing the moving graph X(A).
+    Matrix<VX> restriction(k, k, zero);
+    for (SizeType i = 0u; i != k; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            VX value(A[i][j]);
+            for (SizeType a = 0u; a != m; ++a) {
+                value += A[i][k + a] * center[a][j];
+            }
+            if (!finite(value)) { return std::nullopt; }
+            restriction[i][j] = value;
+        }
+    }
+    Vector<VX> residual(unknowns, zero);
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            VX value(A[k + i][j]);
+            for (SizeType a = 0u; a != m; ++a) {
+                value += A[k + i][k + a] * center[a][j];
+            }
+            for (SizeType b = 0u; b != k; ++b) {
+                value -= center[i][b] * restriction[b][j];
+            }
+            if (!finite(value)) { return std::nullopt; }
+            residual[i * k + j] = value;
+        }
+    }
+    const Vector<VX> correction = preconditioner * residual;
+    const VX eps(Raw::eps(precision));
+    const VX roundoff = VX(4096u, precision) * eps;
+    if (!finite(roundoff)) { return std::nullopt; }
+
+    Matrix<VX> base_radii(m, k, zero);
+    for (SizeType i = 0u; i != m; ++i) {
+        for (SizeType j = 0u; j != k; ++j) {
+            const VX magnitude = abs(center[i][j]);
+            const VX coordinate_scale =
+                magnitude.upper_raw() > one.upper_raw() ? magnitude : one;
+            const VX predicted = abs(correction[i * k + j]);
+            base_radii[i][j] = VX(4u, precision) * predicted +
+                roundoff * coordinate_scale;
+            if (!finite(base_radii[i][j]) ||
+                !(base_radii[i][j].upper_raw() > zero.upper_raw())) {
+                return std::nullopt;
+            }
+        }
+    }
+
+    // Radius choices are heuristics. ONLY the validated proof gate
+    // below can return a successful certificate. Retry a few
+    // increasing boxes without iterative root searching.
+    for (SizeType attempt = 0u; attempt != 4u; ++attempt) {
+        const VX multiplier(1u << attempt, precision);
+        Matrix<VX> box(m, k, zero);
+        for (SizeType i = 0u; i != m; ++i) {
+            for (SizeType j = 0u; j != k; ++j) {
+                const VX radius = multiplier * base_radii[i][j];
+                if (!finite(radius)) { return std::nullopt; }
+                const auto upper = radius.upper_raw();
+                if (!(upper > zero.upper_raw())) {
+                    return std::nullopt;
+                }
+                box[i][j] = center[i][j] + VX(-upper, upper);
+            }
+        }
+        if (auto result = certified_invariant_graph_near(
+                A, center, box, preconditioner, precision)) {
+            return result;
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace Ariadne
 
 #endif // ARIADNE_INVARIANT_SUBSPACE_HPP
