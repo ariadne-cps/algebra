@@ -192,6 +192,130 @@ Void test_coordinate_certificates(PR precision) {
             empty, {0u}, precision));
 }
 
+//! \brief Test exact fixed invariant graphs for entire interval families.
+//! \details Use the graph Riccati identity, NOT midpoint residuals.
+//! Only singleton-zero interval enclosures can prove SUCCESS.
+template<class PR>
+Void test_invariant_graph_certificates(PR precision) {
+    using X = FloatBounds<PR>;
+    const X zero(0u, precision);
+    const X one(1u, precision);
+    const X two_value(2u, precision);
+    const X three_value(3u, precision);
+
+    // Noncoordinate invariant line span((1,1)) for the point
+    // triangular matrix [2 1; 0 3], eigenvalue 3.
+    Matrix<X> A(2u, 2u, zero);
+    A[0u][0u] = two_value;
+    A[0u][1u] = one;
+    A[1u][1u] = three_value;
+    Matrix<X> graph(1u, 1u, one);
+    const auto line = certified_invariant_graph(A, graph, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        line.has_value());
+    if (line) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            line->basis.row_size() == 2u &&
+            line->basis.column_size() == 1u &&
+            line->restriction.row_size() == 1u &&
+            line->restriction.column_size() == 1u);
+        const Matrix<X> action = A * line->basis;
+        const Matrix<X> represented =
+            line->basis * line->restriction;
+        for (SizeType i = 0u; i != 2u; ++i) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                action[i][0u].lower_raw() <=
+                    represented[i][0u].upper_raw() &&
+                represented[i][0u].lower_raw() <=
+                    action[i][0u].upper_raw());
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            line->restriction[0u][0u].lower_raw() ==
+                three_value.lower_raw() &&
+            line->restriction[0u][0u].upper_raw() ==
+                three_value.upper_raw());
+    }
+
+    // Exact zero residual is essential. Perturbing the exterior
+    // coupling, or admitting an uncertain graph coefficient,
+    // must not be passed off as an interval-family certificate.
+    Matrix<X> perturbed(A);
+    perturbed[1u][0u] = one;
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph(perturbed, graph, precision));
+    Matrix<X> uncertain_graph(1u, 1u, X(0, 1, precision));
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph(A, uncertain_graph, precision));
+    const Matrix<X> wrong_graph(2u, 1u, zero);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph(A, wrong_graph, precision));
+
+    // A noncoordinate TWO-dimensional invariant graph even for a
+    // defective Jordan matrix. The restriction remains defective:
+    // a certificate of an invariant plane is NOT a full eigenbasis.
+    // A=[2 1 0;0 2 0;0 0 2], X=[0 1] and U=[I2;X].
+    Matrix<X> jordan(3u, 3u, zero);
+    for (SizeType i = 0u; i != 3u; ++i) {
+        jordan[i][i] = two_value;
+    }
+    jordan[0u][1u] = one;
+    Matrix<X> plane_graph(1u, 2u, zero);
+    plane_graph[0u][1u] = one;
+    const auto plane = certified_invariant_graph(
+        jordan, plane_graph, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        plane.has_value());
+    if (plane) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            plane->basis.row_size() == 3u &&
+            plane->basis.column_size() == 2u &&
+            plane->restriction.row_size() == 2u &&
+            plane->restriction.column_size() == 2u &&
+            plane->basis[2u][1u].lower_raw() == one.lower_raw() &&
+            plane->restriction[0u][1u].lower_raw() ==
+                one.lower_raw());
+        const Matrix<X> action = jordan * plane->basis;
+        const Matrix<X> represented =
+            plane->basis * plane->restriction;
+        for (SizeType i = 0u; i != 3u; ++i) {
+            for (SizeType j = 0u; j != 2u; ++j) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    action[i][j].lower_raw() <=
+                        represented[i][j].upper_raw() &&
+                    represented[i][j].lower_raw() <=
+                        action[i][j].upper_raw());
+            }
+        }
+    }
+
+    // This uncertainty is INTERNAL to the invariant plane's
+    // restriction and has no effect on the graph Riccati equation:
+    // A[0][2] affects only the first row of B and X=[0,1]
+    // selects its second row in X*B.
+    Matrix<X> family(jordan);
+    family[0u][2u] = X(1, 2, precision);
+    const auto uniform = certified_invariant_graph(
+        family, plane_graph, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        uniform.has_value());
+    if (uniform) {
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            uniform->restriction[0u][1u].lower_raw() <=
+                X(2u, precision).lower_raw() &&
+            uniform->restriction[0u][1u].upper_raw() >=
+                X(3u, precision).upper_raw());
+    }
+    // But an uncertain cross-graph block with a genuine effect
+    // cannot be certified merely because its interval includes 0.
+    family[2u][0u] = X(-1, 1, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph(family, plane_graph, precision));
+
+    Matrix<X> empty(0u, 0u, zero);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        !certified_invariant_graph(empty, graph, precision));
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -203,6 +327,10 @@ int main(int argc, char** argv) {
                 test_coordinate_certificates(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_coordinate_certificates(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_invariant_graph_certificates(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_invariant_graph_certificates(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

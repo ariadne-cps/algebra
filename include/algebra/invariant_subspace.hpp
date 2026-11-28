@@ -140,6 +140,154 @@ certified_coordinate_invariant_subspace(
         std::move(basis), std::move(restriction), coordinates};
 }
 
+//! \brief Rigorous invariant graph subspace, with exact fixed basis.
+//! \details U=[I;X] is an n-by-k FULL-COLUMN-RANK point basis, because
+//! its leading k-by-k block is the identity. X consists of singleton
+//! intervals whose values are the same for every input matrix.
+//! For each A in the interval input family, A*U=U*B(A) holds exactly,
+//! where B(A) is the restriction in these fixed graph coordinates.
+//! The stored interval restriction encloses all these B(A); its
+//! elements must not be treated as independently chosen witnesses.
+template<class PR>
+struct CertifiedInvariantGraphData {
+    using X = FloatBounds<PR>;
+    Matrix<X> basis;             //!< Exact fixed graph columns [I;X].
+    Matrix<X> restriction;       //!< Enclosure for B(A) for each A.
+    Matrix<X> graph;             //!< Fixed singleton (n-k)-by-k graph.
+};
+
+//! \brief Certify that a prescribed non-coordinate graph is invariant.
+//! \param A Finite n-by-n real interval matrix representing a family.
+//! \param graph Finite singleton (n-k)-by-k matrix, with 0<k<n.
+//! \param precision Precision used to build the exact identity basis.
+//! \return A rigorous, full-column-rank graph subspace and interval
+//! restriction, or no value if the interval proof is inconclusive.
+//!
+//! \details Split the coordinates into the first k and the last n-k:
+//! \f[ A=\begin{pmatrix}A_{11}&A_{12}\\A_{21}&A_{22}\end{pmatrix},
+//! \qquad U=\begin{pmatrix}I_k\\X\end{pmatrix}. \f]
+//! For a FIXED real point matrix X, define
+//! \f[ B(A)=A_{11}+A_{12}X. \f]
+//! The graph is invariant for each A precisely when
+//! \f[ A_{21}+A_{22}X-X(A_{11}+A_{12}X)=0. \f]
+//! Evaluate this expression with directed-rounding interval arithmetic
+//! on the ORIGINAL input family, using no midpoint or floating Schur
+//! residual. SUCCESS requires the interval enclosure of EVERY entry
+//! to be the exact singleton [0,0]. That condition implies the
+//! equation for every represented A, including all dependent uses
+//! of the same coefficient within the expression. The converse need
+//! not be detected: natural interval evaluation loses correlations,
+//! so valid graphs may be reported INCONCLUSIVE.
+//!
+//! The fixed graph is supplied as singleton intervals, not an interval
+//! family of candidate bases. If graph entries are uncertain, returning
+//! an invariant subspace for ALL matrices would require a quantified
+//! existence proof and a coherent X(A); this routine never makes
+//! that unsupported assertion. U has full column rank independently
+//! of the spectrum because it contains I_k. B(A) may vary with A.
+//!
+//! In contrast to coordinate-subspace certification, this method can
+//! establish non-axis-aligned invariant lines and higher-dimensional
+//! graphs without requiring real eigenvalue simplicity, complex
+//! eigenvectors or diagonalizability. It is nevertheless a SUFFICIENT,
+//! conservative proof for a caller-provided FIXED graph, not a
+//! validated algorithm for discovering unknown invariant graphs or
+//! spectral-cluster enclosures.
+//!
+//! \par Mathematical provenance
+//! Graph subspaces and the matrix Riccati invariance equation are
+//! standard in invariant-subspace perturbation theory; see
+//! G. W. Stewart and J.-G. Sun, Matrix Perturbation Theory,
+//! Academic Press (1990), chapters on invariant subspaces; see
+//! also J. H. Wilkinson, The Algebraic Eigenvalue Problem (1965).
+//! The rigorous certificate here is the exact graph-block identity
+//! combined with outward interval evaluation of its residual.
+template<class PR>
+std::optional<CertifiedInvariantGraphData<PR>>
+certified_invariant_graph(const Matrix<FloatBounds<PR>>& A,
+                          const Matrix<FloatBounds<PR>>& graph,
+                          PR precision) {
+    using X = FloatBounds<PR>;
+    ARIADNE_PRECONDITION(A.row_size() == A.column_size());
+    const SizeType n = A.row_size();
+    const SizeType k = graph.column_size();
+    if (n < 2u || k == 0u || k >= n ||
+        graph.row_size() != n - k) {
+        return std::nullopt;
+    }
+    const SizeType m = n - k;
+    const X exact_zero(0u, precision);
+    const X exact_one(1u, precision);
+
+    const auto valid_bounds = [](const X& value) {
+        return is_finite(value.lower_raw()) &&
+               is_finite(value.upper_raw()) &&
+               value.lower_raw() <= value.upper_raw();
+    };
+    for (SizeType row = 0u; row != n; ++row) {
+        for (SizeType col = 0u; col != n; ++col) {
+            if (!valid_bounds(A[row][col])) {
+                return std::nullopt;
+            }
+        }
+    }
+    for (SizeType row = 0u; row != m; ++row) {
+        for (SizeType col = 0u; col != k; ++col) {
+            const X& value = graph[row][col];
+            if (!valid_bounds(value) ||
+                value.lower_raw() != value.upper_raw()) {
+                return std::nullopt;
+            }
+        }
+    }
+
+    // B(A)=A11+A12*X. The interval matrix encloses restrictions
+    // coherently induced by each point matrix A in the input family.
+    Matrix<X> restriction(k, k, exact_zero);
+    for (SizeType row = 0u; row != k; ++row) {
+        for (SizeType col = 0u; col != k; ++col) {
+            X entry(A[row][col]);
+            for (SizeType j = 0u; j != m; ++j) {
+                entry += A[row][k + j] * graph[j][col];
+            }
+            if (!valid_bounds(entry)) { return std::nullopt; }
+            restriction[row][col] = entry;
+        }
+    }
+
+    // An EXACT singleton-zero interval extension is a rigorous
+    // sufficient condition for every represented A. An interval
+    // merely containing zero cannot be used as a proof.
+    for (SizeType row = 0u; row != m; ++row) {
+        for (SizeType col = 0u; col != k; ++col) {
+            X residual(A[k + row][col]);
+            for (SizeType j = 0u; j != m; ++j) {
+                residual += A[k + row][k + j] * graph[j][col];
+            }
+            for (SizeType j = 0u; j != k; ++j) {
+                residual -= graph[row][j] * restriction[j][col];
+            }
+            if (!valid_bounds(residual) ||
+                residual.lower_raw() != exact_zero.lower_raw() ||
+                residual.upper_raw() != exact_zero.upper_raw()) {
+                return std::nullopt;
+            }
+        }
+    }
+
+    Matrix<X> basis(n, k, exact_zero);
+    for (SizeType col = 0u; col != k; ++col) {
+        basis[col][col] = exact_one;
+    }
+    for (SizeType row = 0u; row != m; ++row) {
+        for (SizeType col = 0u; col != k; ++col) {
+            basis[k + row][col] = graph[row][col];
+        }
+    }
+    return CertifiedInvariantGraphData<PR>{
+        std::move(basis), std::move(restriction), graph};
+}
+
 } // namespace Ariadne
 
 #endif // ARIADNE_INVARIANT_SUBSPACE_HPP
