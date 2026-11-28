@@ -157,6 +157,94 @@ Void test_spectrum(PR precision) {
         validated(triangular_v).status == Status::INCONCLUSIVE);
 }
 
+
+//! \brief Complex spectra of coupled, interleaved 2x2 structural blocks.
+template<class PR>
+Void test_structural_complex_spectrum(PR precision) {
+    using AX = FloatApproximation<PR>;
+    using VX = FloatBounds<PR>;
+    const AX azero(0u, precision);
+    const VX vzero(0u, precision);
+    Spectrum<ApproximateTag, PR> approximate(precision);
+    Spectrum<ValidatedTag, PR> validated(precision);
+
+    // The directed cycle {0,2} represents a real rotation with
+    // spectrum {-i,+i}; the scalar components {1},{3} have 3,5.
+    // Nonzero entries from the cyclic block into both scalar blocks
+    // prevent the matrix from being block diagonal or triangular in
+    // its stored order; nevertheless its spectrum is complete.
+    const Int entries[4][4] = {
+        {0, 1, -1, 0},
+        {0, 3, 0, 1},
+        {1, 1, 0, 0},
+        {0, 0, 0, 5}
+    };
+    Matrix<AX> a(4u, 4u, azero);
+    Matrix<VX> v(4u, 4u, vzero);
+    for (SizeType i = 0u; i != 4u; ++i) {
+        for (SizeType j = 0u; j != 4u; ++j) {
+            a[i][j] = AX(entries[i][j], precision);
+            v[i][j] = VX(entries[i][j], precision);
+        }
+    }
+    const auto point = approximate(a);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        point.status == SpectralStatus::SUCCESS && point.data.has_value());
+    const auto check = [&](const Matrix<VX>& family) {
+        const auto certified = validated(family);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            certified.status == SpectralStatus::SUCCESS &&
+            certified.data.has_value());
+        if (certified.data) {
+            const auto& eigenvalues = certified.data->eigenvalues;
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                eigenvalues.size() == 4u);
+            const Int imaginary[2] = {-1, 1};
+            for (SizeType k = 0u; k != 2u; ++k) {
+                ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                    encloses(eigenvalues[k].real_part(), 0, precision) &&
+                    encloses(eigenvalues[k].imaginary_part(),
+                             imaginary[k], precision));
+            }
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                encloses(eigenvalues[2u].real_part(), 3, precision) &&
+                encloses(eigenvalues[2u].imaginary_part(), 0, precision) &&
+                encloses(eigenvalues[3u].real_part(), 5, precision));
+        }
+    };
+    check(v);
+    if (point.data) {
+        const auto& eigenvalues = point.data->eigenvalues;
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            eigenvalues.size() == 4u);
+        const Int imaginary[2] = {-1, 1};
+        for (SizeType k = 0u; k != 2u; ++k) {
+            ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+                std::abs(eigenvalues[k].real_part().get_d()) < 1e-12 &&
+                std::abs(eigenvalues[k].imaginary_part().get_d() -
+                    static_cast<double>(imaginary[k])) < 1e-12);
+        }
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            std::abs(eigenvalues[2u].real_part().get_d() - 3.0) < 1e-12 &&
+            std::abs(eigenvalues[3u].real_part().get_d() - 5.0) < 1e-12);
+    }
+
+    // Independent family uncertainty in a cross-block edge and scalar
+    // diagonal leaves the conjugate block and full root multiplicity sound.
+    v[0u][1u] += VX(0, 1, precision) / VX(1024u, precision);
+    v[1u][1u] += VX(0, 1, precision) / VX(1024u, precision);
+    check(v);
+
+    // The closing edge makes all 4 vertices mutually reachable; the
+    // present exact structural method must refuse to assert a result.
+    a[3u][0u] = AX(1u, precision);
+    v[3u][0u] = VX(1u, precision);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        approximate(a).status == SpectralStatus::INCONCLUSIVE);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        validated(v).status == SpectralStatus::INCONCLUSIVE);
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -168,6 +256,10 @@ int main(int argc, char** argv) {
                 test_spectrum(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_spectrum(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_structural_complex_spectrum(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_structural_complex_spectrum(MultiplePrecision(80u)));
         });
     return Ariadne::Testing::run_suite(suite, argc, argv);
 }

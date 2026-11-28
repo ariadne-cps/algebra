@@ -31,6 +31,7 @@
 #include <optional>
 #include <type_traits>
 #include <vector>
+#include <utility>
 
 #include "algebra/matrix.hpp"
 #include "numeric/complex.hpp"
@@ -63,8 +64,9 @@ struct SpectrumResult {
 };
 
 //! \brief Calculate eigenvalues without requiring diagonalizability.
-//! \details This first stage handles 1x1, 2x2 and structurally upper/lower
-//! triangular matrices. General dense higher-order matrices await Schur.
+//! \details Handles scalar, 2x2 and structurally block-upper-triangular
+//! matrices whose strongly connected diagonal blocks have order at most two.
+//! General dense higher-order strongly connected blocks await Schur.
 //! ValidatedTag requires a discriminant with verified sign or exact zero.
 template<class P, class PR>
 class Spectrum {
@@ -145,11 +147,110 @@ class Spectrum {
                     if (i < j && !this->_zero(A[i][j])) { lower = false; }
                 }
             }
-            if (!upper && !lower) {
-                return {Status::INCONCLUSIVE, std::nullopt};
-            }
-            for (SizeType i = 0u; i != n; ++i) {
-                result.eigenvalues.emplace_back(A[i][i], zero);
+            if (upper || lower) {
+                for (SizeType i = 0u; i != n; ++i) {
+                    result.eigenvalues.emplace_back(A[i][i], zero);
+                }
+            } else {
+                // A_ij is a structural edge i -> j unless it is
+                // provably exactly zero. A row/column permutation
+                // topologically orders the strongly connected components,
+                // producing an upper block-triangular matrix. The
+                // characteristic polynomial is the product of the
+                // characteristic polynomials of its diagonal blocks.
+                std::vector<std::vector<bool>> reachable(
+                    n, std::vector<bool>(n, false));
+                for (SizeType i = 0u; i != n; ++i) {
+                    for (SizeType j = 0u; j != n; ++j) {
+                        reachable[i][j] = i == j || !this->_zero(A[i][j]);
+                    }
+                }
+                for (SizeType through = 0u; through != n; ++through) {
+                    for (SizeType i = 0u; i != n; ++i) {
+                        for (SizeType j = 0u; j != n; ++j) {
+                            if (reachable[i][through] && reachable[through][j]) {
+                                reachable[i][j] = true;
+                            }
+                        }
+                    }
+                }
+
+                std::vector<SizeType> component_of(n, n);
+                std::vector<std::vector<SizeType>> components;
+                for (SizeType i = 0u; i != n; ++i) {
+                    if (component_of[i] != n) {
+                        continue;
+                    }
+                    const SizeType id = components.size();
+                    std::vector<SizeType> component;
+                    for (SizeType j = 0u; j != n; ++j) {
+                        if (component_of[j] == n &&
+                            reachable[i][j] && reachable[j][i]) {
+                            component_of[j] = id;
+                            component.push_back(j);
+                        }
+                    }
+                    if (component.size() > 2u) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    components.push_back(std::move(component));
+                }
+
+                const SizeType count = components.size();
+                std::vector<std::vector<bool>> edges(
+                    count, std::vector<bool>(count, false));
+                std::vector<SizeType> indegree(count, 0u);
+                for (SizeType i = 0u; i != n; ++i) {
+                    for (SizeType j = 0u; j != n; ++j) {
+                        const SizeType from = component_of[i];
+                        const SizeType to = component_of[j];
+                        if (from != to && !this->_zero(A[i][j]) &&
+                            !edges[from][to]) {
+                            edges[from][to] = true;
+                            ++indegree[to];
+                        }
+                    }
+                }
+                std::vector<bool> placed(count, false);
+                for (SizeType k = 0u; k != count; ++k) {
+                    SizeType next = count;
+                    for (SizeType id = 0u; id != count; ++id) {
+                        if (!placed[id] && indegree[id] == 0u) {
+                            next = id;
+                            break;
+                        }
+                    }
+                    if (next == count) {
+                        return {Status::INCONCLUSIVE, std::nullopt};
+                    }
+                    placed[next] = true;
+                    for (SizeType id = 0u; id != count; ++id) {
+                        if (edges[next][id]) {
+                            --indegree[id];
+                        }
+                    }
+                    const auto& indices = components[next];
+                    if (indices.size() == 1u) {
+                        result.eigenvalues.emplace_back(
+                            A[indices[0u]][indices[0u]], zero);
+                    } else {
+                        Matrix<X> block(2u, 2u, zero);
+                        for (SizeType i = 0u; i != 2u; ++i) {
+                            for (SizeType j = 0u; j != 2u; ++j) {
+                                block[i][j] = A[indices[i]][indices[j]];
+                            }
+                        }
+                        // Reuse exactly the small-order approximate or
+                        // outward-rounded validated spectral contract.
+                        const auto solved = (*this)(block);
+                        if (solved.status != Status::SUCCESS || !solved.data) {
+                            return {Status::INCONCLUSIVE, std::nullopt};
+                        }
+                        for (const auto& lambda: solved.data->eigenvalues) {
+                            result.eigenvalues.push_back(lambda);
+                        }
+                    }
+                }
             }
         }
         for (const auto& lambda: result.eigenvalues) {
