@@ -222,6 +222,44 @@ Void test_complex_diagonalization(PR precision) {
 }
 
 //! \brief Verify automatic real/complex dispatch through one public API.
+//! Reject malformed Schur data without manufacturing a complex eigenbasis.
+template<class PR>
+Void test_invalid_complex_schur_factors(PR precision) {
+    using X = FloatApproximation<PR>;
+    using Status = detail::ComplexEigenDecompositionStatus;
+    Matrix<X> rotation(2u, 2u, X(0u, precision));
+    rotation[0u][1u] = X(-1, precision);
+    rotation[1u][0u] = X(1u, precision);
+    const auto original = SchurDecomposition<ApproximateTag, PR>(precision)(rotation);
+    ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+        original.status == SchurStatus::SUCCESS && original.data.has_value());
+    if (!original.data) { return; }
+    const detail::ComplexEigenDecomposition<ApproximateTag, PR> solver(precision);
+    auto reject = [&](const auto& factors) {
+        const auto result = solver(rotation, factors);
+        ARIADNE_ALGEBRA_LEGACY_ASSERT_CTX(AlgebraTesting::context(),
+            result.status == Status::INCONCLUSIVE && !result.data.has_value());
+    };
+    auto invalid_T = *original.data;
+    invalid_T.quasi_triangular = Matrix<X>(1u, 1u, X(0u, precision));
+    reject(invalid_T);
+    auto invalid_Q = *original.data;
+    invalid_Q.orthogonal = Matrix<X>(1u, 1u, X(0u, precision));
+    reject(invalid_Q);
+    auto empty = *original.data;
+    empty.block_sizes.clear();
+    reject(empty);
+    auto width = *original.data;
+    width.block_sizes = {3u};
+    reject(width);
+    auto incomplete = *original.data;
+    incomplete.block_sizes = {1u};
+    reject(incomplete);
+    auto overfull = *original.data;
+    overfull.block_sizes = {1u, 1u, 1u};
+    reject(overfull);
+}
+
 template<class PR>
 Void test_unified_eigen_decomposition(PR precision) {
     using AX = FloatApproximation<PR>;
@@ -395,6 +433,10 @@ int main(int argc, char** argv) {
                 test_unified_eigen_decomposition(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_unified_eigen_decomposition(MultiplePrecision(80u)));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_invalid_complex_schur_factors(dp));
+            ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
+                test_invalid_complex_schur_factors(MultiplePrecision(80u)));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),
                 test_cached_complex_schur_fallback(dp));
             ARIADNE_TESTING_EXPECT_NO_THROW_CTX(AlgebraTesting::context(),

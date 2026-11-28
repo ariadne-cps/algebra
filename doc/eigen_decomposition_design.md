@@ -843,3 +843,9 @@ For interval input matrices, distinguish certifying an eigenpair for one fixed m
 - The complex implementation remains an internal engine used by the single public `EigenDecomposition<P,PR>`. Preserve all numerical thresholds, preconditions, complex-Schur factor reuse, real-success dispatch, and validated inconclusiveness. No compatibility header or second public API is retained (the current design explicitly permits removing transitional names).
 - Source-level checks: extracted all six nontrivial member definitions, left declarations in the class, and checked the remaining EigenDecomposition references and include dependencies. The existing complex/real regression tests already include the unified header. Build, runtime tests, CI and post-change coverage have **not** been executed or verified for this commit; the supplied LCOV profile measures the preceding head `f47f116` and its line locations become stale after the move.
 - Next step: semantic coverage tests for malformed Schur factors and absent-result queries, then rebuild with fresh instrumentation and classify residual branches per the attached playbook. Pre-merge format review remains deferred.
+
+
+### 2026-11-28 — targeted malformed complex Schur metadata regressions (this commit)
+
+- Added DP/MP tests rejecting wrong Q/T dimensions, missing, oversized, incomplete and excessive block partitions, using valid rotation Schur factors as a baseline. Every malformed case must return INCONCLUSIVE without data; no thresholds or algorithms are changed.
+- Existing LCOV identifies these structurally reachable guards in the original complex header. After moving definitions, line numbers change. Build, C++ tests and new coverage have not been run or claimed; check CI and regenerate coverage before attributing a delta.
