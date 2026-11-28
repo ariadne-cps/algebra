@@ -3,6 +3,7 @@ include(CTest)
 set(UNIT_TESTS
     test_differential
     test_eigen_decomposition
+    test_complex_eigen_decomposition
     test_schur_decomposition
     test_spectrum
     test_determinant
