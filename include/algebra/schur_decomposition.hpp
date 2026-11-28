@@ -102,14 +102,10 @@ struct SchurDecompositionResult {
 //! Francis (1961-1962) allows its QR similarity to be constructed
 //! from the first column of p(H), without forming p(H) explicitly.
 //! For upper Hessenberg H, its first three possibly nonzero entries are
-//! \f[
-//! \begin{split}
-//! x &= h_{00}^2+h_{01}h_{10}-s h_{00}+t,\\
-//! y &= h_{10}(h_{00}+h_{11}-s),\\
-//! z &= h_{10}h_{21},\\
-//! s &= \operatorname{tr}(B),\quad t=\det(B).
-//! \end{split}
-//! \f]
+//! \f[ x=h_{00}^2+h_{01}h_{10}-s h_{00}+t \f]
+//! \f[ y=h_{10}(h_{00}+h_{11}-s) \f]
+//! \f[ z=h_{10}h_{21} \f]
+//! \f[ s=\operatorname{tr}(B),\qquad t=\det(B) \f]
 //! A Householder reflector maps (x,y,z) to the first coordinate,
 //! introducing a small out-of-band bulge. Subsequent reflectors on
 //! at most three consecutive rows chase the bulge down the active
